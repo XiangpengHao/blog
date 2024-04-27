@@ -1,0 +1,21 @@
+project:
+  type: website
+
+website:
+  title: "Xiangpeng's blog"
+  navbar:
+    right:
+      - icon: person-circle
+        href: https://haoxp.xyz
+      - icon: github
+        href:  https://github.com/XiangpengHao
+      - icon: linkedin
+        href: https://www.linkedin.com/in/hao-xiangpeng/
+
+format:
+  html:
+    theme: cosmo
+    css: styles.css
+
+
+

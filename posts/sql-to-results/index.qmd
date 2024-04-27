@@ -1,0 +1,330 @@
+---
+title: "What happens when you type a SQL in the database"
+date: "2024-04-26"
+categories: []
+# image: "image.jpg"
+---
+
+
+This is a working-in-progress blog post to explain how database query engine works. 
+This is a blog post I hoped I knew when I was younger. I believe there are many textbook that covers this topic in much more details, this post aims to be a high level overview of how things work. I try to be as concrete as possible, as much examples as possible.
+
+For simplification, we only consider analytical databases. We assume the data can be loaded with just one command (magic).
+
+## Section 1: End-To-End View
+
+###  Inputs
+
+Let's say we have this simple query (adapted from [TPC-H query 5](https://github.com/apache/datafusion/blob/main/benchmarks/queries/q5.sql)):
+```sql
+SELECT
+    l_orderkey, l_shipdate, o_orderdate
+FROM
+    orders
+JOIN
+    lineitem ON l_orderkey = o_orderkey
+WHERE
+    o_orderdate >= DATE '1994-01-01'
+    AND o_orderdate < DATE '1995-01-01';
+```
+
+`lineitem` table in CSV format:
+```csv
+l_orderkey,l_linenumber,l_shipdate,l_commitdate,l_receiptdate,l_shipmode,l_comment
+1,1,1994-06-01,1994-05-15,1994-06-15,AIR,Delivered on time
+```
+
+`orders` table in CSV format:
+```csv
+o_orderkey,o_orderdate,o_orderpriority,o_clerk,o_comment
+1,1994-05-01,urgent,Clerk#1,Note1
+2,1994-07-01,low,Clerk#2,Note2
+```
+
+### Outputs
+If everything goes well, we should get results similar to this:
+```
++------------+------------+-------------+
+| l_orderkey | l_shipdate | o_orderdate |
++------------+------------+-------------+
+| 1          | 1994-06-01 | 1994-05-01  |
++------------+------------+-------------+
+```
+
+The goal of this document is to explain step-by-step what happens from the inputs to outputs.
+
+## Section 2: Parsing
+
+Skipped for now as it is mostly orthogonal to the data system pipelines.
+
+### Input
+A SQL query text.
+```sql
+SELECT
+    l_orderkey, l_shipdate, o_orderdate
+FROM
+    orders
+JOIN
+    lineitem ON l_orderkey = o_orderkey
+WHERE
+    o_orderdate >= DATE '1994-01-01'
+    AND o_orderdate < DATE '1995-01-01';
+```
+
+### Output
+Structured [`statement`](https://docs.rs/datafusion/37.1.0/datafusion/sql/parser/enum.Statement.html) from the SQL:
+```
+Statement(
+    Query(
+        Query {
+            with: None,
+            body: Select(
+                Select {
+                    projection: [
+                        UnnamedExpr(
+                            Identifier(
+                                Ident {
+                                    value: "l_orderkey",
+                                    quote_style: None,
+                                },
+                            ),
+                        ),
+                        UnnamedExpr(
+                            Identifier(
+                                Ident {
+                                    value: "l_shipdate",
+                                    quote_style: None,
+                                },
+                            ),
+                        ),
+                        UnnamedExpr(
+                            Identifier(
+                                Ident {
+                                    value: "o_orderdate",
+                                    quote_style: None,
+                                },
+                            ),
+                        ),
+                    ],
+                    from: [
+                        TableWithJoins {
+                            relation: Table {
+                                name: ObjectName(
+                                    [
+                                        Ident {
+                                            value: "orders",
+                                            quote_style: None,
+                                        },
+                                    ],
+                                ),
+                                ...
+                            },
+                            joins: [
+                                Join {
+                                    relation: Table {
+                                        name: ObjectName(
+                                            [
+                                                Ident {
+                                                    value: "lineitem",
+                                                    quote_style: None,
+                                                },
+                                            ],
+                                        ),
+                                        ...
+                                    },
+                                    join_operator: Inner(
+                                        On(
+                                            BinaryOp {
+                                                left: Identifier(
+                                                    Ident {
+                                                        value: "l_orderkey",
+                                                        quote_style: None,
+                                                    },
+                                                ),
+                                                op: Eq,
+                                                right: Identifier(
+                                                    Ident {
+                                                        value: "o_orderkey",
+                                                        quote_style: None,
+                                                    },
+                                                ),
+                                            },
+                                        ),
+                                    ),
+                                },
+                            ],
+                        },
+                    ],
+                    selection: Some(
+                        BinaryOp {
+                            left: BinaryOp {
+                                left: Identifier(
+                                    Ident {
+                                        value: "o_orderdate",
+                                        quote_style: None,
+                                    },
+                                ),
+                                op: GtEq,
+                                right: TypedString {
+                                    data_type: Date,
+                                    value: "1994-01-01",
+                                },
+                            },
+                            op: And,
+                            right: BinaryOp {
+                                left: Identifier(
+                                    Ident {
+                                        value: "o_orderdate",
+                                        quote_style: None,
+                                    },
+                                ),
+                                op: Lt,
+                                right: TypedString {
+                                    data_type: Date,
+                                    value: "1995-01-01",
+                                },
+                            },
+                        },
+                    ),
+					...
+                },
+            ),
+            ...
+        },
+    ),
+)
+```
+
+## Section 3: Query Planning
+### Input
+The query statement from last step.
+
+### Output
+The logical query plan, something like this:
+```
+Projection: lineitem.l_orderkey, lineitem.l_shipdate, orders.o_orderdate
+  Filter: orders.o_orderdate >= CAST(Utf8("1994-01-01") AS Date32) AND orders.o_orderdate < CAST(Utf8("1995-01-01") AS Date32)
+    Inner Join:  Filter: lineitem.l_orderkey = orders.o_orderkey
+      TableScan: orders
+      TableScan: lineitem
+```
+
+Plot it as a tree.
+![](f1.png)
+
+Logical vs physical. 
+
+todo: describe why we need to distinguish physical plan and logical plan.
+
+## Section 4: Query Optimizing (logical plan)
+### Input
+The (unoptimized) logical plan from last step.
+
+### Output
+An optimized logical plan.
+```
+Projection: lineitem.l_orderkey, lineitem.l_shipdate, orders.o_orderdate
+  Inner Join: orders.o_orderkey = lineitem.l_orderkey
+    Filter: orders.o_orderdate >= Date32("8766") AND orders.o_orderdate < Date32("9131")
+      TableScan: orders projection=[o_orderkey, o_orderdate], partial_filters=[orders.o_orderdate >= Date32("8766"), orders.o_orderdate < Date32("9131")]
+    TableScan: lineitem projection=[l_orderkey, l_shipdate]
+```
+![](f2.png)
+Note the difference between unoptimized and optimized plan!
+The `Filter` has been pushed down to lower level nodes. Part of the projection has been embedded to the `TableScan`.
+
+## Section 5: Physical Planing
+#### Input
+A logical plan.
+
+### Output
+A physical plan. Unlike logical plans, physical plans are more concrete about what to do, here's an example:
+
+```
+Physical plan:
+ProjectionExec: expr=[l_orderkey@1 as l_orderkey, l_shipdate@2 as l_shipdate, o_orderdate@0 as o_orderdate]
+  CoalesceBatchesExec: target_batch_size=8192
+    HashJoinExec: mode=Partitioned, join_type=Inner, on=[(o_orderkey@0, l_orderkey@0)], projection=[o_orderdate@1, l_orderkey@2, l_shipdate@3]
+      CoalesceBatchesExec: target_batch_size=8192
+        RepartitionExec: partitioning=Hash([o_orderkey@0], 8), input_partitions=8
+          CoalesceBatchesExec: target_batch_size=8192
+            FilterExec: o_orderdate@1 >= 8766 AND o_orderdate@1 < 9131
+              RepartitionExec: partitioning=RoundRobinBatch(8), input_partitions=1
+                CsvExec: file_groups={1 group: [[Users/xiangpeng/work/coding/db-ml/bin/example-data/orders.csv]]}, projection=[o_orderkey, o_orderdate], has_header=true
+      CoalesceBatchesExec: target_batch_size=8192
+        RepartitionExec: partitioning=Hash([l_orderkey@0], 8), input_partitions=8
+          RepartitionExec: partitioning=RoundRobinBatch(8), input_partitions=1
+            CsvExec: file_groups={1 group: [[Users/xiangpeng/work/coding/db-ml/bin/example-data/lineitem.csv]]}, projection=[l_orderkey, l_shipdate], has_header=true
+```
+We can also plot a physical plan to a tree graph:
+
+![](f3.png)
+
+Note that a physical plan has much more details than a logical plan, it contains everything needed to execute the query!
+
+(Optional: we often have physical optimizer that optimize on a physical plan. Omitted here for simplicity)
+
+
+## Section 6: Query Execution
+### Input
+A physical plan
+
+### Output
+The final output like this:
+```
++------------+------------+-------------+
+| l_orderkey | l_shipdate | o_orderdate |
++------------+------------+-------------+
+| 1          | 1994-06-01 | 1994-05-01  |
++------------+------------+-------------+
+```
+
+### How to execute a physical plan?
+TODO: discuss pull-based and push-based execution.
+
+The simplest execution model is [pull-based execution](https://justinjaffray.com/query-engines-push-vs.-pull/), which implements a post-order traversal of the physical plan.
+For a tree like this ([credit](https://www.freecodecamp.org/news/binary-search-tree-traversal-inorder-preorder-post-order-for-bst/)):
+![](f4.png)
+We get a traversal order of `D -> E -> B -> F -> G -> C -> A`
+
+Applying to our physical graph above, we get a execution order of:
+
+1. `CsvExec (orders.csv)`
+
+2. `RepartitionExec`
+
+3. `FilterExec`
+
+4. `CoalesceBatchesExec`
+
+5. `RepartitionExec`
+
+6. `CoalesceBatchesExec`
+
+7. `CsvExec (lineitem.csv)`
+
+8. `RepartitionExec`
+
+9. `RepartitionExec`
+
+10. `CoalesceBatchesExec`
+
+11. `HashJoinExec`
+
+12. `CoalesceBatchesExec`
+
+13. `ProjectionExec`
+
+The `RepartitionExec` and `CoalesceBatchesExec` are executors that partitions the data for multi-thread processing (based on the [Volcano execution](https://w6113.github.io/files/papers/volcanoparallelism-89.pdf) style)
+
+A simplified, single-threaded, no-partitioned execution order would be:
+
+1. `CsvExec (orders.csv)`
+
+2. `FilterExec`
+
+3. `CsvExec (lineitem.csv)`
+
+4. `HashJoinExec`
+
+5. `ProjectionExec`
