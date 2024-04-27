@@ -29,20 +29,25 @@ WHERE
     AND o_orderdate < DATE '1995-01-01';
 ```
 
-`lineitem` table in CSV format:
-```csv
-l_orderkey,l_linenumber,l_shipdate,l_commitdate,l_receiptdate,l_shipmode,l_comment
-1,1,1994-06-01,1994-05-15,1994-06-15,AIR,Delivered on time
-```
+We have the following two tables (adapted from [TPC-H spec](https://www.tpc.org/tpc_documents_current_versions/pdf/tpc-h_v2.17.1.pdf)).
 
-`orders` table in CSV format:
-```csv
-o_orderkey,o_orderdate,o_orderpriority,o_clerk,o_comment
-1,1994-05-01,urgent,Clerk#1,Note1
-2,1994-07-01,low,Clerk#2,Note2
-```
+l_orderkey| l_linenumber| l_shipdate| l_commitdate| l_receiptdate| l_shipmode| l_comment
+----------|------------|----------|------------|-------------|----------|---------
+1          |1          |1994-06-01|1994-05-15 | 1994-06-15 | AIR | Delivered on time
+: lineitem table 
+
+
+| o_orderkey | o_orderdate | o_orderpriority | o_clerk | o_comment |
+|------------|-------------|-----------------|---------|-----------|
+| 1          | 1994-05-01  | urgent          | Clerk#1 | Note1     |
+| 2          | 1994-07-01  | low             | Clerk#2 | Note2     |
+: orders table
+
+The lineitem table contains a order line, while the order table contains the order information. 
+The query tries to find the order key, ship date and order date for orders that are placed in 1994.
 
 ### Outputs
+The query is fairly simple, it joins two tables on the order key, then filters the results based on order date.
 If everything goes well, we should get results similar to this:
 ```txt
 +------------+------------+-------------+
@@ -73,128 +78,83 @@ WHERE
 ```
 
 ### Output
-Structured [`statement`](https://docs.rs/datafusion/37.1.0/datafusion/sql/parser/enum.Statement.html) from the SQL:
+Structured [`statement`](https://docs.rs/datafusion/37.1.0/datafusion/sql/parser/enum.Statement.html) from the SQL (significantly simplified for brevity):
 
-```txt
-Statement(
-    Query(
-        Query {
-            with: None,
-            body: Select(
-                Select {
-                    projection: [
-                        UnnamedExpr(
-                            Identifier(
-                                Ident {
-                                    value: "l_orderkey",
-                                    quote_style: None,
-                                },
-                            ),
-                        ),
-                        UnnamedExpr(
-                            Identifier(
-                                Ident {
-                                    value: "l_shipdate",
-                                    quote_style: None,
-                                },
-                            ),
-                        ),
-                        UnnamedExpr(
-                            Identifier(
-                                Ident {
-                                    value: "o_orderdate",
-                                    quote_style: None,
-                                },
-                            ),
-                        ),
-                    ],
-                    from: [
-                        TableWithJoins {
-                            relation: Table {
-                                name: ObjectName(
-                                    [
-                                        Ident {
-                                            value: "orders",
-                                            quote_style: None,
-                                        },
-                                    ],
-                                ),
-                                ...
-                            },
-                            joins: [
-                                Join {
-                                    relation: Table {
-                                        name: ObjectName(
-                                            [
-                                                Ident {
-                                                    value: "lineitem",
-                                                    quote_style: None,
-                                                },
-                                            ],
-                                        ),
-                                        ...
-                                    },
-                                    join_operator: Inner(
-                                        On(
-                                            BinaryOp {
-                                                left: Identifier(
-                                                    Ident {
-                                                        value: "l_orderkey",
-                                                        quote_style: None,
-                                                    },
-                                                ),
-                                                op: Eq,
-                                                right: Identifier(
-                                                    Ident {
-                                                        value: "o_orderkey",
-                                                        quote_style: None,
-                                                    },
-                                                ),
-                                            },
-                                        ),
-                                    ),
-                                },
-                            ],
-                        },
-                    ],
-                    selection: Some(
-                        BinaryOp {
-                            left: BinaryOp {
-                                left: Identifier(
-                                    Ident {
-                                        value: "o_orderdate",
-                                        quote_style: None,
-                                    },
-                                ),
-                                op: GtEq,
-                                right: TypedString {
-                                    data_type: Date,
-                                    value: "1994-01-01",
-                                },
-                            },
-                            op: And,
-                            right: BinaryOp {
-                                left: Identifier(
-                                    Ident {
-                                        value: "o_orderdate",
-                                        quote_style: None,
-                                    },
-                                ),
-                                op: Lt,
-                                right: TypedString {
-                                    data_type: Date,
-                                    value: "1995-01-01",
-                                },
-                            },
-                        },
-                    ),
-					...
-                },
-            ),
-            ...
+```txt {.code-overflow-wrap}
+from: [
+  TableWithJoins {
+    relation: Table {
+      name: ObjectName([
+        Ident {
+          value: "orders",
+          quote_style: None,
         },
-    ),
-)
+      ]),
+    },
+    joins: [
+      Join {
+        relation: Table {
+          name: ObjectName([
+            Ident {
+              value: "lineitem",
+              quote_style: None,
+            },
+          ]),
+        },
+        join_operator: Inner(
+          On(
+            BinaryOp {
+              left: Identifier(
+                Ident {
+                  value: "l_orderkey",
+                  quote_style: None,
+                },
+              ),
+              op: Eq,
+              right: Identifier(
+                Ident {
+                  value: "o_orderkey",
+                  quote_style: None,
+                },
+              ),
+            },
+          ),
+        ),
+      },
+    ],
+  },
+],
+selection: Some(
+  BinaryOp {
+    left: BinaryOp {
+      left: Identifier(
+        Ident {
+          value: "o_orderdate",
+          quote_style: None,
+        },
+      ),
+      op: GtEq,
+      right: TypedString {
+        data_type: Date,
+        value: "1994-01-01",
+      },
+    },
+    op: And,
+    right: BinaryOp {
+      left: Identifier(
+        Ident {
+          value: "o_orderdate",
+          quote_style: None,
+        },
+      ),
+      op: Lt,
+      right: TypedString {
+        data_type: Date,
+        value: "1995-01-01",
+      },
+    },
+  },
+),
 ```
 
 ## Section 3: Query Planning
