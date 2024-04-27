@@ -8,15 +8,17 @@ toc: true
 
 
 This is a working-in-progress blog post to explain how database query engine works. 
-This is a blog post I hoped I knew when I was younger. I believe there are many textbook that covers this topic in much more details, this post aims to be a high level overview of how things work. I try to be as concrete as possible, as much examples as possible.
+This is a blog post I hoped I knew when I was younger.
+Many database text books already covered almost all topics.
+Unlike those textbooks, I try to be as concrete as possible, as much examples as possible.
 
 For simplification, we only consider analytical databases. We assume the data can be loaded with just one command (magic).
 
 ## Section 1: End-To-End View
 
-###  Inputs
+####  Input
 
-Let's say we have this simple query (adapted from [TPC-H query 5](https://github.com/apache/datafusion/blob/main/benchmarks/queries/q5.sql)):
+Let's say we have this simple query (adapted from [TPC-H query 5](https://github.com/apache/datafusion/blob/main/benchmarks/queries/q5.sql)), which finds the order key, ship date, and order date of orders that were placed in 1994.
 ```sql
 SELECT
     l_orderkey, l_shipdate, o_orderdate
@@ -30,23 +32,29 @@ WHERE
 ```
 
 We have the following two tables (adapted from [TPC-H spec](https://www.tpc.org/tpc_documents_current_versions/pdf/tpc-h_v2.17.1.pdf)).
+The lineitem table defines the the shipment of an item, while the order table contains the order information. 
 
-l_orderkey| l_linenumber| l_shipdate| l_commitdate| l_receiptdate| l_shipmode| l_comment
-----------|------------|----------|------------|-------------|----------|---------
-1          |1          |1994-06-01|1994-05-15 | 1994-06-15 | AIR | Delivered on time
-: lineitem table 
+```{mermaid}
+erDiagram
+  lineitem {
+      int l_orderkey
+      int l_linenumber
+      date l_shipdate
+      date l_commitdate
+      date l_receiptdate
+      string l_shipmode
+      string l_comment
+  }
+  orders {
+      int o_orderkey
+      date o_orderdate
+      string o_orderpriority
+      string o_clerk
+      string o_comment
+  }
+```
 
-
-| o_orderkey | o_orderdate | o_orderpriority | o_clerk | o_comment |
-|------------|-------------|-----------------|---------|-----------|
-| 1          | 1994-05-01  | urgent          | Clerk#1 | Note1     |
-| 2          | 1994-07-01  | low             | Clerk#2 | Note2     |
-: orders table
-
-The lineitem table contains a order line, while the order table contains the order information. 
-The query tries to find the order key, ship date and order date for orders that are placed in 1994.
-
-### Outputs
+#### Output
 The query is fairly simple, it joins two tables on the order key, then filters the results based on order date.
 If everything goes well, we should get results similar to this:
 ```txt
@@ -59,11 +67,20 @@ If everything goes well, we should get results similar to this:
 
 The goal of this document is to explain step-by-step what happens from the inputs to outputs.
 
+The high level flow is like this:
+```{mermaid}
+flowchart LR
+   id1[SQL text] --> |SQL parser| id2[SQL statement] 
+   id2 --> |Query planner| id3[Logical plan] --> |Query optimizer| id4[Optimized logical plan] --> |Physical planner| id5
+   id5[Physical plan] --> |Execution| id7[Output]
+
+```
+
 ## Section 2: Parsing
 
 Skipped for now as it is mostly orthogonal to the data system pipelines.
 
-### Input
+#### Input
 A SQL query text.
 ```sql
 SELECT
@@ -77,7 +94,7 @@ WHERE
     AND o_orderdate < DATE '1995-01-01';
 ```
 
-### Output
+#### Output
 Structured [`statement`](https://docs.rs/datafusion/37.1.0/datafusion/sql/parser/enum.Statement.html) from the SQL (significantly simplified for brevity):
 
 ```txt {.code-overflow-wrap}
@@ -158,10 +175,10 @@ selection: Some(
 ```
 
 ## Section 3: Query Planning
-### Input
+#### Input
 The query statement from last step.
 
-### Output
+#### Output
 The logical query plan, something like this:
 
 ```txt
@@ -173,7 +190,22 @@ Projection: lineitem.l_orderkey, lineitem.l_shipdate, orders.o_orderdate
 ```
 
 Plot it as a tree.
-![](f1.png)
+```{dot}
+//| fig-height: 2
+digraph {
+    graph[]
+    2[shape=box label="Projection: lineitem.l_orderkey, lineitem.l_shipdate, orders.o_orderdate"]
+    3[shape=box label="Filter: orders.o_orderdate >= CAST(Utf8(_1994-01-01_) AS Date32) AND orders.o_orderdate < CAST(Utf8(_1995-01-01_) AS Date32)"]
+    2 -> 3 [arrowhead=none, arrowtail=normal, dir=back]
+    4[shape=box label="Inner Join:  Filter: lineitem.l_orderkey = orders.o_orderkey"]
+    3 -> 4 [arrowhead=none, arrowtail=normal, dir=back]
+    5[shape=box label="TableScan: orders"]
+    4 -> 5 [arrowhead=none, arrowtail=normal, dir=back]
+    6[shape=box label="TableScan: lineitem"]
+    4 -> 6 [arrowhead=none, arrowtail=normal, dir=back]
+}
+```
+
 
 Logical vs physical. 
 
@@ -181,10 +213,10 @@ todo: describe why we need to distinguish physical plan and logical plan.
 
 ## Section 4: Query Optimizing
 
-### Input
+#### Input
 The (unoptimized) logical plan from last step.
 
-### Output
+#### Output
 An optimized logical plan.
 
 ```txt
@@ -194,16 +226,33 @@ Projection: lineitem.l_orderkey, lineitem.l_shipdate, orders.o_orderdate
       TableScan: orders projection=[o_orderkey, o_orderdate], partial_filters=[orders.o_orderdate >= Date32("8766"), orders.o_orderdate < Date32("9131")]
     TableScan: lineitem projection=[l_orderkey, l_shipdate]
 ```
-![](f2.png)
+
+```{dot}
+//| fig-height: 2
+digraph {
+    graph[]
+    2[shape=box label="Projection: lineitem.l_orderkey, lineitem.l_shipdate, orders.o_orderdate"]
+    3[shape=box label="Inner Join: orders.o_orderkey = lineitem.l_orderkey"]
+    2 -> 3 [arrowhead=none, arrowtail=normal, dir=back]
+    4[shape=box label="Filter: orders.o_orderdate >= Date32(_8766_) AND orders.o_orderdate < Date32(_9131_)"]
+    3 -> 4 [arrowhead=none, arrowtail=normal, dir=back]
+    5[shape=box label="TableScan: orders projection=[o_orderkey, o_orderdate], partial_filters=[orders.o_orderdate >= Date32(_8766_), orders.o_orderdate < Date32(_9131_)]"]
+    4 -> 5 [arrowhead=none, arrowtail=normal, dir=back]
+    6[shape=box label="TableScan: lineitem projection=[l_orderkey, l_shipdate]"]
+    3 -> 6 [arrowhead=none, arrowtail=normal, dir=back]
+}
+// End DataFusion GraphViz Plan
+```
+
 Note the difference between unoptimized and optimized plan!
 The `Filter` has been pushed down to lower level nodes. Part of the projection has been embedded to the `TableScan`.
 
 ## Section 5: Physical Planing
 
-### Input
+#### Input
 A logical plan.
 
-### Output
+#### Output
 A physical plan. Unlike logical plans, physical plans are more concrete about what to do, here's an example:
 
 ```txt
@@ -224,7 +273,37 @@ ProjectionExec: expr=[l_orderkey@1 as l_orderkey, l_shipdate@2 as l_shipdate, o_
 ```
 We can also plot a physical plan to a tree graph:
 
-![](f3.png)
+```{dot}
+//| fig-height: 4
+//| fig-width: 8
+digraph {
+    1[shape=box label="ProjectionExec: expr=[l_orderkey@1 as l_orderkey, l_shipdate@2 as l_shipdate, o_orderdate@0 as o_orderdate]", tooltip=""]
+    2[shape=box label="CoalesceBatchesExec: target_batch_size=8192", tooltip=""]
+    1 -> 2 [arrowhead=none, arrowtail=normal, dir=back]
+    3[shape=box label="HashJoinExec: mode=Partitioned, join_type=Inner, on=[(o_orderkey@0, l_orderkey@0)], projection=[o_orderdate@1, l_orderkey@2, l_shipdate@3]", tooltip=""]
+    2 -> 3 [arrowhead=none, arrowtail=normal, dir=back]
+    4[shape=box label="CoalesceBatchesExec: target_batch_size=8192", tooltip=""]
+    3 -> 4 [arrowhead=none, arrowtail=normal, dir=back]
+    5[shape=box label="RepartitionExec: partitioning=Hash([o_orderkey@0], 8), input_partitions=8", tooltip=""]
+    4 -> 5 [arrowhead=none, arrowtail=normal, dir=back]
+    6[shape=box label="CoalesceBatchesExec: target_batch_size=8192", tooltip=""]
+    5 -> 6 [arrowhead=none, arrowtail=normal, dir=back]
+    7[shape=box label="FilterExec: o_orderdate@1 >= 8766 AND o_orderdate@1 < 9131", tooltip=""]
+    6 -> 7 [arrowhead=none, arrowtail=normal, dir=back]
+    8[shape=box label="RepartitionExec: partitioning=RoundRobinBatch(8), input_partitions=1", tooltip=""]
+    7 -> 8 [arrowhead=none, arrowtail=normal, dir=back]
+    9[shape=box label="CsvExec: file_groups={1 group: [[orders.csv]]}, projection=[o_orderkey, o_orderdate], has_header=true", tooltip=""]
+    8 -> 9 [arrowhead=none, arrowtail=normal, dir=back]
+    10[shape=box label="CoalesceBatchesExec: target_batch_size=8192", tooltip=""]
+    3 -> 10 [arrowhead=none, arrowtail=normal, dir=back]
+    11[shape=box label="RepartitionExec: partitioning=Hash([l_orderkey@0], 8), input_partitions=8", tooltip=""]
+    10 -> 11 [arrowhead=none, arrowtail=normal, dir=back]
+    12[shape=box label="RepartitionExec: partitioning=RoundRobinBatch(8), input_partitions=1", tooltip=""]
+    11 -> 12 [arrowhead=none, arrowtail=normal, dir=back]
+    13[shape=box label="CsvExec: file_groups={1 group: [[lineitem.csv]]}, projection=[l_orderkey, l_shipdate], has_header=true", tooltip=""]
+    12 -> 13 [arrowhead=none, arrowtail=normal, dir=back]
+}
+```
 
 ::: {.callout-note}
 Note that a physical plan has much more details than a logical plan, it contains everything needed to execute the query!
@@ -233,10 +312,10 @@ Note that a physical plan has much more details than a logical plan, it contains
 
 
 ## Section 6: Query Execution
-### Input
+#### Input
 A physical plan
 
-### Output
+#### Output
 The final output like this:
 
 ```txt
