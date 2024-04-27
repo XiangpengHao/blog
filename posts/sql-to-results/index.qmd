@@ -1,8 +1,9 @@
 ---
 title: "What happens when you type a SQL in the database"
 date: "2024-04-26"
+date-modified: "2024-04-27"
 categories: []
-# image: "image.jpg"
+toc: true
 ---
 
 
@@ -216,7 +217,8 @@ Logical vs physical.
 
 todo: describe why we need to distinguish physical plan and logical plan.
 
-## Section 4: Query Optimizing (logical plan)
+## Section 4: Query Optimizing
+
 ### Input
 The (unoptimized) logical plan from last step.
 
@@ -234,7 +236,8 @@ Note the difference between unoptimized and optimized plan!
 The `Filter` has been pushed down to lower level nodes. Part of the projection has been embedded to the `TableScan`.
 
 ## Section 5: Physical Planing
-#### Input
+
+### Input
 A logical plan.
 
 ### Output
@@ -260,8 +263,9 @@ We can also plot a physical plan to a tree graph:
 
 ![](f3.png)
 
+::: {.callout-note}
 Note that a physical plan has much more details than a logical plan, it contains everything needed to execute the query!
-
+:::
 (Optional: we often have physical optimizer that optimize on a physical plan. Omitted here for simplicity)
 
 
