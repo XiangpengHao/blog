@@ -82,11 +82,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   "type": "overlay",
   "limit": 50,
   "keyboard-shortcut": [
-    "f",
-    "/",
-    "s"
+    "/"
   ],
-  "show-item-context": false,
   "language": {
     "search-no-results-text": "No results",
     "search-matching-documents-text": "matching documents",
@@ -101,9 +98,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     "search-label": "Search"
   }
 }</script>
+<!-- Cloudflare Web Analytics -->
+<script defer="" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon="{&quot;token&quot;: &quot;eb43fd3c2c574a2590aae63c67009129&quot;}"></script><!-- End Cloudflare Web Analytics -->
 
 
 <link rel="stylesheet" href="../../styles.css">
+<meta property="og:title" content="Xiangpeng’s blog - What happens when you type a SQL in the database">
+<meta property="og:description" content="">
+<meta property="og:site_name" content="Xiangpeng's blog">
 </head>
 
 <body class="nav-fixed">
@@ -135,6 +137,11 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   </li>  
   <li class="nav-item compact">
     <a class="nav-link" href="https://www.linkedin.com/in/hao-xiangpeng/"> <i class="bi bi-linkedin" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="../../index.xml"> <i class="bi bi-rss" role="img">
 </i> 
 <span class="menu-text"></span></a>
   </li>  
@@ -250,11 +257,11 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="outputs" class="level3">
 <h3 class="anchored" data-anchor-id="outputs">Outputs</h3>
 <p>If everything goes well, we should get results similar to this:</p>
-<pre><code>+------------+------------+-------------+
-| l_orderkey | l_shipdate | o_orderdate |
-+------------+------------+-------------+
-| 1          | 1994-06-01 | 1994-05-01  |
-+------------+------------+-------------+</code></pre>
+<div class="sourceCode" id="cb4"><pre class="sourceCode txt code-with-copy"><code class="sourceCode default"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>+------------+------------+-------------+</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>| l_orderkey | l_shipdate | o_orderdate |</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>+------------+------------+-------------+</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>| 1          | 1994-06-01 | 1994-05-01  |</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>+------------+------------+-------------+</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>The goal of this document is to explain step-by-step what happens from the inputs to outputs.</p>
 </section>
 </section>
@@ -277,125 +284,125 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="output" class="level3">
 <h3 class="anchored" data-anchor-id="output">Output</h3>
 <p>Structured <a href="https://docs.rs/datafusion/37.1.0/datafusion/sql/parser/enum.Statement.html"><code>statement</code></a> from the SQL:</p>
-<pre><code>Statement(
-    Query(
-        Query {
-            with: None,
-            body: Select(
-                Select {
-                    projection: [
-                        UnnamedExpr(
-                            Identifier(
-                                Ident {
-                                    value: "l_orderkey",
-                                    quote_style: None,
-                                },
-                            ),
-                        ),
-                        UnnamedExpr(
-                            Identifier(
-                                Ident {
-                                    value: "l_shipdate",
-                                    quote_style: None,
-                                },
-                            ),
-                        ),
-                        UnnamedExpr(
-                            Identifier(
-                                Ident {
-                                    value: "o_orderdate",
-                                    quote_style: None,
-                                },
-                            ),
-                        ),
-                    ],
-                    from: [
-                        TableWithJoins {
-                            relation: Table {
-                                name: ObjectName(
-                                    [
-                                        Ident {
-                                            value: "orders",
-                                            quote_style: None,
-                                        },
-                                    ],
-                                ),
-                                ...
-                            },
-                            joins: [
-                                Join {
-                                    relation: Table {
-                                        name: ObjectName(
-                                            [
-                                                Ident {
-                                                    value: "lineitem",
-                                                    quote_style: None,
-                                                },
-                                            ],
-                                        ),
-                                        ...
-                                    },
-                                    join_operator: Inner(
-                                        On(
-                                            BinaryOp {
-                                                left: Identifier(
-                                                    Ident {
-                                                        value: "l_orderkey",
-                                                        quote_style: None,
-                                                    },
-                                                ),
-                                                op: Eq,
-                                                right: Identifier(
-                                                    Ident {
-                                                        value: "o_orderkey",
-                                                        quote_style: None,
-                                                    },
-                                                ),
-                                            },
-                                        ),
-                                    ),
-                                },
-                            ],
-                        },
-                    ],
-                    selection: Some(
-                        BinaryOp {
-                            left: BinaryOp {
-                                left: Identifier(
-                                    Ident {
-                                        value: "o_orderdate",
-                                        quote_style: None,
-                                    },
-                                ),
-                                op: GtEq,
-                                right: TypedString {
-                                    data_type: Date,
-                                    value: "1994-01-01",
-                                },
-                            },
-                            op: And,
-                            right: BinaryOp {
-                                left: Identifier(
-                                    Ident {
-                                        value: "o_orderdate",
-                                        quote_style: None,
-                                    },
-                                ),
-                                op: Lt,
-                                right: TypedString {
-                                    data_type: Date,
-                                    value: "1995-01-01",
-                                },
-                            },
-                        },
-                    ),
-                    ...
-                },
-            ),
-            ...
-        },
-    ),
-)</code></pre>
+<div class="sourceCode" id="cb6"><pre class="sourceCode txt code-with-copy"><code class="sourceCode default"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>Statement(</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    Query(</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>        Query {</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>            with: None,</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>            body: Select(</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>                Select {</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>                    projection: [</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>                        UnnamedExpr(</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>                            Identifier(</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>                                Ident {</span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>                                    value: "l_orderkey",</span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>                                    quote_style: None,</span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>                                },</span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>                            ),</span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>                        ),</span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>                        UnnamedExpr(</span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>                            Identifier(</span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a>                                Ident {</span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a>                                    value: "l_shipdate",</span>
+<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a>                                    quote_style: None,</span>
+<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a>                                },</span>
+<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a>                            ),</span>
+<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a>                        ),</span>
+<span id="cb6-24"><a href="#cb6-24" aria-hidden="true" tabindex="-1"></a>                        UnnamedExpr(</span>
+<span id="cb6-25"><a href="#cb6-25" aria-hidden="true" tabindex="-1"></a>                            Identifier(</span>
+<span id="cb6-26"><a href="#cb6-26" aria-hidden="true" tabindex="-1"></a>                                Ident {</span>
+<span id="cb6-27"><a href="#cb6-27" aria-hidden="true" tabindex="-1"></a>                                    value: "o_orderdate",</span>
+<span id="cb6-28"><a href="#cb6-28" aria-hidden="true" tabindex="-1"></a>                                    quote_style: None,</span>
+<span id="cb6-29"><a href="#cb6-29" aria-hidden="true" tabindex="-1"></a>                                },</span>
+<span id="cb6-30"><a href="#cb6-30" aria-hidden="true" tabindex="-1"></a>                            ),</span>
+<span id="cb6-31"><a href="#cb6-31" aria-hidden="true" tabindex="-1"></a>                        ),</span>
+<span id="cb6-32"><a href="#cb6-32" aria-hidden="true" tabindex="-1"></a>                    ],</span>
+<span id="cb6-33"><a href="#cb6-33" aria-hidden="true" tabindex="-1"></a>                    from: [</span>
+<span id="cb6-34"><a href="#cb6-34" aria-hidden="true" tabindex="-1"></a>                        TableWithJoins {</span>
+<span id="cb6-35"><a href="#cb6-35" aria-hidden="true" tabindex="-1"></a>                            relation: Table {</span>
+<span id="cb6-36"><a href="#cb6-36" aria-hidden="true" tabindex="-1"></a>                                name: ObjectName(</span>
+<span id="cb6-37"><a href="#cb6-37" aria-hidden="true" tabindex="-1"></a>                                    [</span>
+<span id="cb6-38"><a href="#cb6-38" aria-hidden="true" tabindex="-1"></a>                                        Ident {</span>
+<span id="cb6-39"><a href="#cb6-39" aria-hidden="true" tabindex="-1"></a>                                            value: "orders",</span>
+<span id="cb6-40"><a href="#cb6-40" aria-hidden="true" tabindex="-1"></a>                                            quote_style: None,</span>
+<span id="cb6-41"><a href="#cb6-41" aria-hidden="true" tabindex="-1"></a>                                        },</span>
+<span id="cb6-42"><a href="#cb6-42" aria-hidden="true" tabindex="-1"></a>                                    ],</span>
+<span id="cb6-43"><a href="#cb6-43" aria-hidden="true" tabindex="-1"></a>                                ),</span>
+<span id="cb6-44"><a href="#cb6-44" aria-hidden="true" tabindex="-1"></a>                                ...</span>
+<span id="cb6-45"><a href="#cb6-45" aria-hidden="true" tabindex="-1"></a>                            },</span>
+<span id="cb6-46"><a href="#cb6-46" aria-hidden="true" tabindex="-1"></a>                            joins: [</span>
+<span id="cb6-47"><a href="#cb6-47" aria-hidden="true" tabindex="-1"></a>                                Join {</span>
+<span id="cb6-48"><a href="#cb6-48" aria-hidden="true" tabindex="-1"></a>                                    relation: Table {</span>
+<span id="cb6-49"><a href="#cb6-49" aria-hidden="true" tabindex="-1"></a>                                        name: ObjectName(</span>
+<span id="cb6-50"><a href="#cb6-50" aria-hidden="true" tabindex="-1"></a>                                            [</span>
+<span id="cb6-51"><a href="#cb6-51" aria-hidden="true" tabindex="-1"></a>                                                Ident {</span>
+<span id="cb6-52"><a href="#cb6-52" aria-hidden="true" tabindex="-1"></a>                                                    value: "lineitem",</span>
+<span id="cb6-53"><a href="#cb6-53" aria-hidden="true" tabindex="-1"></a>                                                    quote_style: None,</span>
+<span id="cb6-54"><a href="#cb6-54" aria-hidden="true" tabindex="-1"></a>                                                },</span>
+<span id="cb6-55"><a href="#cb6-55" aria-hidden="true" tabindex="-1"></a>                                            ],</span>
+<span id="cb6-56"><a href="#cb6-56" aria-hidden="true" tabindex="-1"></a>                                        ),</span>
+<span id="cb6-57"><a href="#cb6-57" aria-hidden="true" tabindex="-1"></a>                                        ...</span>
+<span id="cb6-58"><a href="#cb6-58" aria-hidden="true" tabindex="-1"></a>                                    },</span>
+<span id="cb6-59"><a href="#cb6-59" aria-hidden="true" tabindex="-1"></a>                                    join_operator: Inner(</span>
+<span id="cb6-60"><a href="#cb6-60" aria-hidden="true" tabindex="-1"></a>                                        On(</span>
+<span id="cb6-61"><a href="#cb6-61" aria-hidden="true" tabindex="-1"></a>                                            BinaryOp {</span>
+<span id="cb6-62"><a href="#cb6-62" aria-hidden="true" tabindex="-1"></a>                                                left: Identifier(</span>
+<span id="cb6-63"><a href="#cb6-63" aria-hidden="true" tabindex="-1"></a>                                                    Ident {</span>
+<span id="cb6-64"><a href="#cb6-64" aria-hidden="true" tabindex="-1"></a>                                                        value: "l_orderkey",</span>
+<span id="cb6-65"><a href="#cb6-65" aria-hidden="true" tabindex="-1"></a>                                                        quote_style: None,</span>
+<span id="cb6-66"><a href="#cb6-66" aria-hidden="true" tabindex="-1"></a>                                                    },</span>
+<span id="cb6-67"><a href="#cb6-67" aria-hidden="true" tabindex="-1"></a>                                                ),</span>
+<span id="cb6-68"><a href="#cb6-68" aria-hidden="true" tabindex="-1"></a>                                                op: Eq,</span>
+<span id="cb6-69"><a href="#cb6-69" aria-hidden="true" tabindex="-1"></a>                                                right: Identifier(</span>
+<span id="cb6-70"><a href="#cb6-70" aria-hidden="true" tabindex="-1"></a>                                                    Ident {</span>
+<span id="cb6-71"><a href="#cb6-71" aria-hidden="true" tabindex="-1"></a>                                                        value: "o_orderkey",</span>
+<span id="cb6-72"><a href="#cb6-72" aria-hidden="true" tabindex="-1"></a>                                                        quote_style: None,</span>
+<span id="cb6-73"><a href="#cb6-73" aria-hidden="true" tabindex="-1"></a>                                                    },</span>
+<span id="cb6-74"><a href="#cb6-74" aria-hidden="true" tabindex="-1"></a>                                                ),</span>
+<span id="cb6-75"><a href="#cb6-75" aria-hidden="true" tabindex="-1"></a>                                            },</span>
+<span id="cb6-76"><a href="#cb6-76" aria-hidden="true" tabindex="-1"></a>                                        ),</span>
+<span id="cb6-77"><a href="#cb6-77" aria-hidden="true" tabindex="-1"></a>                                    ),</span>
+<span id="cb6-78"><a href="#cb6-78" aria-hidden="true" tabindex="-1"></a>                                },</span>
+<span id="cb6-79"><a href="#cb6-79" aria-hidden="true" tabindex="-1"></a>                            ],</span>
+<span id="cb6-80"><a href="#cb6-80" aria-hidden="true" tabindex="-1"></a>                        },</span>
+<span id="cb6-81"><a href="#cb6-81" aria-hidden="true" tabindex="-1"></a>                    ],</span>
+<span id="cb6-82"><a href="#cb6-82" aria-hidden="true" tabindex="-1"></a>                    selection: Some(</span>
+<span id="cb6-83"><a href="#cb6-83" aria-hidden="true" tabindex="-1"></a>                        BinaryOp {</span>
+<span id="cb6-84"><a href="#cb6-84" aria-hidden="true" tabindex="-1"></a>                            left: BinaryOp {</span>
+<span id="cb6-85"><a href="#cb6-85" aria-hidden="true" tabindex="-1"></a>                                left: Identifier(</span>
+<span id="cb6-86"><a href="#cb6-86" aria-hidden="true" tabindex="-1"></a>                                    Ident {</span>
+<span id="cb6-87"><a href="#cb6-87" aria-hidden="true" tabindex="-1"></a>                                        value: "o_orderdate",</span>
+<span id="cb6-88"><a href="#cb6-88" aria-hidden="true" tabindex="-1"></a>                                        quote_style: None,</span>
+<span id="cb6-89"><a href="#cb6-89" aria-hidden="true" tabindex="-1"></a>                                    },</span>
+<span id="cb6-90"><a href="#cb6-90" aria-hidden="true" tabindex="-1"></a>                                ),</span>
+<span id="cb6-91"><a href="#cb6-91" aria-hidden="true" tabindex="-1"></a>                                op: GtEq,</span>
+<span id="cb6-92"><a href="#cb6-92" aria-hidden="true" tabindex="-1"></a>                                right: TypedString {</span>
+<span id="cb6-93"><a href="#cb6-93" aria-hidden="true" tabindex="-1"></a>                                    data_type: Date,</span>
+<span id="cb6-94"><a href="#cb6-94" aria-hidden="true" tabindex="-1"></a>                                    value: "1994-01-01",</span>
+<span id="cb6-95"><a href="#cb6-95" aria-hidden="true" tabindex="-1"></a>                                },</span>
+<span id="cb6-96"><a href="#cb6-96" aria-hidden="true" tabindex="-1"></a>                            },</span>
+<span id="cb6-97"><a href="#cb6-97" aria-hidden="true" tabindex="-1"></a>                            op: And,</span>
+<span id="cb6-98"><a href="#cb6-98" aria-hidden="true" tabindex="-1"></a>                            right: BinaryOp {</span>
+<span id="cb6-99"><a href="#cb6-99" aria-hidden="true" tabindex="-1"></a>                                left: Identifier(</span>
+<span id="cb6-100"><a href="#cb6-100" aria-hidden="true" tabindex="-1"></a>                                    Ident {</span>
+<span id="cb6-101"><a href="#cb6-101" aria-hidden="true" tabindex="-1"></a>                                        value: "o_orderdate",</span>
+<span id="cb6-102"><a href="#cb6-102" aria-hidden="true" tabindex="-1"></a>                                        quote_style: None,</span>
+<span id="cb6-103"><a href="#cb6-103" aria-hidden="true" tabindex="-1"></a>                                    },</span>
+<span id="cb6-104"><a href="#cb6-104" aria-hidden="true" tabindex="-1"></a>                                ),</span>
+<span id="cb6-105"><a href="#cb6-105" aria-hidden="true" tabindex="-1"></a>                                op: Lt,</span>
+<span id="cb6-106"><a href="#cb6-106" aria-hidden="true" tabindex="-1"></a>                                right: TypedString {</span>
+<span id="cb6-107"><a href="#cb6-107" aria-hidden="true" tabindex="-1"></a>                                    data_type: Date,</span>
+<span id="cb6-108"><a href="#cb6-108" aria-hidden="true" tabindex="-1"></a>                                    value: "1995-01-01",</span>
+<span id="cb6-109"><a href="#cb6-109" aria-hidden="true" tabindex="-1"></a>                                },</span>
+<span id="cb6-110"><a href="#cb6-110" aria-hidden="true" tabindex="-1"></a>                            },</span>
+<span id="cb6-111"><a href="#cb6-111" aria-hidden="true" tabindex="-1"></a>                        },</span>
+<span id="cb6-112"><a href="#cb6-112" aria-hidden="true" tabindex="-1"></a>                    ),</span>
+<span id="cb6-113"><a href="#cb6-113" aria-hidden="true" tabindex="-1"></a>                    ...</span>
+<span id="cb6-114"><a href="#cb6-114" aria-hidden="true" tabindex="-1"></a>                },</span>
+<span id="cb6-115"><a href="#cb6-115" aria-hidden="true" tabindex="-1"></a>            ),</span>
+<span id="cb6-116"><a href="#cb6-116" aria-hidden="true" tabindex="-1"></a>            ...</span>
+<span id="cb6-117"><a href="#cb6-117" aria-hidden="true" tabindex="-1"></a>        },</span>
+<span id="cb6-118"><a href="#cb6-118" aria-hidden="true" tabindex="-1"></a>    ),</span>
+<span id="cb6-119"><a href="#cb6-119" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </section>
 </section>
 <section id="section-3-query-planning" class="level2">
@@ -407,11 +414,11 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="output-1" class="level3">
 <h3 class="anchored" data-anchor-id="output-1">Output</h3>
 <p>The logical query plan, something like this:</p>
-<pre><code>Projection: lineitem.l_orderkey, lineitem.l_shipdate, orders.o_orderdate
-  Filter: orders.o_orderdate &gt;= CAST(Utf8("1994-01-01") AS Date32) AND orders.o_orderdate &lt; CAST(Utf8("1995-01-01") AS Date32)
-    Inner Join:  Filter: lineitem.l_orderkey = orders.o_orderkey
-      TableScan: orders
-      TableScan: lineitem</code></pre>
+<div class="sourceCode" id="cb7"><pre class="sourceCode txt code-with-copy"><code class="sourceCode default"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>Projection: lineitem.l_orderkey, lineitem.l_shipdate, orders.o_orderdate</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  Filter: orders.o_orderdate &gt;= CAST(Utf8("1994-01-01") AS Date32) AND orders.o_orderdate &lt; CAST(Utf8("1995-01-01") AS Date32)</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    Inner Join:  Filter: lineitem.l_orderkey = orders.o_orderkey</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>      TableScan: orders</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>      TableScan: lineitem</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Plot it as a tree. <img src="f1.png" class="img-fluid"></p>
 <p>Logical vs physical.</p>
 <p>todo: describe why we need to distinguish physical plan and logical plan.</p>
@@ -426,11 +433,11 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="output-2" class="level3">
 <h3 class="anchored" data-anchor-id="output-2">Output</h3>
 <p>An optimized logical plan.</p>
-<pre><code>Projection: lineitem.l_orderkey, lineitem.l_shipdate, orders.o_orderdate
-  Inner Join: orders.o_orderkey = lineitem.l_orderkey
-    Filter: orders.o_orderdate &gt;= Date32("8766") AND orders.o_orderdate &lt; Date32("9131")
-      TableScan: orders projection=[o_orderkey, o_orderdate], partial_filters=[orders.o_orderdate &gt;= Date32("8766"), orders.o_orderdate &lt; Date32("9131")]
-    TableScan: lineitem projection=[l_orderkey, l_shipdate]</code></pre>
+<div class="sourceCode" id="cb8"><pre class="sourceCode txt code-with-copy"><code class="sourceCode default"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>Projection: lineitem.l_orderkey, lineitem.l_shipdate, orders.o_orderdate</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  Inner Join: orders.o_orderkey = lineitem.l_orderkey</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    Filter: orders.o_orderdate &gt;= Date32("8766") AND orders.o_orderdate &lt; Date32("9131")</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>      TableScan: orders projection=[o_orderkey, o_orderdate], partial_filters=[orders.o_orderdate &gt;= Date32("8766"), orders.o_orderdate &lt; Date32("9131")]</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>    TableScan: lineitem projection=[l_orderkey, l_shipdate]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p><img src="f2.png" class="img-fluid"> Note the difference between unoptimized and optimized plan! The <code>Filter</code> has been pushed down to lower level nodes. Part of the projection has been embedded to the <code>TableScan</code>.</p>
 </section>
 </section>
@@ -443,20 +450,20 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="output-3" class="level3">
 <h3 class="anchored" data-anchor-id="output-3">Output</h3>
 <p>A physical plan. Unlike logical plans, physical plans are more concrete about what to do, here’s an example:</p>
-<pre><code>Physical plan:
-ProjectionExec: expr=[l_orderkey@1 as l_orderkey, l_shipdate@2 as l_shipdate, o_orderdate@0 as o_orderdate]
-  CoalesceBatchesExec: target_batch_size=8192
-    HashJoinExec: mode=Partitioned, join_type=Inner, on=[(o_orderkey@0, l_orderkey@0)], projection=[o_orderdate@1, l_orderkey@2, l_shipdate@3]
-      CoalesceBatchesExec: target_batch_size=8192
-        RepartitionExec: partitioning=Hash([o_orderkey@0], 8), input_partitions=8
-          CoalesceBatchesExec: target_batch_size=8192
-            FilterExec: o_orderdate@1 &gt;= 8766 AND o_orderdate@1 &lt; 9131
-              RepartitionExec: partitioning=RoundRobinBatch(8), input_partitions=1
-                CsvExec: file_groups={1 group: [[Users/xiangpeng/work/coding/db-ml/bin/example-data/orders.csv]]}, projection=[o_orderkey, o_orderdate], has_header=true
-      CoalesceBatchesExec: target_batch_size=8192
-        RepartitionExec: partitioning=Hash([l_orderkey@0], 8), input_partitions=8
-          RepartitionExec: partitioning=RoundRobinBatch(8), input_partitions=1
-            CsvExec: file_groups={1 group: [[Users/xiangpeng/work/coding/db-ml/bin/example-data/lineitem.csv]]}, projection=[l_orderkey, l_shipdate], has_header=true</code></pre>
+<div class="sourceCode" id="cb9"><pre class="sourceCode txt code-with-copy"><code class="sourceCode default"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>Physical plan:</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>ProjectionExec: expr=[l_orderkey@1 as l_orderkey, l_shipdate@2 as l_shipdate, o_orderdate@0 as o_orderdate]</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  CoalesceBatchesExec: target_batch_size=8192</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>    HashJoinExec: mode=Partitioned, join_type=Inner, on=[(o_orderkey@0, l_orderkey@0)], projection=[o_orderdate@1, l_orderkey@2, l_shipdate@3]</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>      CoalesceBatchesExec: target_batch_size=8192</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>        RepartitionExec: partitioning=Hash([o_orderkey@0], 8), input_partitions=8</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>          CoalesceBatchesExec: target_batch_size=8192</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>            FilterExec: o_orderdate@1 &gt;= 8766 AND o_orderdate@1 &lt; 9131</span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>              RepartitionExec: partitioning=RoundRobinBatch(8), input_partitions=1</span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>                CsvExec: file_groups={1 group: [[Users/xiangpeng/work/coding/db-ml/bin/example-data/orders.csv]]}, projection=[o_orderkey, o_orderdate], has_header=true</span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>      CoalesceBatchesExec: target_batch_size=8192</span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>        RepartitionExec: partitioning=Hash([l_orderkey@0], 8), input_partitions=8</span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>          RepartitionExec: partitioning=RoundRobinBatch(8), input_partitions=1</span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>            CsvExec: file_groups={1 group: [[Users/xiangpeng/work/coding/db-ml/bin/example-data/lineitem.csv]]}, projection=[l_orderkey, l_shipdate], has_header=true</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>We can also plot a physical plan to a tree graph:</p>
 <p><img src="f3.png" class="img-fluid"></p>
 <div class="callout callout-style-default callout-note callout-titled">
@@ -484,11 +491,11 @@ Note
 <section id="output-4" class="level3">
 <h3 class="anchored" data-anchor-id="output-4">Output</h3>
 <p>The final output like this:</p>
-<pre><code>+------------+------------+-------------+
-| l_orderkey | l_shipdate | o_orderdate |
-+------------+------------+-------------+
-| 1          | 1994-06-01 | 1994-05-01  |
-+------------+------------+-------------+</code></pre>
+<div class="sourceCode" id="cb10"><pre class="sourceCode txt code-with-copy"><code class="sourceCode default"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>+------------+------------+-------------+</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>| l_orderkey | l_shipdate | o_orderdate |</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>+------------+------------+-------------+</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>| 1          | 1994-06-01 | 1994-05-01  |</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>+------------+------------+-------------+</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </section>
 <section id="how-to-execute-a-physical-plan" class="level3">
 <h3 class="anchored" data-anchor-id="how-to-execute-a-physical-plan">How to execute a physical plan?</h3>

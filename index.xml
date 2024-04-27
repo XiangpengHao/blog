@@ -1,0 +1,381 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss  xmlns:atom="http://www.w3.org/2005/Atom" 
+      xmlns:media="http://search.yahoo.com/mrss/" 
+      xmlns:content="http://purl.org/rss/1.0/modules/content/" 
+      xmlns:dc="http://purl.org/dc/elements/1.1/" 
+      version="2.0">
+<channel>
+<title>Xiangpeng&#39;s blog</title>
+<link>https://blog.haoxp.xyz/</link>
+<atom:link href="https://blog.haoxp.xyz/index.xml" rel="self" type="application/rss+xml"/>
+<description></description>
+<generator>quarto-1.4.553</generator>
+<lastBuildDate>Fri, 26 Apr 2024 00:00:00 GMT</lastBuildDate>
+<item>
+  <title>What happens when you type a SQL in the database</title>
+  <link>https://blog.haoxp.xyz/posts/sql-to-results/</link>
+  <description><![CDATA[ 
+
+
+
+
+
+<p>This is a working-in-progress blog post to explain how database query engine works. This is a blog post I hoped I knew when I was younger. I believe there are many textbook that covers this topic in much more details, this post aims to be a high level overview of how things work. I try to be as concrete as possible, as much examples as possible.</p>
+<p>For simplification, we only consider analytical databases. We assume the data can be loaded with just one command (magic).</p>
+<section id="section-1-end-to-end-view" class="level2">
+<h2 class="anchored" data-anchor-id="section-1-end-to-end-view">Section 1: End-To-End View</h2>
+<section id="inputs" class="level3">
+<h3 class="anchored" data-anchor-id="inputs">Inputs</h3>
+<p>Let’s say we have this simple query (adapted from <a href="https://github.com/apache/datafusion/blob/main/benchmarks/queries/q5.sql">TPC-H query 5</a>):</p>
+<div class="sourceCode" id="cb1" style="background: #f1f3f5;"><pre class="sourceCode sql code-with-copy"><code class="sourceCode sql"><span id="cb1-1"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">SELECT</span></span>
+<span id="cb1-2">    l_orderkey, l_shipdate, o_orderdate</span>
+<span id="cb1-3"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">FROM</span></span>
+<span id="cb1-4">    orders</span>
+<span id="cb1-5"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">JOIN</span></span>
+<span id="cb1-6">    lineitem <span class="kw" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">ON</span> l_orderkey <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> o_orderkey</span>
+<span id="cb1-7"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">WHERE</span></span>
+<span id="cb1-8">    o_orderdate <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&gt;=</span> <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">DATE</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'1994-01-01'</span></span>
+<span id="cb1-9">    <span class="kw" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">AND</span> o_orderdate <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&lt;</span> <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">DATE</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'1995-01-01'</span>;</span></code></pre></div>
+<p><code>lineitem</code> table in CSV format:</p>
+<pre class="csv"><code>l_orderkey,l_linenumber,l_shipdate,l_commitdate,l_receiptdate,l_shipmode,l_comment
+1,1,1994-06-01,1994-05-15,1994-06-15,AIR,Delivered on time</code></pre>
+<p><code>orders</code> table in CSV format:</p>
+<pre class="csv"><code>o_orderkey,o_orderdate,o_orderpriority,o_clerk,o_comment
+1,1994-05-01,urgent,Clerk#1,Note1
+2,1994-07-01,low,Clerk#2,Note2</code></pre>
+</section>
+<section id="outputs" class="level3">
+<h3 class="anchored" data-anchor-id="outputs">Outputs</h3>
+<p>If everything goes well, we should get results similar to this:</p>
+<div class="sourceCode" id="cb4" style="background: #f1f3f5;"><pre class="sourceCode txt code-with-copy"><code class="sourceCode default"><span id="cb4-1">+------------+------------+-------------+</span>
+<span id="cb4-2">| l_orderkey | l_shipdate | o_orderdate |</span>
+<span id="cb4-3">+------------+------------+-------------+</span>
+<span id="cb4-4">| 1          | 1994-06-01 | 1994-05-01  |</span>
+<span id="cb4-5">+------------+------------+-------------+</span></code></pre></div>
+<p>The goal of this document is to explain step-by-step what happens from the inputs to outputs.</p>
+</section>
+</section>
+<section id="section-2-parsing" class="level2">
+<h2 class="anchored" data-anchor-id="section-2-parsing">Section 2: Parsing</h2>
+<p>Skipped for now as it is mostly orthogonal to the data system pipelines.</p>
+<section id="input" class="level3">
+<h3 class="anchored" data-anchor-id="input">Input</h3>
+<p>A SQL query text.</p>
+<div class="sourceCode" id="cb5" style="background: #f1f3f5;"><pre class="sourceCode sql code-with-copy"><code class="sourceCode sql"><span id="cb5-1"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">SELECT</span></span>
+<span id="cb5-2">    l_orderkey, l_shipdate, o_orderdate</span>
+<span id="cb5-3"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">FROM</span></span>
+<span id="cb5-4">    orders</span>
+<span id="cb5-5"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">JOIN</span></span>
+<span id="cb5-6">    lineitem <span class="kw" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">ON</span> l_orderkey <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> o_orderkey</span>
+<span id="cb5-7"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">WHERE</span></span>
+<span id="cb5-8">    o_orderdate <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&gt;=</span> <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">DATE</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'1994-01-01'</span></span>
+<span id="cb5-9">    <span class="kw" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">AND</span> o_orderdate <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&lt;</span> <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">DATE</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'1995-01-01'</span>;</span></code></pre></div>
+</section>
+<section id="output" class="level3">
+<h3 class="anchored" data-anchor-id="output">Output</h3>
+<p>Structured <a href="https://docs.rs/datafusion/37.1.0/datafusion/sql/parser/enum.Statement.html"><code>statement</code></a> from the SQL:</p>
+<div class="sourceCode" id="cb6" style="background: #f1f3f5;"><pre class="sourceCode txt code-with-copy"><code class="sourceCode default"><span id="cb6-1">Statement(</span>
+<span id="cb6-2">    Query(</span>
+<span id="cb6-3">        Query {</span>
+<span id="cb6-4">            with: None,</span>
+<span id="cb6-5">            body: Select(</span>
+<span id="cb6-6">                Select {</span>
+<span id="cb6-7">                    projection: [</span>
+<span id="cb6-8">                        UnnamedExpr(</span>
+<span id="cb6-9">                            Identifier(</span>
+<span id="cb6-10">                                Ident {</span>
+<span id="cb6-11">                                    value: "l_orderkey",</span>
+<span id="cb6-12">                                    quote_style: None,</span>
+<span id="cb6-13">                                },</span>
+<span id="cb6-14">                            ),</span>
+<span id="cb6-15">                        ),</span>
+<span id="cb6-16">                        UnnamedExpr(</span>
+<span id="cb6-17">                            Identifier(</span>
+<span id="cb6-18">                                Ident {</span>
+<span id="cb6-19">                                    value: "l_shipdate",</span>
+<span id="cb6-20">                                    quote_style: None,</span>
+<span id="cb6-21">                                },</span>
+<span id="cb6-22">                            ),</span>
+<span id="cb6-23">                        ),</span>
+<span id="cb6-24">                        UnnamedExpr(</span>
+<span id="cb6-25">                            Identifier(</span>
+<span id="cb6-26">                                Ident {</span>
+<span id="cb6-27">                                    value: "o_orderdate",</span>
+<span id="cb6-28">                                    quote_style: None,</span>
+<span id="cb6-29">                                },</span>
+<span id="cb6-30">                            ),</span>
+<span id="cb6-31">                        ),</span>
+<span id="cb6-32">                    ],</span>
+<span id="cb6-33">                    from: [</span>
+<span id="cb6-34">                        TableWithJoins {</span>
+<span id="cb6-35">                            relation: Table {</span>
+<span id="cb6-36">                                name: ObjectName(</span>
+<span id="cb6-37">                                    [</span>
+<span id="cb6-38">                                        Ident {</span>
+<span id="cb6-39">                                            value: "orders",</span>
+<span id="cb6-40">                                            quote_style: None,</span>
+<span id="cb6-41">                                        },</span>
+<span id="cb6-42">                                    ],</span>
+<span id="cb6-43">                                ),</span>
+<span id="cb6-44">                                ...</span>
+<span id="cb6-45">                            },</span>
+<span id="cb6-46">                            joins: [</span>
+<span id="cb6-47">                                Join {</span>
+<span id="cb6-48">                                    relation: Table {</span>
+<span id="cb6-49">                                        name: ObjectName(</span>
+<span id="cb6-50">                                            [</span>
+<span id="cb6-51">                                                Ident {</span>
+<span id="cb6-52">                                                    value: "lineitem",</span>
+<span id="cb6-53">                                                    quote_style: None,</span>
+<span id="cb6-54">                                                },</span>
+<span id="cb6-55">                                            ],</span>
+<span id="cb6-56">                                        ),</span>
+<span id="cb6-57">                                        ...</span>
+<span id="cb6-58">                                    },</span>
+<span id="cb6-59">                                    join_operator: Inner(</span>
+<span id="cb6-60">                                        On(</span>
+<span id="cb6-61">                                            BinaryOp {</span>
+<span id="cb6-62">                                                left: Identifier(</span>
+<span id="cb6-63">                                                    Ident {</span>
+<span id="cb6-64">                                                        value: "l_orderkey",</span>
+<span id="cb6-65">                                                        quote_style: None,</span>
+<span id="cb6-66">                                                    },</span>
+<span id="cb6-67">                                                ),</span>
+<span id="cb6-68">                                                op: Eq,</span>
+<span id="cb6-69">                                                right: Identifier(</span>
+<span id="cb6-70">                                                    Ident {</span>
+<span id="cb6-71">                                                        value: "o_orderkey",</span>
+<span id="cb6-72">                                                        quote_style: None,</span>
+<span id="cb6-73">                                                    },</span>
+<span id="cb6-74">                                                ),</span>
+<span id="cb6-75">                                            },</span>
+<span id="cb6-76">                                        ),</span>
+<span id="cb6-77">                                    ),</span>
+<span id="cb6-78">                                },</span>
+<span id="cb6-79">                            ],</span>
+<span id="cb6-80">                        },</span>
+<span id="cb6-81">                    ],</span>
+<span id="cb6-82">                    selection: Some(</span>
+<span id="cb6-83">                        BinaryOp {</span>
+<span id="cb6-84">                            left: BinaryOp {</span>
+<span id="cb6-85">                                left: Identifier(</span>
+<span id="cb6-86">                                    Ident {</span>
+<span id="cb6-87">                                        value: "o_orderdate",</span>
+<span id="cb6-88">                                        quote_style: None,</span>
+<span id="cb6-89">                                    },</span>
+<span id="cb6-90">                                ),</span>
+<span id="cb6-91">                                op: GtEq,</span>
+<span id="cb6-92">                                right: TypedString {</span>
+<span id="cb6-93">                                    data_type: Date,</span>
+<span id="cb6-94">                                    value: "1994-01-01",</span>
+<span id="cb6-95">                                },</span>
+<span id="cb6-96">                            },</span>
+<span id="cb6-97">                            op: And,</span>
+<span id="cb6-98">                            right: BinaryOp {</span>
+<span id="cb6-99">                                left: Identifier(</span>
+<span id="cb6-100">                                    Ident {</span>
+<span id="cb6-101">                                        value: "o_orderdate",</span>
+<span id="cb6-102">                                        quote_style: None,</span>
+<span id="cb6-103">                                    },</span>
+<span id="cb6-104">                                ),</span>
+<span id="cb6-105">                                op: Lt,</span>
+<span id="cb6-106">                                right: TypedString {</span>
+<span id="cb6-107">                                    data_type: Date,</span>
+<span id="cb6-108">                                    value: "1995-01-01",</span>
+<span id="cb6-109">                                },</span>
+<span id="cb6-110">                            },</span>
+<span id="cb6-111">                        },</span>
+<span id="cb6-112">                    ),</span>
+<span id="cb6-113">                    ...</span>
+<span id="cb6-114">                },</span>
+<span id="cb6-115">            ),</span>
+<span id="cb6-116">            ...</span>
+<span id="cb6-117">        },</span>
+<span id="cb6-118">    ),</span>
+<span id="cb6-119">)</span></code></pre></div>
+</section>
+</section>
+<section id="section-3-query-planning" class="level2">
+<h2 class="anchored" data-anchor-id="section-3-query-planning">Section 3: Query Planning</h2>
+<section id="input-1" class="level3">
+<h3 class="anchored" data-anchor-id="input-1">Input</h3>
+<p>The query statement from last step.</p>
+</section>
+<section id="output-1" class="level3">
+<h3 class="anchored" data-anchor-id="output-1">Output</h3>
+<p>The logical query plan, something like this:</p>
+<div class="sourceCode" id="cb7" style="background: #f1f3f5;"><pre class="sourceCode txt code-with-copy"><code class="sourceCode default"><span id="cb7-1">Projection: lineitem.l_orderkey, lineitem.l_shipdate, orders.o_orderdate</span>
+<span id="cb7-2">  Filter: orders.o_orderdate &gt;= CAST(Utf8("1994-01-01") AS Date32) AND orders.o_orderdate &lt; CAST(Utf8("1995-01-01") AS Date32)</span>
+<span id="cb7-3">    Inner Join:  Filter: lineitem.l_orderkey = orders.o_orderkey</span>
+<span id="cb7-4">      TableScan: orders</span>
+<span id="cb7-5">      TableScan: lineitem</span></code></pre></div>
+<p>Plot it as a tree. <img src="https://blog.haoxp.xyz/posts/sql-to-results/f1.png" class="img-fluid"></p>
+<p>Logical vs physical.</p>
+<p>todo: describe why we need to distinguish physical plan and logical plan.</p>
+</section>
+</section>
+<section id="section-4-query-optimizing" class="level2">
+<h2 class="anchored" data-anchor-id="section-4-query-optimizing">Section 4: Query Optimizing</h2>
+<section id="input-2" class="level3">
+<h3 class="anchored" data-anchor-id="input-2">Input</h3>
+<p>The (unoptimized) logical plan from last step.</p>
+</section>
+<section id="output-2" class="level3">
+<h3 class="anchored" data-anchor-id="output-2">Output</h3>
+<p>An optimized logical plan.</p>
+<div class="sourceCode" id="cb8" style="background: #f1f3f5;"><pre class="sourceCode txt code-with-copy"><code class="sourceCode default"><span id="cb8-1">Projection: lineitem.l_orderkey, lineitem.l_shipdate, orders.o_orderdate</span>
+<span id="cb8-2">  Inner Join: orders.o_orderkey = lineitem.l_orderkey</span>
+<span id="cb8-3">    Filter: orders.o_orderdate &gt;= Date32("8766") AND orders.o_orderdate &lt; Date32("9131")</span>
+<span id="cb8-4">      TableScan: orders projection=[o_orderkey, o_orderdate], partial_filters=[orders.o_orderdate &gt;= Date32("8766"), orders.o_orderdate &lt; Date32("9131")]</span>
+<span id="cb8-5">    TableScan: lineitem projection=[l_orderkey, l_shipdate]</span></code></pre></div>
+<p><img src="https://blog.haoxp.xyz/posts/sql-to-results/f2.png" class="img-fluid"> Note the difference between unoptimized and optimized plan! The <code>Filter</code> has been pushed down to lower level nodes. Part of the projection has been embedded to the <code>TableScan</code>.</p>
+</section>
+</section>
+<section id="section-5-physical-planing" class="level2">
+<h2 class="anchored" data-anchor-id="section-5-physical-planing">Section 5: Physical Planing</h2>
+<section id="input-3" class="level3">
+<h3 class="anchored" data-anchor-id="input-3">Input</h3>
+<p>A logical plan.</p>
+</section>
+<section id="output-3" class="level3">
+<h3 class="anchored" data-anchor-id="output-3">Output</h3>
+<p>A physical plan. Unlike logical plans, physical plans are more concrete about what to do, here’s an example:</p>
+<div class="sourceCode" id="cb9" style="background: #f1f3f5;"><pre class="sourceCode txt code-with-copy"><code class="sourceCode default"><span id="cb9-1">Physical plan:</span>
+<span id="cb9-2">ProjectionExec: expr=[l_orderkey@1 as l_orderkey, l_shipdate@2 as l_shipdate, o_orderdate@0 as o_orderdate]</span>
+<span id="cb9-3">  CoalesceBatchesExec: target_batch_size=8192</span>
+<span id="cb9-4">    HashJoinExec: mode=Partitioned, join_type=Inner, on=[(o_orderkey@0, l_orderkey@0)], projection=[o_orderdate@1, l_orderkey@2, l_shipdate@3]</span>
+<span id="cb9-5">      CoalesceBatchesExec: target_batch_size=8192</span>
+<span id="cb9-6">        RepartitionExec: partitioning=Hash([o_orderkey@0], 8), input_partitions=8</span>
+<span id="cb9-7">          CoalesceBatchesExec: target_batch_size=8192</span>
+<span id="cb9-8">            FilterExec: o_orderdate@1 &gt;= 8766 AND o_orderdate@1 &lt; 9131</span>
+<span id="cb9-9">              RepartitionExec: partitioning=RoundRobinBatch(8), input_partitions=1</span>
+<span id="cb9-10">                CsvExec: file_groups={1 group: [[Users/xiangpeng/work/coding/db-ml/bin/example-data/orders.csv]]}, projection=[o_orderkey, o_orderdate], has_header=true</span>
+<span id="cb9-11">      CoalesceBatchesExec: target_batch_size=8192</span>
+<span id="cb9-12">        RepartitionExec: partitioning=Hash([l_orderkey@0], 8), input_partitions=8</span>
+<span id="cb9-13">          RepartitionExec: partitioning=RoundRobinBatch(8), input_partitions=1</span>
+<span id="cb9-14">            CsvExec: file_groups={1 group: [[Users/xiangpeng/work/coding/db-ml/bin/example-data/lineitem.csv]]}, projection=[l_orderkey, l_shipdate], has_header=true</span></code></pre></div>
+<p>We can also plot a physical plan to a tree graph:</p>
+<p><img src="https://blog.haoxp.xyz/posts/sql-to-results/f3.png" class="img-fluid"></p>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Note
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Note that a physical plan has much more details than a logical plan, it contains everything needed to execute the query!</p>
+</div>
+</div>
+<p>(Optional: we often have physical optimizer that optimize on a physical plan. Omitted here for simplicity)</p>
+</section>
+</section>
+<section id="section-6-query-execution" class="level2">
+<h2 class="anchored" data-anchor-id="section-6-query-execution">Section 6: Query Execution</h2>
+<section id="input-4" class="level3">
+<h3 class="anchored" data-anchor-id="input-4">Input</h3>
+<p>A physical plan</p>
+</section>
+<section id="output-4" class="level3">
+<h3 class="anchored" data-anchor-id="output-4">Output</h3>
+<p>The final output like this:</p>
+<div class="sourceCode" id="cb10" style="background: #f1f3f5;"><pre class="sourceCode txt code-with-copy"><code class="sourceCode default"><span id="cb10-1">+------------+------------+-------------+</span>
+<span id="cb10-2">| l_orderkey | l_shipdate | o_orderdate |</span>
+<span id="cb10-3">+------------+------------+-------------+</span>
+<span id="cb10-4">| 1          | 1994-06-01 | 1994-05-01  |</span>
+<span id="cb10-5">+------------+------------+-------------+</span></code></pre></div>
+</section>
+<section id="how-to-execute-a-physical-plan" class="level3">
+<h3 class="anchored" data-anchor-id="how-to-execute-a-physical-plan">How to execute a physical plan?</h3>
+<p>TODO: discuss pull-based and push-based execution.</p>
+<p>The simplest execution model is <a href="https://justinjaffray.com/query-engines-push-vs.-pull/">pull-based execution</a>, which implements a post-order traversal of the physical plan. For a tree like this (<a href="https://www.freecodecamp.org/news/binary-search-tree-traversal-inorder-preorder-post-order-for-bst/">credit</a>): <img src="https://blog.haoxp.xyz/posts/sql-to-results/f4.png" class="img-fluid"> We get a traversal order of <code>D -&gt; E -&gt; B -&gt; F -&gt; G -&gt; C -&gt; A</code></p>
+<p>Applying to our physical graph above, we get a execution order of:</p>
+<ol type="1">
+<li><p><code>CsvExec (orders.csv)</code></p></li>
+<li><p><code>RepartitionExec</code></p></li>
+<li><p><code>FilterExec</code></p></li>
+<li><p><code>CoalesceBatchesExec</code></p></li>
+<li><p><code>RepartitionExec</code></p></li>
+<li><p><code>CoalesceBatchesExec</code></p></li>
+<li><p><code>CsvExec (lineitem.csv)</code></p></li>
+<li><p><code>RepartitionExec</code></p></li>
+<li><p><code>RepartitionExec</code></p></li>
+<li><p><code>CoalesceBatchesExec</code></p></li>
+<li><p><code>HashJoinExec</code></p></li>
+<li><p><code>CoalesceBatchesExec</code></p></li>
+<li><p><code>ProjectionExec</code></p></li>
+</ol>
+<p>The <code>RepartitionExec</code> and <code>CoalesceBatchesExec</code> are executors that partitions the data for multi-thread processing (based on the <a href="https://w6113.github.io/files/papers/volcanoparallelism-89.pdf">Volcano execution</a> style)</p>
+<p>A simplified, single-threaded, no-partitioned execution order would be:</p>
+<ol type="1">
+<li><p><code>CsvExec (orders.csv)</code></p></li>
+<li><p><code>FilterExec</code></p></li>
+<li><p><code>CsvExec (lineitem.csv)</code></p></li>
+<li><p><code>HashJoinExec</code></p></li>
+<li><p><code>ProjectionExec</code></p></li>
+</ol>
+
+
+</section>
+</section>
+
+ ]]></description>
+  <guid>https://blog.haoxp.xyz/posts/sql-to-results/</guid>
+  <pubDate>Fri, 26 Apr 2024 00:00:00 GMT</pubDate>
+</item>
+</channel>
+</rss>
