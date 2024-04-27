@@ -3,6 +3,10 @@ project:
 
 website:
   title: "Xiangpeng's blog"
+  site-url: https://blog.haoxp.xyz
+  open-graph: true
+  search: 
+    keyboard-shortcut: ['/']
   navbar:
     right:
       - icon: person-circle
@@ -11,6 +15,11 @@ website:
         href:  https://github.com/XiangpengHao
       - icon: linkedin
         href: https://www.linkedin.com/in/hao-xiangpeng/
+      - icon: rss
+        href: index.xml
+
+include-in-header: 
+  file: cloudflare.html 
 
 format:
   html:

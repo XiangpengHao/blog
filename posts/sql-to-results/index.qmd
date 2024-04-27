@@ -44,7 +44,7 @@ o_orderkey,o_orderdate,o_orderpriority,o_clerk,o_comment
 
 ### Outputs
 If everything goes well, we should get results similar to this:
-```
+```txt
 +------------+------------+-------------+
 | l_orderkey | l_shipdate | o_orderdate |
 +------------+------------+-------------+
@@ -74,7 +74,8 @@ WHERE
 
 ### Output
 Structured [`statement`](https://docs.rs/datafusion/37.1.0/datafusion/sql/parser/enum.Statement.html) from the SQL:
-```
+
+```txt
 Statement(
     Query(
         Query {
@@ -202,7 +203,8 @@ The query statement from last step.
 
 ### Output
 The logical query plan, something like this:
-```
+
+```txt
 Projection: lineitem.l_orderkey, lineitem.l_shipdate, orders.o_orderdate
   Filter: orders.o_orderdate >= CAST(Utf8("1994-01-01") AS Date32) AND orders.o_orderdate < CAST(Utf8("1995-01-01") AS Date32)
     Inner Join:  Filter: lineitem.l_orderkey = orders.o_orderkey
@@ -224,7 +226,8 @@ The (unoptimized) logical plan from last step.
 
 ### Output
 An optimized logical plan.
-```
+
+```txt
 Projection: lineitem.l_orderkey, lineitem.l_shipdate, orders.o_orderdate
   Inner Join: orders.o_orderkey = lineitem.l_orderkey
     Filter: orders.o_orderdate >= Date32("8766") AND orders.o_orderdate < Date32("9131")
@@ -243,7 +246,7 @@ A logical plan.
 ### Output
 A physical plan. Unlike logical plans, physical plans are more concrete about what to do, here's an example:
 
-```
+```txt
 Physical plan:
 ProjectionExec: expr=[l_orderkey@1 as l_orderkey, l_shipdate@2 as l_shipdate, o_orderdate@0 as o_orderdate]
   CoalesceBatchesExec: target_batch_size=8192
@@ -275,7 +278,8 @@ A physical plan
 
 ### Output
 The final output like this:
-```
+
+```txt
 +------------+------------+-------------+
 | l_orderkey | l_shipdate | o_orderdate |
 +------------+------------+-------------+
