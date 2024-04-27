@@ -98,6 +98,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     "search-label": "Search"
   }
 }</script>
+<script src="../../site_libs/quarto-diagram/mermaid.min.js"></script>
+<script src="../../site_libs/quarto-diagram/mermaid-init.js"></script>
+<link href="../../site_libs/quarto-diagram/mermaid.css" rel="stylesheet">
 <!-- Cloudflare Web Analytics -->
 <script defer="" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon="{&quot;token&quot;: &quot;eb43fd3c2c574a2590aae63c67009129&quot;}"></script><!-- End Cloudflare Web Analytics -->
 
@@ -189,35 +192,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#section-1-end-to-end-view" id="toc-section-1-end-to-end-view" class="nav-link active" data-scroll-target="#section-1-end-to-end-view">Section 1: End-To-End View</a>
-  <ul class="collapse">
-  <li><a href="#inputs" id="toc-inputs" class="nav-link" data-scroll-target="#inputs">Inputs</a></li>
-  <li><a href="#outputs" id="toc-outputs" class="nav-link" data-scroll-target="#outputs">Outputs</a></li>
-  </ul></li>
-  <li><a href="#section-2-parsing" id="toc-section-2-parsing" class="nav-link" data-scroll-target="#section-2-parsing">Section 2: Parsing</a>
-  <ul class="collapse">
-  <li><a href="#input" id="toc-input" class="nav-link" data-scroll-target="#input">Input</a></li>
-  <li><a href="#output" id="toc-output" class="nav-link" data-scroll-target="#output">Output</a></li>
-  </ul></li>
-  <li><a href="#section-3-query-planning" id="toc-section-3-query-planning" class="nav-link" data-scroll-target="#section-3-query-planning">Section 3: Query Planning</a>
-  <ul class="collapse">
-  <li><a href="#input-1" id="toc-input-1" class="nav-link" data-scroll-target="#input-1">Input</a></li>
-  <li><a href="#output-1" id="toc-output-1" class="nav-link" data-scroll-target="#output-1">Output</a></li>
-  </ul></li>
-  <li><a href="#section-4-query-optimizing" id="toc-section-4-query-optimizing" class="nav-link" data-scroll-target="#section-4-query-optimizing">Section 4: Query Optimizing</a>
-  <ul class="collapse">
-  <li><a href="#input-2" id="toc-input-2" class="nav-link" data-scroll-target="#input-2">Input</a></li>
-  <li><a href="#output-2" id="toc-output-2" class="nav-link" data-scroll-target="#output-2">Output</a></li>
-  </ul></li>
-  <li><a href="#section-5-physical-planing" id="toc-section-5-physical-planing" class="nav-link" data-scroll-target="#section-5-physical-planing">Section 5: Physical Planing</a>
-  <ul class="collapse">
-  <li><a href="#input-3" id="toc-input-3" class="nav-link" data-scroll-target="#input-3">Input</a></li>
-  <li><a href="#output-3" id="toc-output-3" class="nav-link" data-scroll-target="#output-3">Output</a></li>
-  </ul></li>
+  <li><a href="#section-1-end-to-end-view" id="toc-section-1-end-to-end-view" class="nav-link active" data-scroll-target="#section-1-end-to-end-view">Section 1: End-To-End View</a></li>
+  <li><a href="#section-2-parsing" id="toc-section-2-parsing" class="nav-link" data-scroll-target="#section-2-parsing">Section 2: Parsing</a></li>
+  <li><a href="#section-3-query-planning" id="toc-section-3-query-planning" class="nav-link" data-scroll-target="#section-3-query-planning">Section 3: Query Planning</a></li>
+  <li><a href="#section-4-query-optimizing" id="toc-section-4-query-optimizing" class="nav-link" data-scroll-target="#section-4-query-optimizing">Section 4: Query Optimizing</a></li>
+  <li><a href="#section-5-physical-planing" id="toc-section-5-physical-planing" class="nav-link" data-scroll-target="#section-5-physical-planing">Section 5: Physical Planing</a></li>
   <li><a href="#section-6-query-execution" id="toc-section-6-query-execution" class="nav-link" data-scroll-target="#section-6-query-execution">Section 6: Query Execution</a>
   <ul class="collapse">
-  <li><a href="#input-4" id="toc-input-4" class="nav-link" data-scroll-target="#input-4">Input</a></li>
-  <li><a href="#output-4" id="toc-output-4" class="nav-link" data-scroll-target="#output-4">Output</a></li>
   <li><a href="#how-to-execute-a-physical-plan" id="toc-how-to-execute-a-physical-plan" class="nav-link" data-scroll-target="#how-to-execute-a-physical-plan">How to execute a physical plan?</a></li>
   </ul></li>
   </ul>
@@ -230,13 +211,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 
 
-<p>This is a working-in-progress blog post to explain how database query engine works. This is a blog post I hoped I knew when I was younger. I believe there are many textbook that covers this topic in much more details, this post aims to be a high level overview of how things work. I try to be as concrete as possible, as much examples as possible.</p>
+<p>This is a working-in-progress blog post to explain how database query engine works. This is a blog post I hoped I knew when I was younger. Many database text books already covered almost all topics. Unlike those textbooks, I try to be as concrete as possible, as much examples as possible.</p>
 <p>For simplification, we only consider analytical databases. We assume the data can be loaded with just one command (magic).</p>
 <section id="section-1-end-to-end-view" class="level2">
 <h2 class="anchored" data-anchor-id="section-1-end-to-end-view">Section 1: End-To-End View</h2>
-<section id="inputs" class="level3">
-<h3 class="anchored" data-anchor-id="inputs">Inputs</h3>
-<p>Let’s say we have this simple query (adapted from <a href="https://github.com/apache/datafusion/blob/main/benchmarks/queries/q5.sql">TPC-H query 5</a>):</p>
+<section id="input" class="level4">
+<h4 class="anchored" data-anchor-id="input">Input</h4>
+<p>Let’s say we have this simple query (adapted from <a href="https://github.com/apache/datafusion/blob/main/benchmarks/queries/q5.sql">TPC-H query 5</a>), which finds the order key, ship date, and order date of orders that were placed in 1994.</p>
 <div class="sourceCode" id="cb1"><pre class="sourceCode sql code-with-copy"><code class="sourceCode sql"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">SELECT</span></span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    l_orderkey, l_shipdate, o_orderdate</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">FROM</span></span>
@@ -246,73 +227,38 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="kw">WHERE</span></span>
 <span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    o_orderdate <span class="op">&gt;=</span> <span class="dt">DATE</span> <span class="st">'1994-01-01'</span></span>
 <span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">AND</span> o_orderdate <span class="op">&lt;</span> <span class="dt">DATE</span> <span class="st">'1995-01-01'</span>;</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<p>We have the following two tables (adapted from <a href="https://www.tpc.org/tpc_documents_current_versions/pdf/tpc-h_v2.17.1.pdf">TPC-H spec</a>).</p>
-<table class="table">
-<caption>lineitem table</caption>
-<colgroup>
-<col style="width: 13%">
-<col style="width: 15%">
-<col style="width: 13%">
-<col style="width: 15%">
-<col style="width: 17%">
-<col style="width: 13%">
-<col style="width: 11%">
-</colgroup>
-<thead>
-<tr class="header">
-<th>l_orderkey</th>
-<th>l_linenumber</th>
-<th>l_shipdate</th>
-<th>l_commitdate</th>
-<th>l_receiptdate</th>
-<th>l_shipmode</th>
-<th>l_comment</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td>1</td>
-<td>1</td>
-<td>1994-06-01</td>
-<td>1994-05-15</td>
-<td>1994-06-15</td>
-<td>AIR</td>
-<td>Delivered on time</td>
-</tr>
-</tbody>
-</table>
-<table class="table">
-<caption>orders table</caption>
-<thead>
-<tr class="header">
-<th>o_orderkey</th>
-<th>o_orderdate</th>
-<th>o_orderpriority</th>
-<th>o_clerk</th>
-<th>o_comment</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td>1</td>
-<td>1994-05-01</td>
-<td>urgent</td>
-<td>Clerk#1</td>
-<td>Note1</td>
-</tr>
-<tr class="even">
-<td>2</td>
-<td>1994-07-01</td>
-<td>low</td>
-<td>Clerk#2</td>
-<td>Note2</td>
-</tr>
-</tbody>
-</table>
-<p>The lineitem table contains a order line, while the order table contains the order information. The query tries to find the order key, ship date and order date for orders that are placed in 1994.</p>
+<p>We have the following two tables (adapted from <a href="https://www.tpc.org/tpc_documents_current_versions/pdf/tpc-h_v2.17.1.pdf">TPC-H spec</a>). The lineitem table defines the the shipment of an item, while the order table contains the order information.</p>
+<div class="cell" data-layout-align="default">
+<div class="cell-output-display">
+<div>
+<p></p><figure class="figure"><p></p>
+<div>
+<pre class="mermaid mermaid-js">erDiagram
+  lineitem {
+      int l_orderkey
+      int l_linenumber
+      date l_shipdate
+      date l_commitdate
+      date l_receiptdate
+      string l_shipmode
+      string l_comment
+  }
+  orders {
+      int o_orderkey
+      date o_orderdate
+      string o_orderpriority
+      string o_clerk
+      string o_comment
+  }
+</pre>
+</div>
+<p></p></figure><p></p>
+</div>
+</div>
+</div>
 </section>
-<section id="outputs" class="level3">
-<h3 class="anchored" data-anchor-id="outputs">Outputs</h3>
+<section id="output" class="level4">
+<h4 class="anchored" data-anchor-id="output">Output</h4>
 <p>The query is fairly simple, it joins two tables on the order key, then filters the results based on order date. If everything goes well, we should get results similar to this:</p>
 <div class="sourceCode" id="cb2"><pre class="sourceCode txt code-with-copy"><code class="sourceCode default"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>+------------+------------+-------------+</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>| l_orderkey | l_shipdate | o_orderdate |</span>
@@ -320,13 +266,30 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>| 1          | 1994-06-01 | 1994-05-01  |</span>
 <span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>+------------+------------+-------------+</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>The goal of this document is to explain step-by-step what happens from the inputs to outputs.</p>
+<p>The high level flow is like this:</p>
+<div class="cell" data-layout-align="default">
+<div class="cell-output-display">
+<div>
+<p></p><figure class="figure"><p></p>
+<div>
+<pre class="mermaid mermaid-js">flowchart LR
+   id1[SQL text] --&gt; |SQL parser| id2[SQL statement] 
+   id2 --&gt; |Query planner| id3[Logical plan] --&gt; |Query optimizer| id4[Optimized logical plan] --&gt; |Physical planner| id5
+   id5[Physical plan] --&gt; |Execution| id7[Output]
+
+</pre>
+</div>
+<p></p></figure><p></p>
+</div>
+</div>
+</div>
 </section>
 </section>
 <section id="section-2-parsing" class="level2">
 <h2 class="anchored" data-anchor-id="section-2-parsing">Section 2: Parsing</h2>
 <p>Skipped for now as it is mostly orthogonal to the data system pipelines.</p>
-<section id="input" class="level3">
-<h3 class="anchored" data-anchor-id="input">Input</h3>
+<section id="input-1" class="level4">
+<h4 class="anchored" data-anchor-id="input-1">Input</h4>
 <p>A SQL query text.</p>
 <div class="sourceCode" id="cb3"><pre class="sourceCode sql code-with-copy"><code class="sourceCode sql"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">SELECT</span></span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    l_orderkey, l_shipdate, o_orderdate</span>
@@ -338,8 +301,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    o_orderdate <span class="op">&gt;=</span> <span class="dt">DATE</span> <span class="st">'1994-01-01'</span></span>
 <span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">AND</span> o_orderdate <span class="op">&lt;</span> <span class="dt">DATE</span> <span class="st">'1995-01-01'</span>;</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </section>
-<section id="output" class="level3">
-<h3 class="anchored" data-anchor-id="output">Output</h3>
+<section id="output-1" class="level4">
+<h4 class="anchored" data-anchor-id="output-1">Output</h4>
 <p>Structured <a href="https://docs.rs/datafusion/37.1.0/datafusion/sql/parser/enum.Statement.html"><code>statement</code></a> from the SQL (significantly simplified for brevity):</p>
 <div class="sourceCode" id="cb4"><pre class="sourceCode txt code-overflow-wrap code-with-copy"><code class="sourceCode default"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>from: [</span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  TableWithJoins {</span>
@@ -419,48 +382,186 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="section-3-query-planning" class="level2">
 <h2 class="anchored" data-anchor-id="section-3-query-planning">Section 3: Query Planning</h2>
-<section id="input-1" class="level3">
-<h3 class="anchored" data-anchor-id="input-1">Input</h3>
+<section id="input-2" class="level4">
+<h4 class="anchored" data-anchor-id="input-2">Input</h4>
 <p>The query statement from last step.</p>
 </section>
-<section id="output-1" class="level3">
-<h3 class="anchored" data-anchor-id="output-1">Output</h3>
+<section id="output-2" class="level4">
+<h4 class="anchored" data-anchor-id="output-2">Output</h4>
 <p>The logical query plan, something like this:</p>
 <div class="sourceCode" id="cb5"><pre class="sourceCode txt code-with-copy"><code class="sourceCode default"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>Projection: lineitem.l_orderkey, lineitem.l_shipdate, orders.o_orderdate</span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  Filter: orders.o_orderdate &gt;= CAST(Utf8("1994-01-01") AS Date32) AND orders.o_orderdate &lt; CAST(Utf8("1995-01-01") AS Date32)</span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    Inner Join:  Filter: lineitem.l_orderkey = orders.o_orderkey</span>
 <span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>      TableScan: orders</span>
 <span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>      TableScan: lineitem</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<p>Plot it as a tree. <img src="f1.png" class="img-fluid"></p>
+<p>Plot it as a tree.</p>
+<div class="cell" data-fig-height="2" data-layout-align="default">
+<div class="cell-output-display">
+<div>
+<p></p><figure class="figure"><p></p>
+<div>
+<svg width="672" height="192" viewbox="0.00 0.00 796.91 260.00" xmlns="http://www.w3.org/2000/svg" xlink="http://www.w3.org/1999/xlink" style="; max-width: none; max-height: none">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 256)">
+<polygon fill="white" stroke="transparent" points="-4,4 -4,-256 792.91,-256 792.91,4 -4,4"></polygon>
+<!-- 2 -->
+<g id="node1" class="node">
+<title>2</title>
+<polygon fill="none" stroke="black" points="603.17,-252 185.74,-252 185.74,-216 603.17,-216 603.17,-252"></polygon>
+<text text-anchor="middle" x="394.46" y="-229.8" font-family="Times,serif" font-size="14.00">Projection: lineitem.l_orderkey, lineitem.l_shipdate, orders.o_orderdate</text>
+</g>
+<!-- 3 -->
+<g id="node2" class="node">
+<title>3</title>
+<polygon fill="none" stroke="black" points="788.87,-180 0.04,-180 0.04,-144 788.87,-144 788.87,-180"></polygon>
+<text text-anchor="middle" x="394.46" y="-157.8" font-family="Times,serif" font-size="14.00">Filter: orders.o_orderdate &gt;= CAST(Utf8(_1994-01-01_) AS Date32) AND orders.o_orderdate &lt; CAST(Utf8(_1995-01-01_) AS Date32)</text>
+</g>
+<!-- 2&#45;&gt;3 -->
+<g id="edge1" class="edge">
+<title>2-&gt;3</title>
+<path fill="none" stroke="black" d="M394.46,-205.67C394.46,-197.05 394.46,-187.79 394.46,-180.1"></path>
+<polygon fill="black" stroke="black" points="390.96,-205.7 394.46,-215.7 397.96,-205.7 390.96,-205.7"></polygon>
+</g>
+<!-- 4 -->
+<g id="node3" class="node">
+<title>4</title>
+<polygon fill="none" stroke="black" points="568.59,-108 220.32,-108 220.32,-72 568.59,-72 568.59,-108"></polygon>
+<text text-anchor="middle" x="394.46" y="-85.8" font-family="Times,serif" font-size="14.00">Inner Join: &nbsp;Filter: lineitem.l_orderkey = orders.o_orderkey</text>
+</g>
+<!-- 3&#45;&gt;4 -->
+<g id="edge2" class="edge">
+<title>3-&gt;4</title>
+<path fill="none" stroke="black" d="M394.46,-133.67C394.46,-125.05 394.46,-115.79 394.46,-108.1"></path>
+<polygon fill="black" stroke="black" points="390.96,-133.7 394.46,-143.7 397.96,-133.7 390.96,-133.7"></polygon>
+</g>
+<!-- 5 -->
+<g id="node4" class="node">
+<title>5</title>
+<polygon fill="none" stroke="black" points="383.42,-36 265.5,-36 265.5,0 383.42,0 383.42,-36"></polygon>
+<text text-anchor="middle" x="324.46" y="-13.8" font-family="Times,serif" font-size="14.00">TableScan: orders</text>
+</g>
+<!-- 4&#45;&gt;5 -->
+<g id="edge3" class="edge">
+<title>4-&gt;5</title>
+<path fill="none" stroke="black" d="M369.93,-64.48C360.56,-55.11 350.09,-44.64 341.56,-36.1"></path>
+<polygon fill="black" stroke="black" points="367.61,-67.1 377.15,-71.7 372.56,-62.15 367.61,-67.1"></polygon>
+</g>
+<!-- 6 -->
+<g id="node5" class="node">
+<title>6</title>
+<polygon fill="none" stroke="black" points="529.81,-36 401.11,-36 401.11,0 529.81,0 529.81,-36"></polygon>
+<text text-anchor="middle" x="465.46" y="-13.8" font-family="Times,serif" font-size="14.00">TableScan: lineitem</text>
+</g>
+<!-- 4&#45;&gt;6 -->
+<g id="edge4" class="edge">
+<title>4-&gt;6</title>
+<path fill="none" stroke="black" d="M419.33,-64.48C428.83,-55.11 439.45,-44.64 448.11,-36.1"></path>
+<polygon fill="black" stroke="black" points="416.67,-62.18 412.01,-71.7 421.58,-67.17 416.67,-62.18"></polygon>
+</g>
+</g>
+</svg>
+</div>
+<p></p></figure><p></p>
+</div>
+</div>
+</div>
 <p>Logical vs physical.</p>
 <p>todo: describe why we need to distinguish physical plan and logical plan.</p>
 </section>
 </section>
 <section id="section-4-query-optimizing" class="level2">
 <h2 class="anchored" data-anchor-id="section-4-query-optimizing">Section 4: Query Optimizing</h2>
-<section id="input-2" class="level3">
-<h3 class="anchored" data-anchor-id="input-2">Input</h3>
+<section id="input-3" class="level4">
+<h4 class="anchored" data-anchor-id="input-3">Input</h4>
 <p>The (unoptimized) logical plan from last step.</p>
 </section>
-<section id="output-2" class="level3">
-<h3 class="anchored" data-anchor-id="output-2">Output</h3>
+<section id="output-3" class="level4">
+<h4 class="anchored" data-anchor-id="output-3">Output</h4>
 <p>An optimized logical plan.</p>
 <div class="sourceCode" id="cb6"><pre class="sourceCode txt code-with-copy"><code class="sourceCode default"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>Projection: lineitem.l_orderkey, lineitem.l_shipdate, orders.o_orderdate</span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  Inner Join: orders.o_orderkey = lineitem.l_orderkey</span>
 <span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    Filter: orders.o_orderdate &gt;= Date32("8766") AND orders.o_orderdate &lt; Date32("9131")</span>
 <span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>      TableScan: orders projection=[o_orderkey, o_orderdate], partial_filters=[orders.o_orderdate &gt;= Date32("8766"), orders.o_orderdate &lt; Date32("9131")]</span>
 <span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>    TableScan: lineitem projection=[l_orderkey, l_shipdate]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<p><img src="f2.png" class="img-fluid"> Note the difference between unoptimized and optimized plan! The <code>Filter</code> has been pushed down to lower level nodes. Part of the projection has been embedded to the <code>TableScan</code>.</p>
+<div class="cell" data-fig-height="2" data-layout-align="default">
+<div class="cell-output-display">
+<div>
+<p></p><figure class="figure"><p></p>
+<div>
+<svg width="672" height="192" viewbox="0.00 0.00 1054.03 260.00" xmlns="http://www.w3.org/2000/svg" xlink="http://www.w3.org/1999/xlink" style="; max-width: none; max-height: none">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 256)">
+<polygon fill="white" stroke="transparent" points="-4,4 -4,-256 1050.03,-256 1050.03,4 -4,4"></polygon>
+<!-- 2 -->
+<g id="node1" class="node">
+<title>2</title>
+<polygon fill="none" stroke="black" points="866.24,-252 448.81,-252 448.81,-216 866.24,-216 866.24,-252"></polygon>
+<text text-anchor="middle" x="657.53" y="-229.8" font-family="Times,serif" font-size="14.00">Projection: lineitem.l_orderkey, lineitem.l_shipdate, orders.o_orderdate</text>
+</g>
+<!-- 3 -->
+<g id="node2" class="node">
+<title>3</title>
+<polygon fill="none" stroke="black" points="810.94,-180 504.11,-180 504.11,-144 810.94,-144 810.94,-180"></polygon>
+<text text-anchor="middle" x="657.53" y="-157.8" font-family="Times,serif" font-size="14.00">Inner Join: orders.o_orderkey = lineitem.l_orderkey</text>
+</g>
+<!-- 2&#45;&gt;3 -->
+<g id="edge1" class="edge">
+<title>2-&gt;3</title>
+<path fill="none" stroke="black" d="M657.53,-205.67C657.53,-197.05 657.53,-187.79 657.53,-180.1"></path>
+<polygon fill="black" stroke="black" points="654.03,-205.7 657.53,-215.7 661.03,-205.7 654.03,-205.7"></polygon>
+</g>
+<!-- 4 -->
+<g id="node3" class="node">
+<title>4</title>
+<polygon fill="none" stroke="black" points="696.95,-108 174.1,-108 174.1,-72 696.95,-72 696.95,-108"></polygon>
+<text text-anchor="middle" x="435.53" y="-85.8" font-family="Times,serif" font-size="14.00">Filter: orders.o_orderdate &gt;= Date32(_8766_) AND orders.o_orderdate &lt; Date32(_9131_)</text>
+</g>
+<!-- 3&#45;&gt;4 -->
+<g id="edge2" class="edge">
+<title>3-&gt;4</title>
+<path fill="none" stroke="black" d="M593.54,-140.83C560.7,-130.47 521.12,-117.99 489.79,-108.11"></path>
+<polygon fill="black" stroke="black" points="592.91,-144.3 603.5,-143.97 595.02,-137.62 592.91,-144.3"></polygon>
+</g>
+<!-- 6 -->
+<g id="node5" class="node">
+<title>6</title>
+<polygon fill="none" stroke="black" points="1046.04,-108 715.01,-108 715.01,-72 1046.04,-72 1046.04,-108"></polygon>
+<text text-anchor="middle" x="880.53" y="-85.8" font-family="Times,serif" font-size="14.00">TableScan: lineitem projection=[l_orderkey, l_shipdate]</text>
+</g>
+<!-- 3&#45;&gt;6 -->
+<g id="edge4" class="edge">
+<title>3-&gt;6</title>
+<path fill="none" stroke="black" d="M721.37,-140.96C754.44,-130.58 794.41,-118.03 826.02,-108.11"></path>
+<polygon fill="black" stroke="black" points="720.29,-137.63 711.79,-143.97 722.38,-144.31 720.29,-137.63"></polygon>
+</g>
+<!-- 5 -->
+<g id="node4" class="node">
+<title>5</title>
+<polygon fill="none" stroke="black" points="871.08,-36 -0.03,-36 -0.03,0 871.08,0 871.08,-36"></polygon>
+<text text-anchor="middle" x="435.53" y="-13.8" font-family="Times,serif" font-size="14.00">TableScan: orders projection=[o_orderkey, o_orderdate], partial_filters=[orders.o_orderdate &gt;= Date32(_8766_), orders.o_orderdate &lt; Date32(_9131_)]</text>
+</g>
+<!-- 4&#45;&gt;5 -->
+<g id="edge3" class="edge">
+<title>4-&gt;5</title>
+<path fill="none" stroke="black" d="M435.53,-61.67C435.53,-53.05 435.53,-43.79 435.53,-36.1"></path>
+<polygon fill="black" stroke="black" points="432.03,-61.7 435.53,-71.7 439.03,-61.7 432.03,-61.7"></polygon>
+</g>
+</g>
+</svg>
+</div>
+<p></p></figure><p></p>
+</div>
+</div>
+</div>
+<p>Note the difference between unoptimized and optimized plan! The <code>Filter</code> has been pushed down to lower level nodes. Part of the projection has been embedded to the <code>TableScan</code>.</p>
 </section>
 </section>
 <section id="section-5-physical-planing" class="level2">
 <h2 class="anchored" data-anchor-id="section-5-physical-planing">Section 5: Physical Planing</h2>
-<section id="input-3" class="level3">
-<h3 class="anchored" data-anchor-id="input-3">Input</h3>
+<section id="input-4" class="level4">
+<h4 class="anchored" data-anchor-id="input-4">Input</h4>
 <p>A logical plan.</p>
 </section>
-<section id="output-3" class="level3">
-<h3 class="anchored" data-anchor-id="output-3">Output</h3>
+<section id="output-4" class="level4">
+<h4 class="anchored" data-anchor-id="output-4">Output</h4>
 <p>A physical plan. Unlike logical plans, physical plans are more concrete about what to do, here’s an example:</p>
 <div class="sourceCode" id="cb7"><pre class="sourceCode txt code-with-copy"><code class="sourceCode default"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>Physical plan:</span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>ProjectionExec: expr=[l_orderkey@1 as l_orderkey, l_shipdate@2 as l_shipdate, o_orderdate@0 as o_orderdate]</span>
@@ -477,7 +578,171 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>          RepartitionExec: partitioning=RoundRobinBatch(8), input_partitions=1</span>
 <span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a>            CsvExec: file_groups={1 group: [[Users/xiangpeng/work/coding/db-ml/bin/example-data/lineitem.csv]]}, projection=[l_orderkey, l_shipdate], has_header=true</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>We can also plot a physical plan to a tree graph:</p>
-<p><img src="f3.png" class="img-fluid"></p>
+<div class="cell" data-fig-height="4" data-fig-width="8" data-layout-align="default">
+<div class="cell-output-display">
+<div>
+<p></p><figure class="figure"><p></p>
+<div>
+<svg width="768" height="384" viewbox="0.00 0.00 1122.05 620.00" xmlns="http://www.w3.org/2000/svg" xlink="http://www.w3.org/1999/xlink" style="; max-width: none; max-height: none">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 616)">
+<polygon fill="white" stroke="transparent" points="-4,4 -4,-616 1118.05,-616 1118.05,4 -4,4"></polygon>
+<!-- 1 -->
+<g id="node1" class="node">
+<title>1</title>
+<polygon fill="none" stroke="black" points="895.67,-612 245.15,-612 245.15,-576 895.67,-576 895.67,-612"></polygon>
+<text text-anchor="middle" x="570.41" y="-589.8" font-family="Times,serif" font-size="14.00">ProjectionExec: expr=[l_orderkey@1 as l_orderkey, l_shipdate@2 as l_shipdate, o_orderdate@0 as o_orderdate]</text>
+</g>
+<!-- 2 -->
+<g id="node2" class="node">
+<title>2</title>
+<polygon fill="none" stroke="black" points="710.47,-540 430.34,-540 430.34,-504 710.47,-504 710.47,-540"></polygon>
+<text text-anchor="middle" x="570.41" y="-517.8" font-family="Times,serif" font-size="14.00">CoalesceBatchesExec: target_batch_size=8192</text>
+</g>
+<!-- 1&#45;&gt;2 -->
+<g id="edge1" class="edge">
+<title>1-&gt;2</title>
+<path fill="none" stroke="black" d="M570.41,-565.67C570.41,-557.05 570.41,-547.79 570.41,-540.1"></path>
+<polygon fill="black" stroke="black" points="566.91,-565.7 570.41,-575.7 573.91,-565.7 566.91,-565.7"></polygon>
+</g>
+<!-- 3 -->
+<g id="node3" class="node">
+<title>3</title>
+<polygon fill="none" stroke="black" points="1000.06,-468 140.76,-468 140.76,-432 1000.06,-432 1000.06,-468"></polygon>
+<text text-anchor="middle" x="570.41" y="-445.8" font-family="Times,serif" font-size="14.00">HashJoinExec: mode=Partitioned, join_type=Inner, on=[(o_orderkey@0, l_orderkey@0)], projection=[o_orderdate@1, l_orderkey@2, l_shipdate@3]</text>
+</g>
+<!-- 2&#45;&gt;3 -->
+<g id="edge2" class="edge">
+<title>2-&gt;3</title>
+<path fill="none" stroke="black" d="M570.41,-493.67C570.41,-485.05 570.41,-475.79 570.41,-468.1"></path>
+<polygon fill="black" stroke="black" points="566.91,-493.7 570.41,-503.7 573.91,-493.7 566.91,-493.7"></polygon>
+</g>
+<!-- 4 -->
+<g id="node4" class="node">
+<title>4</title>
+<polygon fill="none" stroke="black" points="561.47,-396 281.34,-396 281.34,-360 561.47,-360 561.47,-396"></polygon>
+<text text-anchor="middle" x="421.41" y="-373.8" font-family="Times,serif" font-size="14.00">CoalesceBatchesExec: target_batch_size=8192</text>
+</g>
+<!-- 3&#45;&gt;4 -->
+<g id="edge3" class="edge">
+<title>3-&gt;4</title>
+<path fill="none" stroke="black" d="M524.69,-427.52C503.19,-417.42 477.91,-405.54 457.74,-396.07"></path>
+<polygon fill="black" stroke="black" points="523.42,-430.79 533.96,-431.88 526.4,-424.46 523.42,-430.79"></polygon>
+</g>
+<!-- 10 -->
+<g id="node10" class="node">
+<title>10</title>
+<polygon fill="none" stroke="black" points="899.47,-396 619.34,-396 619.34,-360 899.47,-360 899.47,-396"></polygon>
+<text text-anchor="middle" x="759.41" y="-373.8" font-family="Times,serif" font-size="14.00">CoalesceBatchesExec: target_batch_size=8192</text>
+</g>
+<!-- 3&#45;&gt;10 -->
+<g id="edge9" class="edge">
+<title>3-&gt;10</title>
+<path fill="none" stroke="black" d="M626.21,-428.33C653.94,-418.06 687.05,-405.8 713.32,-396.07"></path>
+<polygon fill="black" stroke="black" points="624.81,-425.12 616.64,-431.88 627.24,-431.68 624.81,-425.12"></polygon>
+</g>
+<!-- 5 -->
+<g id="node5" class="node">
+<title>5</title>
+<polygon fill="none" stroke="black" points="562.11,-324 118.71,-324 118.71,-288 562.11,-288 562.11,-324"></polygon>
+<text text-anchor="middle" x="340.41" y="-301.8" font-family="Times,serif" font-size="14.00">RepartitionExec: partitioning=Hash([o_orderkey@0], 8), input_partitions=8</text>
+</g>
+<!-- 4&#45;&gt;5 -->
+<g id="edge4" class="edge">
+<title>4-&gt;5</title>
+<path fill="none" stroke="black" d="M393.68,-353.03C382.67,-343.52 370.27,-332.8 360.2,-324.1"></path>
+<polygon fill="black" stroke="black" points="391.53,-355.81 401.39,-359.7 396.11,-350.51 391.53,-355.81"></polygon>
+</g>
+<!-- 6 -->
+<g id="node6" class="node">
+<title>6</title>
+<polygon fill="none" stroke="black" points="467.47,-252 187.34,-252 187.34,-216 467.47,-216 467.47,-252"></polygon>
+<text text-anchor="middle" x="327.41" y="-229.8" font-family="Times,serif" font-size="14.00">CoalesceBatchesExec: target_batch_size=8192</text>
+</g>
+<!-- 5&#45;&gt;6 -->
+<g id="edge5" class="edge">
+<title>5-&gt;6</title>
+<path fill="none" stroke="black" d="M335.33,-277.67C333.73,-269.05 332.01,-259.79 330.59,-252.1"></path>
+<polygon fill="black" stroke="black" points="331.93,-278.5 337.2,-287.7 338.81,-277.23 331.93,-278.5"></polygon>
+</g>
+<!-- 7 -->
+<g id="node7" class="node">
+<title>7</title>
+<polygon fill="none" stroke="black" points="494.62,-180 108.19,-180 108.19,-144 494.62,-144 494.62,-180"></polygon>
+<text text-anchor="middle" x="301.41" y="-157.8" font-family="Times,serif" font-size="14.00">FilterExec: o_orderdate@1 &gt;= 8766 AND o_orderdate@1 &lt; 9131</text>
+</g>
+<!-- 6&#45;&gt;7 -->
+<g id="edge6" class="edge">
+<title>6-&gt;7</title>
+<path fill="none" stroke="black" d="M317.47,-206.23C314.21,-197.46 310.68,-187.96 307.76,-180.1"></path>
+<polygon fill="black" stroke="black" points="314.22,-207.54 320.98,-215.7 320.78,-205.1 314.22,-207.54"></polygon>
+</g>
+<!-- 8 -->
+<g id="node8" class="node">
+<title>8</title>
+<polygon fill="none" stroke="black" points="510.59,-108 92.23,-108 92.23,-72 510.59,-72 510.59,-108"></polygon>
+<text text-anchor="middle" x="301.41" y="-85.8" font-family="Times,serif" font-size="14.00">RepartitionExec: partitioning=RoundRobinBatch(8), input_partitions=1</text>
+</g>
+<!-- 7&#45;&gt;8 -->
+<g id="edge7" class="edge">
+<title>7-&gt;8</title>
+<path fill="none" stroke="black" d="M301.41,-133.67C301.41,-125.05 301.41,-115.79 301.41,-108.1"></path>
+<polygon fill="black" stroke="black" points="297.91,-133.7 301.41,-143.7 304.91,-133.7 297.91,-133.7"></polygon>
+</g>
+<!-- 9 -->
+<g id="node9" class="node">
+<title>9</title>
+<polygon fill="none" stroke="black" points="602.73,-36 0.09,-36 0.09,0 602.73,0 602.73,-36"></polygon>
+<text text-anchor="middle" x="301.41" y="-13.8" font-family="Times,serif" font-size="14.00">CsvExec: file_groups={1 group: [[orders.csv]]}, projection=[o_orderkey, o_orderdate], has_header=true</text>
+</g>
+<!-- 8&#45;&gt;9 -->
+<g id="edge8" class="edge">
+<title>8-&gt;9</title>
+<path fill="none" stroke="black" d="M301.41,-61.67C301.41,-53.05 301.41,-43.79 301.41,-36.1"></path>
+<polygon fill="black" stroke="black" points="297.91,-61.7 301.41,-71.7 304.91,-61.7 297.91,-61.7"></polygon>
+</g>
+<!-- 11 -->
+<g id="node11" class="node">
+<title>11</title>
+<polygon fill="none" stroke="black" points="1026.5,-324 586.32,-324 586.32,-288 1026.5,-288 1026.5,-324"></polygon>
+<text text-anchor="middle" x="806.41" y="-301.8" font-family="Times,serif" font-size="14.00">RepartitionExec: partitioning=Hash([l_orderkey@0], 8), input_partitions=8</text>
+</g>
+<!-- 10&#45;&gt;11 -->
+<g id="edge10" class="edge">
+<title>10-&gt;11</title>
+<path fill="none" stroke="black" d="M776.62,-351.36C782.72,-342.28 789.42,-332.3 794.92,-324.1"></path>
+<polygon fill="black" stroke="black" points="773.7,-349.44 771.03,-359.7 779.51,-353.35 773.7,-349.44"></polygon>
+</g>
+<!-- 12 -->
+<g id="node12" class="node">
+<title>12</title>
+<polygon fill="none" stroke="black" points="1018.59,-252 600.23,-252 600.23,-216 1018.59,-216 1018.59,-252"></polygon>
+<text text-anchor="middle" x="809.41" y="-229.8" font-family="Times,serif" font-size="14.00">RepartitionExec: partitioning=RoundRobinBatch(8), input_partitions=1</text>
+</g>
+<!-- 11&#45;&gt;12 -->
+<g id="edge11" class="edge">
+<title>11-&gt;12</title>
+<path fill="none" stroke="black" d="M807.58,-277.67C807.95,-269.05 808.35,-259.79 808.68,-252.1"></path>
+<polygon fill="black" stroke="black" points="804.08,-277.56 807.15,-287.7 811.08,-277.86 804.08,-277.56"></polygon>
+</g>
+<!-- 13 -->
+<g id="node13" class="node">
+<title>13</title>
+<polygon fill="none" stroke="black" points="1114.19,-180 512.62,-180 512.62,-144 1114.19,-144 1114.19,-180"></polygon>
+<text text-anchor="middle" x="813.41" y="-157.8" font-family="Times,serif" font-size="14.00">CsvExec: file_groups={1 group: [[lineitem.csv]]}, projection=[l_orderkey, l_shipdate], has_header=true</text>
+</g>
+<!-- 12&#45;&gt;13 -->
+<g id="edge12" class="edge">
+<title>12-&gt;13</title>
+<path fill="none" stroke="black" d="M810.97,-205.67C811.46,-197.05 811.99,-187.79 812.43,-180.1"></path>
+<polygon fill="black" stroke="black" points="807.47,-205.51 810.4,-215.7 814.46,-205.91 807.47,-205.51"></polygon>
+</g>
+</g>
+</svg>
+</div>
+<p></p></figure><p></p>
+</div>
+</div>
+</div>
 <div class="callout callout-style-default callout-note callout-titled">
 <div class="callout-header d-flex align-content-center">
 <div class="callout-icon-container">
@@ -496,12 +761,12 @@ Note
 </section>
 <section id="section-6-query-execution" class="level2">
 <h2 class="anchored" data-anchor-id="section-6-query-execution">Section 6: Query Execution</h2>
-<section id="input-4" class="level3">
-<h3 class="anchored" data-anchor-id="input-4">Input</h3>
+<section id="input-5" class="level4">
+<h4 class="anchored" data-anchor-id="input-5">Input</h4>
 <p>A physical plan</p>
 </section>
-<section id="output-4" class="level3">
-<h3 class="anchored" data-anchor-id="output-4">Output</h3>
+<section id="output-5" class="level4">
+<h4 class="anchored" data-anchor-id="output-5">Output</h4>
 <p>The final output like this:</p>
 <div class="sourceCode" id="cb8"><pre class="sourceCode txt code-with-copy"><code class="sourceCode default"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>+------------+------------+-------------+</span>
 <span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>| l_orderkey | l_shipdate | o_orderdate |</span>
