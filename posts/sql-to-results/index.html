@@ -106,7 +106,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <link rel="stylesheet" href="../../styles.css">
 </head>
 
-<body class="nav-fixed fullcontent">
+<body class="nav-fixed">
 
 <div id="quarto-search-results"></div>
   <header id="quarto-header" class="headroom fixed-top quarto-banner">
@@ -164,6 +164,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       </div>
     </div>
     
+      <div>
+      <div class="quarto-title-meta-heading">Modified</div>
+      <div class="quarto-title-meta-contents">
+        <p class="date-modified">April 27, 2024</p>
+      </div>
+    </div>
       
     </div>
     
@@ -171,7 +177,45 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   </header><div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
 <!-- sidebar -->
 <!-- margin-sidebar -->
-    
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#section-1-end-to-end-view" id="toc-section-1-end-to-end-view" class="nav-link active" data-scroll-target="#section-1-end-to-end-view">Section 1: End-To-End View</a>
+  <ul class="collapse">
+  <li><a href="#inputs" id="toc-inputs" class="nav-link" data-scroll-target="#inputs">Inputs</a></li>
+  <li><a href="#outputs" id="toc-outputs" class="nav-link" data-scroll-target="#outputs">Outputs</a></li>
+  </ul></li>
+  <li><a href="#section-2-parsing" id="toc-section-2-parsing" class="nav-link" data-scroll-target="#section-2-parsing">Section 2: Parsing</a>
+  <ul class="collapse">
+  <li><a href="#input" id="toc-input" class="nav-link" data-scroll-target="#input">Input</a></li>
+  <li><a href="#output" id="toc-output" class="nav-link" data-scroll-target="#output">Output</a></li>
+  </ul></li>
+  <li><a href="#section-3-query-planning" id="toc-section-3-query-planning" class="nav-link" data-scroll-target="#section-3-query-planning">Section 3: Query Planning</a>
+  <ul class="collapse">
+  <li><a href="#input-1" id="toc-input-1" class="nav-link" data-scroll-target="#input-1">Input</a></li>
+  <li><a href="#output-1" id="toc-output-1" class="nav-link" data-scroll-target="#output-1">Output</a></li>
+  </ul></li>
+  <li><a href="#section-4-query-optimizing" id="toc-section-4-query-optimizing" class="nav-link" data-scroll-target="#section-4-query-optimizing">Section 4: Query Optimizing</a>
+  <ul class="collapse">
+  <li><a href="#input-2" id="toc-input-2" class="nav-link" data-scroll-target="#input-2">Input</a></li>
+  <li><a href="#output-2" id="toc-output-2" class="nav-link" data-scroll-target="#output-2">Output</a></li>
+  </ul></li>
+  <li><a href="#section-5-physical-planing" id="toc-section-5-physical-planing" class="nav-link" data-scroll-target="#section-5-physical-planing">Section 5: Physical Planing</a>
+  <ul class="collapse">
+  <li><a href="#input-3" id="toc-input-3" class="nav-link" data-scroll-target="#input-3">Input</a></li>
+  <li><a href="#output-3" id="toc-output-3" class="nav-link" data-scroll-target="#output-3">Output</a></li>
+  </ul></li>
+  <li><a href="#section-6-query-execution" id="toc-section-6-query-execution" class="nav-link" data-scroll-target="#section-6-query-execution">Section 6: Query Execution</a>
+  <ul class="collapse">
+  <li><a href="#input-4" id="toc-input-4" class="nav-link" data-scroll-target="#input-4">Input</a></li>
+  <li><a href="#output-4" id="toc-output-4" class="nav-link" data-scroll-target="#output-4">Output</a></li>
+  <li><a href="#how-to-execute-a-physical-plan" id="toc-how-to-execute-a-physical-plan" class="nav-link" data-scroll-target="#how-to-execute-a-physical-plan">How to execute a physical plan?</a></li>
+  </ul></li>
+  </ul>
+</nav>
+    </div>
 <!-- main -->
 <main class="content quarto-banner-title-block" id="quarto-document-content">
 
@@ -373,8 +417,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p>todo: describe why we need to distinguish physical plan and logical plan.</p>
 </section>
 </section>
-<section id="section-4-query-optimizing-logical-plan" class="level2">
-<h2 class="anchored" data-anchor-id="section-4-query-optimizing-logical-plan">Section 4: Query Optimizing (logical plan)</h2>
+<section id="section-4-query-optimizing" class="level2">
+<h2 class="anchored" data-anchor-id="section-4-query-optimizing">Section 4: Query Optimizing</h2>
 <section id="input-2" class="level3">
 <h3 class="anchored" data-anchor-id="input-2">Input</h3>
 <p>The (unoptimized) logical plan from last step.</p>
@@ -392,8 +436,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="section-5-physical-planing" class="level2">
 <h2 class="anchored" data-anchor-id="section-5-physical-planing">Section 5: Physical Planing</h2>
-<section id="input-3" class="level4">
-<h4 class="anchored" data-anchor-id="input-3">Input</h4>
+<section id="input-3" class="level3">
+<h3 class="anchored" data-anchor-id="input-3">Input</h3>
 <p>A logical plan.</p>
 </section>
 <section id="output-3" class="level3">
@@ -415,7 +459,19 @@ ProjectionExec: expr=[l_orderkey@1 as l_orderkey, l_shipdate@2 as l_shipdate, o_
             CsvExec: file_groups={1 group: [[Users/xiangpeng/work/coding/db-ml/bin/example-data/lineitem.csv]]}, projection=[l_orderkey, l_shipdate], has_header=true</code></pre>
 <p>We can also plot a physical plan to a tree graph:</p>
 <p><img src="f3.png" class="img-fluid"></p>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Note
+</div>
+</div>
+<div class="callout-body-container callout-body">
 <p>Note that a physical plan has much more details than a logical plan, it contains everything needed to execute the query!</p>
+</div>
+</div>
 <p>(Optional: we often have physical optimizer that optimize on a physical plan. Omitted here for simplicity)</p>
 </section>
 </section>
@@ -550,7 +606,7 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
   });
     var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
     var mailtoRegex = new RegExp(/^mailto:/);
-      var filterRegex = new RegExp('/' + window.location.host + '/');
+      var filterRegex = new RegExp("https:\/\/blog\.haoxp\.xyz");
     var isInternal = (href) => {
         return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
     }
