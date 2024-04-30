@@ -18,7 +18,7 @@ As complex as it is, the boundaries of the building blocks within a database are
 The recent (and state-of-the-art) [Apache DataFusion](https://github.com/apache/datafusion) project is a good example of building a database using well-defined industry standards like [Apache Arrow](https://arrow.apache.org), and [Apache Parquet](https://parquet.apache.org). 
 Without home-grown solutions for storage and in-memory representation, DataFusion is [comparable or even better](https://github.com/apache/datafusion/files/15149988/DataFusion_Query_Engine___SIGMOD_2024-FINAL-mk4.pdf) than alternatives like [DuckDB](https://github.com/duckdb/duckdb). 
 
-This document aims to explain how modern query engines (i.e., [OLAP](https://aws.amazon.com/compare/the-difference-between-olap-and-oltp)) work, step by step, from SQL to results:
+Having the boundaries well-defined, this document aims to explain how query engines (i.e., [OLAP](https://aws.amazon.com/compare/the-difference-between-olap-and-oltp)) transform a plain SQL query into the results we want, how every step works, and how they are connected.
 ```{mermaid}
 flowchart LR
    id1[SQL text] --> |SQL parser| id2[SQL statement] 

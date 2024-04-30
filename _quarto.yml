@@ -5,6 +5,7 @@ website:
   title: "Xiangpeng's blog"
   site-url: https://blog.haoxp.xyz
   open-graph: true
+  twitter-card: true
   search: 
     keyboard-shortcut: ['/']
   navbar:
