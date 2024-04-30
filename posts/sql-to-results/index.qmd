@@ -1,38 +1,48 @@
 ---
 title: "What happens when you type a SQL in the database"
 date: "2024-04-26"
-date-modified: "2024-04-27"
+date-modified: "2024-04-30"
 categories: []
 toc: true
 ---
 
+## Preface 
+Database can be complex, it involves almost all aspects (research communities) of computer science: PL (programming language), SE (software enginerring), OS (operating system), networking, storage, theory, and more recently, NLP (natural language processing), and ML (machine learning). 
+The database community is centered around the people who are interested in making the database (the product) better, instead of by pure intellectual/research interests, it is therefore a practical and multi-disciplinary field.
+This makes databases awesome, but also hard to learn.
 
+As complex as it is, the boundary of the building blocks within a database are clear after decades of research and real-world operations.
+The recent (and state-of-the-art) [Apache DataFusion](https://github.com/apache/datafusion) project is a good example of building a database using well-defined industry standard like [Apache Arrow](https://arrow.apache.org), and [Apache Parquet](https://parquet.apache.org). 
+Without home-grown solutions for storage and in-memory representation, DataFusion is [comparable or even better](https://github.com/apache/datafusion/files/15149988/DataFusion_Query_Engine___SIGMOD_2024-FINAL-mk4.pdf) than alternatives like [DuckDB](https://github.com/duckdb/duckdb). 
+
+This document aim to explain how modern query engines (i.e., [OLAP](https://aws.amazon.com/compare/the-difference-between-olap-and-oltp)) work, step by step, from SQL to results:
+```{mermaid}
+flowchart LR
+   id1[SQL text] --> |SQL parser| id2[SQL statement] 
+   id2 --> |Query planner| id3[Logical plan] --> |Query optimizer| id4[Optimized logical plan] --> |Physical planner| id5
+   id5[Physical plan] --> |Execution| id7[Output]
+
+```
+
+
+
+::: {.callout-note}
 This is a working-in-progress blog post to explain how database query engine works. 
 This is a blog post I hoped I knew when I was younger.
-Many database text books already covered almost all topics.
-Unlike those textbooks, I try to be as concrete as possible, as much examples as possible.
 
-For simplification, we only consider analytical databases. We assume the data can be loaded with just one command (magic).
+<!-- I hope this post to be a long-term reference for people who are interested in databases.  -->
+I aim to make multi-year efforts to edit it and improve it as I learn more about databases.
+I sometimes dreamed that this post could evolve to be the database equivlent of the [OSTEP](https://pages.cs.wisc.edu/~remzi/OSTEP/) book (might be too mbitious though).
+:::
+
 
 ## Section 1: End-To-End View
 
-####  Input
+### Input 
 
-Let's say we have this simple query (adapted from [TPC-H query 5](https://github.com/apache/datafusion/blob/main/benchmarks/queries/q5.sql)), which finds the order key, ship date, and order date of orders that were placed in 1994.
-```sql
-SELECT
-    l_orderkey, l_shipdate, o_orderdate
-FROM
-    orders
-JOIN
-    lineitem ON l_orderkey = o_orderkey
-WHERE
-    o_orderdate >= DATE '1994-01-01'
-    AND o_orderdate < DATE '1995-01-01';
-```
-
-We have the following two tables (adapted from [TPC-H spec](https://www.tpc.org/tpc_documents_current_versions/pdf/tpc-h_v2.17.1.pdf)).
-The lineitem table defines the the shipment of an item, while the order table contains the order information. 
+#### Table definition
+We have the following two tables (adapted from [TPC-H spec](https://www.tpc.org/tpc_documents_current_versions/pdf/tpc-h_v2.17.1.pdf)): `lineitem` and `orders`.
+The `lineitem` defines the the shipment dates, while the `order` defines order details. 
 
 ```{mermaid}
 erDiagram
@@ -54,7 +64,23 @@ erDiagram
   }
 ```
 
-#### Output
+
+#### SQL query
+Let's say we have this simple query (adapted from [TPC-H query 5](https://github.com/apache/datafusion/blob/main/benchmarks/queries/q5.sql)), which finds the `l_orderkey`, `l_shipdate`, and `o_orderdate` of orders that were placed in `1994`.
+```sql
+SELECT
+    l_orderkey, l_shipdate, o_orderdate
+FROM
+    orders
+JOIN
+    lineitem ON l_orderkey = o_orderkey
+WHERE
+    o_orderdate >= DATE '1994-01-01'
+    AND o_orderdate < DATE '1995-01-01';
+```
+
+
+### Output
 The query is fairly simple, it joins two tables on the order key, then filters the results based on order date.
 If everything goes well, we should get results similar to this:
 ```txt
@@ -63,17 +89,6 @@ If everything goes well, we should get results similar to this:
 +------------+------------+-------------+
 | 1          | 1994-06-01 | 1994-05-01  |
 +------------+------------+-------------+
-```
-
-The goal of this document is to explain step-by-step what happens from the inputs to outputs.
-
-The high level flow is like this:
-```{mermaid}
-flowchart LR
-   id1[SQL text] --> |SQL parser| id2[SQL statement] 
-   id2 --> |Query planner| id3[Logical plan] --> |Query optimizer| id4[Optimized logical plan] --> |Physical planner| id5
-   id5[Physical plan] --> |Execution| id7[Output]
-
 ```
 
 ## Section 2: Parsing
@@ -327,51 +342,47 @@ The final output like this:
 ```
 
 ### How to execute a physical plan?
-TODO: discuss pull-based and push-based execution.
 
-The simplest execution model is [pull-based execution](https://justinjaffray.com/query-engines-push-vs.-pull/), which implements a post-order traversal of the physical plan.
-For a tree like this ([credit](https://www.freecodecamp.org/news/binary-search-tree-traversal-inorder-preorder-post-order-for-bst/)):
+The simplest execution model is [pull-based execution](https://justinjaffray.com/query-engines-push-vs.-pull/), which implements a [post-order traversal](https://www.freecodecamp.org/news/binary-search-tree-traversal-inorder-preorder-post-order-for-bst/) of the physical plan.
+For a tree like blow, we get a traversal order of `D -> E -> B -> F -> G -> C -> A`:
 ![](f4.png)
-We get a traversal order of `D -> E -> B -> F -> G -> C -> A`
 
 Applying to our physical graph above, we get a execution order of:
 
-1. `CsvExec (orders.csv)`
+1. [`CsvExec (orders.csv)`](https://docs.rs/datafusion/37.1.0/datafusion/datasource/physical_plan/struct.CsvExec.html)
 
-2. `RepartitionExec`
+2. [`RepartitionExec`](https://docs.rs/datafusion/37.1.0/datafusion/physical_plan/repartition/struct.RepartitionExec.html)
 
-3. `FilterExec`
+3. [`FilterExec`](https://docs.rs/datafusion/37.1.0/datafusion/physical_plan/filter/struct.FilterExec.html)
 
-4. `CoalesceBatchesExec`
+4. [`CoalesceBatchesExec`](https://docs.rs/datafusion/37.1.0/datafusion/physical_plan/coalesce_batches/struct.CoalesceBatchesExec.html)
 
-5. `RepartitionExec`
+5. [`RepartitionExec`](https://docs.rs/datafusion/37.1.0/datafusion/physical_plan/repartition/struct.RepartitionExec.html)
 
-6. `CoalesceBatchesExec`
+6. [`CoalesceBatchesExec`](https://docs.rs/datafusion/37.1.0/datafusion/physical_plan/coalesce_batches/struct.CoalesceBatchesExec.html)
 
-7. `CsvExec (lineitem.csv)`
+7. [`CsvExec (lineitem.csv)`](https://docs.rs/datafusion/37.1.0/datafusion/datasource/physical_plan/struct.CsvExec.html)
 
-8. `RepartitionExec`
+8. [`RepartitionExec`](https://docs.rs/datafusion/37.1.0/datafusion/physical_plan/repartition/struct.RepartitionExec.html)
 
-9. `RepartitionExec`
+9. [`RepartitionExec`](https://docs.rs/datafusion/37.1.0/datafusion/physical_plan/repartition/struct.RepartitionExec.html)
 
-10. `CoalesceBatchesExec`
+10. [`CoalesceBatchesExec`](https://docs.rs/datafusion/37.1.0/datafusion/physical_plan/coalesce_batches/struct.CoalesceBatchesExec.html)
 
-11. `HashJoinExec`
+11. [`HashJoinExec`](https://docs.rs/datafusion/37.1.0/datafusion/physical_plan/joins/struct.HashJoinExec.html)
 
-12. `CoalesceBatchesExec`
+12. [`CoalesceBatchesExec`](https://docs.rs/datafusion/37.1.0/datafusion/physical_plan/coalesce_batches/struct.CoalesceBatchesExec.html)
 
-13. `ProjectionExec`
+13. [`ProjectionExec`](https://docs.rs/datafusion/37.1.0/datafusion/physical_plan/projection/struct.ProjectionExec.html)
 
-The `RepartitionExec` and `CoalesceBatchesExec` are executors that partitions the data for multi-thread processing (based on the [Volcano execution](https://w6113.github.io/files/papers/volcanoparallelism-89.pdf) style)
+The `RepartitionExec` and `CoalesceBatchesExec` are executors that partitions the data for multi-thread processing (based on the [Volcano execution](https://w6113.github.io/files/papers/volcanoparallelism-89.pdf) style).
 
 A simplified, single-threaded, no-partitioned execution order would be:
+```{mermaid}
+graph LR;
+    e1["CsvExec (orders.csv)"] --> FilterExec
+    FilterExec --> e2 
+    e2["CsvExec (lineitem.csv)"] --> HashJoinExec
+    HashJoinExec --> ProjectionExec
+```
 
-1. `CsvExec (orders.csv)`
-
-2. `FilterExec`
-
-3. `CsvExec (lineitem.csv)`
-
-4. `HashJoinExec`
-
-5. `ProjectionExec`
