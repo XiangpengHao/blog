@@ -7,7 +7,7 @@ toc: true
 ---
 
 ## Preface 
-Database can be complex, it involves almost all aspects (research communities) of computer science: PL (programming language), SE (software enginerring), OS (operating system), networking, storage, theory, and more recently, NLP (natural language processing), and ML (machine learning). 
+Database can be complex, it involves almost all aspects (research communities) of computer science: PL (programming language), SE (software engineering), OS (operating system), networking, storage, theory, and more recently, NLP (natural language processing), and ML (machine learning). 
 The database community is centered around the people who are interested in making the database (the product) better, instead of by pure intellectual/research interests, it is therefore a practical and multi-disciplinary field.
 This makes databases awesome, but also hard to learn.
 
@@ -32,7 +32,7 @@ This is a blog post I hoped I knew when I was younger.
 
 <!-- I hope this post to be a long-term reference for people who are interested in databases.  -->
 I aim to make multi-year efforts to edit it and improve it as I learn more about databases.
-I sometimes dreamed that this post could evolve to be the database equivlent of the [OSTEP](https://pages.cs.wisc.edu/~remzi/OSTEP/) book (might be too mbitious though).
+I sometimes dreamed that this post could evolve to be the database equivalent of the [OSTEP](https://pages.cs.wisc.edu/~remzi/OSTEP/) book (might be too ambitious though).
 :::
 
 
