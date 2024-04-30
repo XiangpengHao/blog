@@ -322,80 +322,80 @@ Note
 <section id="output-1" class="level4">
 <h4 class="anchored" data-anchor-id="output-1">Output</h4>
 <p>Structured <a href="https://docs.rs/datafusion/37.1.0/datafusion/sql/parser/enum.Statement.html"><code>statement</code></a> from the SQL (significantly simplified for brevity):</p>
-<div class="sourceCode" id="cb3"><pre class="sourceCode numberSource txt numberLines code-with-copy"><code class="sourceCode default"><span id="cb3-1"><a href="#cb3-1"></a>from: [</span>
-<span id="cb3-2"><a href="#cb3-2"></a>  TableWithJoins {</span>
-<span id="cb3-3"><a href="#cb3-3"></a>    relation: Table {</span>
-<span id="cb3-4"><a href="#cb3-4"></a>      name: ObjectName([</span>
-<span id="cb3-5"><a href="#cb3-5"></a>        Ident {</span>
-<span id="cb3-6"><a href="#cb3-6"></a>          value: "orders",</span>
-<span id="cb3-7"><a href="#cb3-7"></a>          quote_style: None,</span>
-<span id="cb3-8"><a href="#cb3-8"></a>        },</span>
-<span id="cb3-9"><a href="#cb3-9"></a>      ]),</span>
-<span id="cb3-10"><a href="#cb3-10"></a>    },</span>
-<span id="cb3-11"><a href="#cb3-11"></a>    joins: [</span>
-<span id="cb3-12"><a href="#cb3-12"></a>      Join {</span>
-<span id="cb3-13"><a href="#cb3-13"></a>        relation: Table {</span>
-<span id="cb3-14"><a href="#cb3-14"></a>          name: ObjectName([</span>
-<span id="cb3-15"><a href="#cb3-15"></a>            Ident {</span>
-<span id="cb3-16"><a href="#cb3-16"></a>              value: "lineitem",</span>
-<span id="cb3-17"><a href="#cb3-17"></a>              quote_style: None,</span>
-<span id="cb3-18"><a href="#cb3-18"></a>            },</span>
-<span id="cb3-19"><a href="#cb3-19"></a>          ]),</span>
-<span id="cb3-20"><a href="#cb3-20"></a>        },</span>
-<span id="cb3-21"><a href="#cb3-21"></a>        join_operator: Inner(</span>
-<span id="cb3-22"><a href="#cb3-22"></a>          On(</span>
-<span id="cb3-23"><a href="#cb3-23"></a>            BinaryOp {</span>
-<span id="cb3-24"><a href="#cb3-24"></a>              left: Identifier(</span>
-<span id="cb3-25"><a href="#cb3-25"></a>                Ident {</span>
-<span id="cb3-26"><a href="#cb3-26"></a>                  value: "l_orderkey",</span>
-<span id="cb3-27"><a href="#cb3-27"></a>                  quote_style: None,</span>
-<span id="cb3-28"><a href="#cb3-28"></a>                },</span>
-<span id="cb3-29"><a href="#cb3-29"></a>              ),</span>
-<span id="cb3-30"><a href="#cb3-30"></a>              op: Eq,</span>
-<span id="cb3-31"><a href="#cb3-31"></a>              right: Identifier(</span>
-<span id="cb3-32"><a href="#cb3-32"></a>                Ident {</span>
-<span id="cb3-33"><a href="#cb3-33"></a>                  value: "o_orderkey",</span>
-<span id="cb3-34"><a href="#cb3-34"></a>                  quote_style: None,</span>
-<span id="cb3-35"><a href="#cb3-35"></a>                },</span>
-<span id="cb3-36"><a href="#cb3-36"></a>              ),</span>
-<span id="cb3-37"><a href="#cb3-37"></a>            },</span>
-<span id="cb3-38"><a href="#cb3-38"></a>          ),</span>
-<span id="cb3-39"><a href="#cb3-39"></a>        ),</span>
-<span id="cb3-40"><a href="#cb3-40"></a>      },</span>
-<span id="cb3-41"><a href="#cb3-41"></a>    ],</span>
-<span id="cb3-42"><a href="#cb3-42"></a>  },</span>
-<span id="cb3-43"><a href="#cb3-43"></a>],</span>
-<span id="cb3-44"><a href="#cb3-44"></a>selection: Some(</span>
-<span id="cb3-45"><a href="#cb3-45"></a>  BinaryOp {</span>
-<span id="cb3-46"><a href="#cb3-46"></a>    left: BinaryOp {</span>
-<span id="cb3-47"><a href="#cb3-47"></a>      left: Identifier(</span>
-<span id="cb3-48"><a href="#cb3-48"></a>        Ident {</span>
-<span id="cb3-49"><a href="#cb3-49"></a>          value: "o_orderdate",</span>
-<span id="cb3-50"><a href="#cb3-50"></a>          quote_style: None,</span>
-<span id="cb3-51"><a href="#cb3-51"></a>        },</span>
-<span id="cb3-52"><a href="#cb3-52"></a>      ),</span>
-<span id="cb3-53"><a href="#cb3-53"></a>      op: GtEq,</span>
-<span id="cb3-54"><a href="#cb3-54"></a>      right: TypedString {</span>
-<span id="cb3-55"><a href="#cb3-55"></a>        data_type: Date,</span>
-<span id="cb3-56"><a href="#cb3-56"></a>        value: "1994-01-01",</span>
-<span id="cb3-57"><a href="#cb3-57"></a>      },</span>
-<span id="cb3-58"><a href="#cb3-58"></a>    },</span>
-<span id="cb3-59"><a href="#cb3-59"></a>    op: And,</span>
-<span id="cb3-60"><a href="#cb3-60"></a>    right: BinaryOp {</span>
-<span id="cb3-61"><a href="#cb3-61"></a>      left: Identifier(</span>
-<span id="cb3-62"><a href="#cb3-62"></a>        Ident {</span>
-<span id="cb3-63"><a href="#cb3-63"></a>          value: "o_orderdate",</span>
-<span id="cb3-64"><a href="#cb3-64"></a>          quote_style: None,</span>
-<span id="cb3-65"><a href="#cb3-65"></a>        },</span>
-<span id="cb3-66"><a href="#cb3-66"></a>      ),</span>
-<span id="cb3-67"><a href="#cb3-67"></a>      op: Lt,</span>
-<span id="cb3-68"><a href="#cb3-68"></a>      right: TypedString {</span>
-<span id="cb3-69"><a href="#cb3-69"></a>        data_type: Date,</span>
-<span id="cb3-70"><a href="#cb3-70"></a>        value: "1995-01-01",</span>
-<span id="cb3-71"><a href="#cb3-71"></a>      },</span>
-<span id="cb3-72"><a href="#cb3-72"></a>    },</span>
-<span id="cb3-73"><a href="#cb3-73"></a>  },</span>
-<span id="cb3-74"><a href="#cb3-74"></a>),</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb3"><pre class="sourceCode txt code-with-copy"><code class="sourceCode default"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>from: [</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  TableWithJoins {</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    relation: Table {</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>      name: ObjectName([</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>        Ident {</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>          value: "orders",</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>          quote_style: None,</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>        },</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>      ]),</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    },</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>    joins: [</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>      Join {</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>        relation: Table {</span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>          name: ObjectName([</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>            Ident {</span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>              value: "lineitem",</span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>              quote_style: None,</span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>            },</span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>          ]),</span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>        },</span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>        join_operator: Inner(</span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>          On(</span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>            BinaryOp {</span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a>              left: Identifier(</span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>                Ident {</span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>                  value: "l_orderkey",</span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a>                  quote_style: None,</span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a>                },</span>
+<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a>              ),</span>
+<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a>              op: Eq,</span>
+<span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a>              right: Identifier(</span>
+<span id="cb3-32"><a href="#cb3-32" aria-hidden="true" tabindex="-1"></a>                Ident {</span>
+<span id="cb3-33"><a href="#cb3-33" aria-hidden="true" tabindex="-1"></a>                  value: "o_orderkey",</span>
+<span id="cb3-34"><a href="#cb3-34" aria-hidden="true" tabindex="-1"></a>                  quote_style: None,</span>
+<span id="cb3-35"><a href="#cb3-35" aria-hidden="true" tabindex="-1"></a>                },</span>
+<span id="cb3-36"><a href="#cb3-36" aria-hidden="true" tabindex="-1"></a>              ),</span>
+<span id="cb3-37"><a href="#cb3-37" aria-hidden="true" tabindex="-1"></a>            },</span>
+<span id="cb3-38"><a href="#cb3-38" aria-hidden="true" tabindex="-1"></a>          ),</span>
+<span id="cb3-39"><a href="#cb3-39" aria-hidden="true" tabindex="-1"></a>        ),</span>
+<span id="cb3-40"><a href="#cb3-40" aria-hidden="true" tabindex="-1"></a>      },</span>
+<span id="cb3-41"><a href="#cb3-41" aria-hidden="true" tabindex="-1"></a>    ],</span>
+<span id="cb3-42"><a href="#cb3-42" aria-hidden="true" tabindex="-1"></a>  },</span>
+<span id="cb3-43"><a href="#cb3-43" aria-hidden="true" tabindex="-1"></a>],</span>
+<span id="cb3-44"><a href="#cb3-44" aria-hidden="true" tabindex="-1"></a>selection: Some(</span>
+<span id="cb3-45"><a href="#cb3-45" aria-hidden="true" tabindex="-1"></a>  BinaryOp {</span>
+<span id="cb3-46"><a href="#cb3-46" aria-hidden="true" tabindex="-1"></a>    left: BinaryOp {</span>
+<span id="cb3-47"><a href="#cb3-47" aria-hidden="true" tabindex="-1"></a>      left: Identifier(</span>
+<span id="cb3-48"><a href="#cb3-48" aria-hidden="true" tabindex="-1"></a>        Ident {</span>
+<span id="cb3-49"><a href="#cb3-49" aria-hidden="true" tabindex="-1"></a>          value: "o_orderdate",</span>
+<span id="cb3-50"><a href="#cb3-50" aria-hidden="true" tabindex="-1"></a>          quote_style: None,</span>
+<span id="cb3-51"><a href="#cb3-51" aria-hidden="true" tabindex="-1"></a>        },</span>
+<span id="cb3-52"><a href="#cb3-52" aria-hidden="true" tabindex="-1"></a>      ),</span>
+<span id="cb3-53"><a href="#cb3-53" aria-hidden="true" tabindex="-1"></a>      op: GtEq,</span>
+<span id="cb3-54"><a href="#cb3-54" aria-hidden="true" tabindex="-1"></a>      right: TypedString {</span>
+<span id="cb3-55"><a href="#cb3-55" aria-hidden="true" tabindex="-1"></a>        data_type: Date,</span>
+<span id="cb3-56"><a href="#cb3-56" aria-hidden="true" tabindex="-1"></a>        value: "1994-01-01",</span>
+<span id="cb3-57"><a href="#cb3-57" aria-hidden="true" tabindex="-1"></a>      },</span>
+<span id="cb3-58"><a href="#cb3-58" aria-hidden="true" tabindex="-1"></a>    },</span>
+<span id="cb3-59"><a href="#cb3-59" aria-hidden="true" tabindex="-1"></a>    op: And,</span>
+<span id="cb3-60"><a href="#cb3-60" aria-hidden="true" tabindex="-1"></a>    right: BinaryOp {</span>
+<span id="cb3-61"><a href="#cb3-61" aria-hidden="true" tabindex="-1"></a>      left: Identifier(</span>
+<span id="cb3-62"><a href="#cb3-62" aria-hidden="true" tabindex="-1"></a>        Ident {</span>
+<span id="cb3-63"><a href="#cb3-63" aria-hidden="true" tabindex="-1"></a>          value: "o_orderdate",</span>
+<span id="cb3-64"><a href="#cb3-64" aria-hidden="true" tabindex="-1"></a>          quote_style: None,</span>
+<span id="cb3-65"><a href="#cb3-65" aria-hidden="true" tabindex="-1"></a>        },</span>
+<span id="cb3-66"><a href="#cb3-66" aria-hidden="true" tabindex="-1"></a>      ),</span>
+<span id="cb3-67"><a href="#cb3-67" aria-hidden="true" tabindex="-1"></a>      op: Lt,</span>
+<span id="cb3-68"><a href="#cb3-68" aria-hidden="true" tabindex="-1"></a>      right: TypedString {</span>
+<span id="cb3-69"><a href="#cb3-69" aria-hidden="true" tabindex="-1"></a>        data_type: Date,</span>
+<span id="cb3-70"><a href="#cb3-70" aria-hidden="true" tabindex="-1"></a>        value: "1995-01-01",</span>
+<span id="cb3-71"><a href="#cb3-71" aria-hidden="true" tabindex="-1"></a>      },</span>
+<span id="cb3-72"><a href="#cb3-72" aria-hidden="true" tabindex="-1"></a>    },</span>
+<span id="cb3-73"><a href="#cb3-73" aria-hidden="true" tabindex="-1"></a>  },</span>
+<span id="cb3-74"><a href="#cb3-74" aria-hidden="true" tabindex="-1"></a>),</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </section>
 </section>
 <section id="section-3-query-planning" class="level2">

@@ -152,7 +152,7 @@ font-style: inherit;">'1995-01-01'</span>;</span></code></pre></div>
 <section id="output-1" class="level4">
 <h4 class="anchored" data-anchor-id="output-1">Output</h4>
 <p>Structured <a href="https://docs.rs/datafusion/37.1.0/datafusion/sql/parser/enum.Statement.html"><code>statement</code></a> from the SQL (significantly simplified for brevity):</p>
-<div class="sourceCode" id="cb3" style="background: #f1f3f5;"><pre class="sourceCode numberSource txt numberLines code-with-copy"><code class="sourceCode default"><span id="cb3-1">from: [</span>
+<div class="sourceCode" id="cb3" style="background: #f1f3f5;"><pre class="sourceCode txt code-with-copy"><code class="sourceCode default"><span id="cb3-1">from: [</span>
 <span id="cb3-2">  TableWithJoins {</span>
 <span id="cb3-3">    relation: Table {</span>
 <span id="cb3-4">      name: ObjectName([</span>
