@@ -4,18 +4,21 @@ date: "2024-04-26"
 date-modified: "2024-04-30"
 categories: []
 toc: true
+format:
+  html: 
+    highlight-style: tango 
 ---
 
 ## Preface 
-Database can be complex, it involves almost all aspects (research communities) of computer science: PL (programming language), SE (software engineering), OS (operating system), networking, storage, theory, and more recently, NLP (natural language processing), and ML (machine learning). 
-The database community is centered around the people who are interested in making the database (the product) better, instead of by pure intellectual/research interests, it is therefore a practical and multi-disciplinary field.
-This makes databases awesome, but also hard to learn.
+A database can be complex; it involves almost all aspects (research communities) of computer science: PL (programming language), SE (software engineering), OS (operating system), networking, storage, theory; more recently, NLP (natural language processing), and ML (machine learning). 
+The database community is centered around the people interested in making the database (the product) better instead of pure intellectual/research interests; it is, therefore, a practical and multi-disciplinary field.
+This makes databases awesome but also hard to learn.
 
-As complex as it is, the boundary of the building blocks within a database are clear after decades of research and real-world operations.
-The recent (and state-of-the-art) [Apache DataFusion](https://github.com/apache/datafusion) project is a good example of building a database using well-defined industry standard like [Apache Arrow](https://arrow.apache.org), and [Apache Parquet](https://parquet.apache.org). 
+As complex as it is, the boundaries of the building blocks within a database are clear after decades of research and real-world operations.
+The recent (and state-of-the-art) [Apache DataFusion](https://github.com/apache/datafusion) project is a good example of building a database using well-defined industry standards like [Apache Arrow](https://arrow.apache.org), and [Apache Parquet](https://parquet.apache.org). 
 Without home-grown solutions for storage and in-memory representation, DataFusion is [comparable or even better](https://github.com/apache/datafusion/files/15149988/DataFusion_Query_Engine___SIGMOD_2024-FINAL-mk4.pdf) than alternatives like [DuckDB](https://github.com/duckdb/duckdb). 
 
-This document aim to explain how modern query engines (i.e., [OLAP](https://aws.amazon.com/compare/the-difference-between-olap-and-oltp)) work, step by step, from SQL to results:
+This document aims to explain how modern query engines (i.e., [OLAP](https://aws.amazon.com/compare/the-difference-between-olap-and-oltp)) work, step by step, from SQL to results:
 ```{mermaid}
 flowchart LR
    id1[SQL text] --> |SQL parser| id2[SQL statement] 
@@ -27,12 +30,11 @@ flowchart LR
 
 
 ::: {.callout-note}
-This is a working-in-progress blog post to explain how database query engine works. 
+This working-in-progress blog post explains how a database query engine works. 
 This is a blog post I hoped I knew when I was younger.
 
-<!-- I hope this post to be a long-term reference for people who are interested in databases.  -->
-I aim to make multi-year efforts to edit it and improve it as I learn more about databases.
-I sometimes dreamed that this post could evolve to be the database equivalent of the [OSTEP](https://pages.cs.wisc.edu/~remzi/OSTEP/) book (might be too ambitious though).
+I aim to make multi-year efforts to edit and improve it as I learn more about databases.
+I sometimes dreamed that this post could evolve to be the database equivalent of the [OSTEP](https://pages.cs.wisc.edu/~remzi/OSTEP/) book (might be too ambitious, though).
 :::
 
 
@@ -81,7 +83,7 @@ WHERE
 
 
 ### Output
-The query is fairly simple, it joins two tables on the order key, then filters the results based on order date.
+The query is pretty simple; it joins two tables on the order key and then filters the results based on the order date.
 If everything goes well, we should get results similar to this:
 ```txt
 +------------+------------+-------------+
@@ -93,26 +95,16 @@ If everything goes well, we should get results similar to this:
 
 ## Section 2: Parsing
 
-Skipped for now as it is mostly orthogonal to the data system pipelines.
+I skipped it for now as it is mostly orthogonal to the data system pipelines.
 
 #### Input
-A SQL query text.
-```sql
-SELECT
-    l_orderkey, l_shipdate, o_orderdate
-FROM
-    orders
-JOIN
-    lineitem ON l_orderkey = o_orderkey
-WHERE
-    o_orderdate >= DATE '1994-01-01'
-    AND o_orderdate < DATE '1995-01-01';
-```
+The SQL query text.
+
 
 #### Output
 Structured [`statement`](https://docs.rs/datafusion/37.1.0/datafusion/sql/parser/enum.Statement.html) from the SQL (significantly simplified for brevity):
 
-```txt {.code-overflow-wrap}
+```txt {.numberLines}
 from: [
   TableWithJoins {
     relation: Table {
@@ -191,10 +183,10 @@ selection: Some(
 
 ## Section 3: Query Planning
 #### Input
-The query statement from last step.
+The query statement from the last step.
 
 #### Output
-The logical query plan, something like this:
+The logical query plan is something like this:
 
 ```txt
 Projection: lineitem.l_orderkey, lineitem.l_shipdate, orders.o_orderdate
@@ -224,12 +216,12 @@ digraph {
 
 Logical vs physical. 
 
-todo: describe why we need to distinguish physical plan and logical plan.
+Todo: describe why we must distinguish between physical and logical plans.
 
 ## Section 4: Query Optimizing
 
 #### Input
-The (unoptimized) logical plan from last step.
+The (unoptimized) logical plan from the last step.
 
 #### Output
 An optimized logical plan.
@@ -259,16 +251,16 @@ digraph {
 // End DataFusion GraphViz Plan
 ```
 
-Note the difference between unoptimized and optimized plan!
-The `Filter` has been pushed down to lower level nodes. Part of the projection has been embedded to the `TableScan`.
+Note the difference between an unoptimized and an optimized plan!
+The `Filter` has been pushed down to lower-level nodes. Part of the projection has been embedded in the `TableScan`.
 
-## Section 5: Physical Planing
+## Section 5: Physical Planning
 
 #### Input
 A logical plan.
 
 #### Output
-A physical plan. Unlike logical plans, physical plans are more concrete about what to do, here's an example:
+A physical plan. Unlike logical plans, physical plans are more concrete about what to do; here's an example:
 
 ```txt
 Physical plan:
@@ -321,9 +313,9 @@ digraph {
 ```
 
 ::: {.callout-note}
-Note that a physical plan has much more details than a logical plan, it contains everything needed to execute the query!
+Note that a physical plan has much more details than a logical plan; it contains everything needed to execute the query!
 :::
-(Optional: we often have physical optimizer that optimize on a physical plan. Omitted here for simplicity)
+(Optional: we often have physical optimizers that optimize on a physical plan. Omitted here for simplicity)
 
 
 ## Section 6: Query Execution
@@ -331,7 +323,7 @@ Note that a physical plan has much more details than a logical plan, it contains
 A physical plan
 
 #### Output
-The final output like this:
+The final output is like this:
 
 ```txt
 +------------+------------+-------------+
@@ -344,10 +336,10 @@ The final output like this:
 ### How to execute a physical plan?
 
 The simplest execution model is [pull-based execution](https://justinjaffray.com/query-engines-push-vs.-pull/), which implements a [post-order traversal](https://www.freecodecamp.org/news/binary-search-tree-traversal-inorder-preorder-post-order-for-bst/) of the physical plan.
-For a tree like blow, we get a traversal order of `D -> E -> B -> F -> G -> C -> A`:
+For a tree (like blow), we get a traversal order of `D -> E -> B -> F -> G -> C -> A`:
 ![](f4.png)
 
-Applying to our physical graph above, we get a execution order of:
+Applying our physical graph above, we get an execution order of:
 
 1. [`CsvExec (orders.csv)`](https://docs.rs/datafusion/37.1.0/datafusion/datasource/physical_plan/struct.CsvExec.html)
 
@@ -375,7 +367,7 @@ Applying to our physical graph above, we get a execution order of:
 
 13. [`ProjectionExec`](https://docs.rs/datafusion/37.1.0/datafusion/physical_plan/projection/struct.ProjectionExec.html)
 
-The `RepartitionExec` and `CoalesceBatchesExec` are executors that partitions the data for multi-thread processing (based on the [Volcano execution](https://w6113.github.io/files/papers/volcanoparallelism-89.pdf) style).
+The `RepartitionExec` and `CoalesceBatchesExec` are executors that partition the data for multi-thread processing (based on the [Volcano execution](https://w6113.github.io/files/papers/volcanoparallelism-89.pdf) style).
 
 A simplified, single-threaded, no-partitioned execution order would be:
 ```{mermaid}
