@@ -104,7 +104,7 @@ The SQL query text.
 #### Output
 Structured [`statement`](https://docs.rs/datafusion/37.1.0/datafusion/sql/parser/enum.Statement.html) from the SQL (significantly simplified for brevity):
 
-```txt {.numberLines}
+```txt
 from: [
   TableWithJoins {
     relation: Table {
