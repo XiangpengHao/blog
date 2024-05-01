@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.4.553">
+<meta name="generator" content="quarto-1.4.554">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -207,7 +207,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#section-5-physical-planning" id="toc-section-5-physical-planning" class="nav-link" data-scroll-target="#section-5-physical-planning">Section 5: Physical Planning</a></li>
   <li><a href="#section-6-query-execution" id="toc-section-6-query-execution" class="nav-link" data-scroll-target="#section-6-query-execution">Section 6: Query Execution</a>
   <ul class="collapse">
-  <li><a href="#how-to-execute-a-physical-plan" id="toc-how-to-execute-a-physical-plan" class="nav-link" data-scroll-target="#how-to-execute-a-physical-plan">How to execute a physical plan?</a></li>
+  <li><a href="#execution-order" id="toc-execution-order" class="nav-link" data-scroll-target="#execution-order">Execution order</a></li>
+  <li><a href="#reading-from-disk" id="toc-reading-from-disk" class="nav-link" data-scroll-target="#reading-from-disk">Reading from disk</a></li>
   </ul></li>
   </ul>
 </nav>
@@ -795,8 +796,8 @@ Note
 <span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>| 1          | 1994-06-01 | 1994-05-01  |</span>
 <span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>+------------+------------+-------------+</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </section>
-<section id="how-to-execute-a-physical-plan" class="level3">
-<h3 class="anchored" data-anchor-id="how-to-execute-a-physical-plan">How to execute a physical plan?</h3>
+<section id="execution-order" class="level3">
+<h3 class="anchored" data-anchor-id="execution-order">Execution order</h3>
 <p>The simplest execution model is <a href="https://justinjaffray.com/query-engines-push-vs.-pull/">pull-based execution</a>, which implements a <a href="https://www.freecodecamp.org/news/binary-search-tree-traversal-inorder-preorder-post-order-for-bst/">post-order traversal</a> of the physical plan. For a tree (like blow), we get a traversal order of <code>D -&gt; E -&gt; B -&gt; F -&gt; G -&gt; C -&gt; A</code>: <img src="f4.png" class="img-fluid"></p>
 <p>Applying our physical graph above, we get an execution order of:</p>
 <ol type="1">
@@ -832,6 +833,11 @@ Note
 </div>
 </div>
 </div>
+</section>
+<section id="reading-from-disk" class="level3">
+<h3 class="anchored" data-anchor-id="reading-from-disk">Reading from disk</h3>
+<p>CSV files are row-based, and we read them row by row, it is efficient when we frequently need to read the whole row. However, modern data analytic workloads do not always need to read the whole row; they often only need to read a subset of columns. In our example above, we only need to read <code>l_orderkey</code>, <code>l_shipdate</code>, <code>o_orderdate</code>, <code>o_orderkey</code> from the tables. If using a row-based file format (like CSV), we need to load all columns into memory, which is inefficient. Column-based file formats (like <a href="https://parquet.apache.org/">Apache Parquet</a>) can be more efficient in this case.</p>
+<p>TODO: draw a figure about columnar and row storage format.</p>
 
 
 </section>
