@@ -333,7 +333,7 @@ The final output is like this:
 +------------+------------+-------------+
 ```
 
-### How to execute a physical plan?
+### Execution order 
 
 The simplest execution model is [pull-based execution](https://justinjaffray.com/query-engines-push-vs.-pull/), which implements a [post-order traversal](https://www.freecodecamp.org/news/binary-search-tree-traversal-inorder-preorder-post-order-for-bst/) of the physical plan.
 For a tree (like blow), we get a traversal order of `D -> E -> B -> F -> G -> C -> A`:
@@ -377,4 +377,15 @@ graph LR;
     e2["CsvExec (lineitem.csv)"] --> HashJoinExec
     HashJoinExec --> ProjectionExec
 ```
+
+
+### Reading from disk
+CSV files are row-based, and we read them row by row, it is efficient when we frequently need to read the whole row.
+However, modern data analytic workloads do not always need to read the whole row; they often only need to read a subset of columns.
+In our example above, we only need to read `l_orderkey`, `l_shipdate`, `o_orderdate`, `o_orderkey` from the tables.
+If using a row-based file format (like CSV), we need to load all columns into memory, which is inefficient.
+Column-based file formats (like [Apache Parquet](https://parquet.apache.org/)) can be more efficient in this case.
+
+TODO: draw a figure about columnar and row storage format.
+
 
