@@ -2,10 +2,14 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://blog.haoxp.xyz/index.html</loc>
-    <lastmod>2024-05-03T04:53:02.212Z</lastmod>
+    <lastmod>2024-05-07T18:53:24.347Z</lastmod>
   </url>
   <url>
     <loc>https://blog.haoxp.xyz/posts/sql-to-results/index.html</loc>
-    <lastmod>2024-05-03T04:53:02.216Z</lastmod>
+    <lastmod>2024-05-07T18:53:24.351Z</lastmod>
+  </url>
+  <url>
+    <loc>https://blog.haoxp.xyz/posts/good-advisor/index.html</loc>
+    <lastmod>2024-05-07T18:53:24.351Z</lastmod>
   </url>
 </urlset>

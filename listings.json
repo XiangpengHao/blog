@@ -2,6 +2,7 @@
   {
     "listing": "/index.html",
     "items": [
+      "/posts/good-advisor/index.html",
       "/posts/sql-to-results/index.html"
     ]
   }

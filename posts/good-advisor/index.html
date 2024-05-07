@@ -6,8 +6,9 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
+<meta name="dcterms.date" content="2024-05-07">
 
-<title>Xiangpeng’s blog - Database/storage systems</title>
+<title>Xiangpeng’s blog - Three types of good academic advisors</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -23,24 +24,22 @@ ul.task-list li input[type="checkbox"] {
 </style>
 
 
-<script src="site_libs/quarto-nav/quarto-nav.js"></script>
-<script src="site_libs/quarto-nav/headroom.min.js"></script>
-<script src="site_libs/clipboard/clipboard.min.js"></script>
-<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
-<script src="site_libs/quarto-search/fuse.min.js"></script>
-<script src="site_libs/quarto-search/quarto-search.js"></script>
-<meta name="quarto:offset" content="./">
-<script src="site_libs/quarto-listing/list.min.js"></script>
-<script src="site_libs/quarto-listing/quarto-listing.js"></script>
-<script src="site_libs/quarto-html/quarto.js"></script>
-<script src="site_libs/quarto-html/popper.min.js"></script>
-<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
-<script src="site_libs/quarto-html/anchor.min.js"></script>
-<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
-<script src="site_libs/bootstrap/bootstrap.min.js"></script>
-<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<script src="../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../">
+<script src="../../site_libs/quarto-html/quarto.js"></script>
+<script src="../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -65,72 +64,16 @@ ul.task-list li input[type="checkbox"] {
     "search-label": "Search"
   }
 }</script>
-<script>
-
-  window.document.addEventListener("DOMContentLoaded", function (_event) {
-    const listingTargetEl = window.document.querySelector('#listing-listing .list');
-    if (!listingTargetEl) {
-      // No listing discovered, do not attach.
-      return; 
-    }
-
-    const options = {
-      valueNames: ['listing-date','listing-title','listing-author','listing-image','listing-description',{ data: ['index'] },{ data: ['categories'] },{ data: ['listing-date-sort'] },{ data: ['listing-file-modified-sort'] }],
-      
-      searchColumns: ["listing-date","listing-title","listing-author","listing-image","listing-description"],
-    };
-
-    window['quarto-listings'] = window['quarto-listings'] || {};
-    window['quarto-listings']['listing-listing'] = new List('listing-listing', options);
-
-    if (window['quarto-listing-loaded']) {
-      window['quarto-listing-loaded']();
-    }
-  });
-
-  window.addEventListener('hashchange',() => {
-    if (window['quarto-listing-loaded']) {
-      window['quarto-listing-loaded']();
-    }
-  })
-  </script>
 <!-- Cloudflare Web Analytics -->
 <script defer="" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon="{&quot;token&quot;: &quot;eb43fd3c2c574a2590aae63c67009129&quot;}"></script><!-- End Cloudflare Web Analytics -->
 
-  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
 
-<script type="text/javascript">
-const typesetMath = (el) => {
-  if (window.MathJax) {
-    // MathJax Typeset
-    window.MathJax.typeset([el]);
-  } else if (window.katex) {
-    // KaTeX Render
-    var mathElements = el.getElementsByClassName("math");
-    var macros = [];
-    for (var i = 0; i < mathElements.length; i++) {
-      var texText = mathElements[i].firstChild;
-      if (mathElements[i].tagName == "SPAN") {
-        window.katex.render(texText.data, mathElements[i], {
-          displayMode: mathElements[i].classList.contains('display'),
-          throwOnError: false,
-          macros: macros,
-          fleqn: false
-        });
-      }
-    }
-  }
-}
-window.Quarto = {
-  typesetMath
-};
-</script>
-
-<link rel="stylesheet" href="styles.css">
-<link rel="alternate" type="application/rss+xml" title="Xiangpeng's blog" href="index.xml" data-external="1"><meta property="og:title" content="Xiangpeng’s blog - Database/storage systems">
+<link rel="stylesheet" href="../../styles.css">
+<meta property="og:title" content="Xiangpeng’s blog - Three types of good academic advisors">
+<meta property="og:description" content="">
 <meta property="og:site_name" content="Xiangpeng's blog">
-<meta name="twitter:title" content="Xiangpeng’s blog - Database/storage systems">
+<meta name="twitter:title" content="Xiangpeng’s blog - Three types of good academic advisors">
+<meta name="twitter:description" content="">
 <meta name="twitter:card" content="summary">
 </head>
 
@@ -141,7 +84,7 @@ window.Quarto = {
     <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
       <div class="navbar-container container-fluid">
       <div class="navbar-brand-container mx-auto">
-    <a class="navbar-brand" href="./index.html">
+    <a class="navbar-brand" href="../../index.html">
     <span class="navbar-title">Xiangpeng’s blog</span>
     </a>
   </div>
@@ -167,7 +110,7 @@ window.Quarto = {
 <span class="menu-text"></span></a>
   </li>  
   <li class="nav-item compact">
-    <a class="nav-link" href="./index.xml"> <i class="bi bi-rss" role="img">
+    <a class="nav-link" href="../../index.xml"> <i class="bi bi-rss" role="img">
 </i> 
 <span class="menu-text"></span></a>
   </li>  
@@ -181,92 +124,97 @@ window.Quarto = {
 <!-- content -->
 <header id="title-block-header" class="quarto-title-block default page-columns page-full">
   <div class="quarto-title-banner page-columns page-full">
-    <div class="quarto-title column-page">
-      <h1 class="title">Database/storage systems</h1>
+    <div class="quarto-title column-body">
+      <h1 class="title">Three types of good academic advisors</h1>
                       </div>
   </div>
     
   
-  <div class="quarto-title-meta column-page">
+  <div class="quarto-title-meta">
 
       
+      <div>
+      <div class="quarto-title-meta-heading">Published</div>
+      <div class="quarto-title-meta-contents">
+        <p class="date">May 7, 2024</p>
+      </div>
+    </div>
     
+      <div>
+      <div class="quarto-title-meta-heading">Modified</div>
+      <div class="quarto-title-meta-contents">
+        <p class="date-modified">May 7, 2024</p>
+      </div>
+    </div>
       
     </div>
     
   
-  </header><div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-full page-navbar">
+  </header><div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
 <!-- sidebar -->
 <!-- margin-sidebar -->
-    
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#good-advisors" id="toc-good-advisors" class="nav-link active" data-scroll-target="#good-advisors">Good advisors</a></li>
+  <li><a href="#signs-of-bad-advisors" id="toc-signs-of-bad-advisors" class="nav-link" data-scroll-target="#signs-of-bad-advisors">Signs of bad advisors</a></li>
+  <li><a href="#self-reflections" id="toc-self-reflections" class="nav-link" data-scroll-target="#self-reflections">Self-reflections</a></li>
+  </ul>
+</nav>
+    </div>
 <!-- main -->
-<main class="content quarto-banner-title-block column-page" id="quarto-document-content">
+<main class="content quarto-banner-title-block" id="quarto-document-content">
 
 
 
 
 
+<section id="good-advisors" class="level2">
+<h2 class="anchored" data-anchor-id="good-advisors">Good advisors</h2>
+<p>Entrepreneurs, innovators, and educators.</p>
+<p><strong>Entrepreneur</strong>: good at resource acquisition and allocation. Students have enough resources to reach their potential. They connect people and match the right students with the right resources. Example: <a href="https://www.cs.utexas.edu/~akella/">Aditya Akella</a>.</p>
+<p><strong>Innovator</strong>: good at finding the right thing to do. They have a clear vision of what important problems are. They are often smart people who deeply understand the problems they work on. Students learn a lot about their methodologies, visions, and ways of thinking/reasoning. Example: <a href="https://en.wikipedia.org/wiki/Michael_Stonebraker">Mike Stonebraker</a>.</p>
+<p><strong>Educator</strong>: good at teaching and empowering the students. They empower their student to reach their potential and to find what they are good at. They motivate their students and ignite their passions. Example: <a href="https://pages.cs.wisc.edu/~remzi/">Remzi H. Arpaci-Dusseau</a>(likely also <a href="https://pages.cs.wisc.edu/~dusseau/">Andrea C. Arpaci-Dusseau</a>, but I haven’t worked with her).</p>
+<p>A good advisor doesn’t necessarily have to be in only one category; for example, I have seen many good educators also be good innovators, but a good advisor often has to be in at least one of the categories.</p>
+<p>I’m privileged enough to have worked with all three types of good advisors; however, finding a good advisor requires a lot of luck and effort. Reality check: many faculty members (especially in prestigious universities) are not in any of the categories, and most don’t even try to be a good advisor.</p>
+</section>
+<section id="signs-of-bad-advisors" class="level2">
+<h2 class="anchored" data-anchor-id="signs-of-bad-advisors">Signs of bad advisors</h2>
+<blockquote class="blockquote">
+<p>All happy families are alike; each unhappy family is unhappy in its own way. – Leo Tolstoy</p>
+</blockquote>
+<p>Like unhappy families, bad advisors are pretty novel in their ways of being bad; we don’t summarize them here. Instead, we list some key symptoms of working with a bad advisor.</p>
+<ol type="1">
+<li><strong>Time-to-recovery</strong>, i.e., how long does it take to recover from a meeting with your advisor?</li>
+</ol>
+<p>Regular meetings with your advisor can be stressful; often the time you need to prepare many slides, teach your advisor about your work, and try to get some feedback. Often, especially in the early stages of your Ph.D., you don’t have good presentation/communication skills to explain your work to your advisor. Your advisor can get impatient and think you are not progressing or working hard enough.</p>
+<p>This can be frustrating and demotivating, and this pattern repeats every week. The question is, how long does it take to recover from this meeting? I have experienced that it can take a few hours, or even an entire day, to recover from the frustration and continue to work on my research. However, it does not have to be this way; a good advisor can motivate students and give concrete feedback to help them improve.</p>
+<ol start="2" type="1">
+<li><strong>Being treated like a human</strong>, i.e., not a tool/machine to generate papers.</li>
+</ol>
+<p>Graduate students are first humans, then students, and then researchers, but never tools/machines to generate papers.</p>
+<p>Most bad advisors treat their students as leverage to fulfill their own goals. They often have very concrete expectations from their students: publish X papers in Y top-tier conferences/journals and work on Z topics with W skill sets. They evaluate their student by whether they can meet those expectations; even worse, those expectations are often inexplicit and change over time.</p>
+<p>If students lag behind expectations – which happens all the time – they are often blamed for not working hard enough or not being smart enough. Worse, they will be threatened to delay graduation, withdraw funding, or even be kicked out of the program. Even if students are on track, they are often not appreciated for their hard work and dedication. They are given more work to do, and the cycle repeats.</p>
+<p>Graduate study is a long journey; without being treated like a real human, you <strong>feel</strong> suffering, lonely, and lost. But you deserve a supportive, fruitful, and enjoyable PhD study.</p>
+<ol start="3" type="1">
+<li><strong>Being aware of power dynamics</strong>, you are my boss.</li>
+</ol>
+<p>Many people dreamed an advisor-advisee relationship would be like a marriage partnership: they respect, trust, and work together to achieve common goals.</p>
+<p>But that is never the case in reality; we should stop pretending and wake up from that dream. Advisors pay their students’ salaries, and they can decide whether they can graduate or not. The conversation between an advisor and a student is never equal, and the power dynamics are always there.</p>
+<p>The real challenge is whether the advisor is aware of these power dynamics and how they use them. When in disagreement, does the student have the real freedom to say no? Does the advisor sincerely feel comfortable to be challenged? Navigating these power dynamics is art for both students and advisors, but it’s on the advisors to practice and ensure students feel safe and respected.</p>
+</section>
+<section id="self-reflections" class="level2">
+<h2 class="anchored" data-anchor-id="self-reflections">Self-reflections</h2>
+<p>It’s easy to blame bad advisors, but it is hard not to become one.</p>
+<p>I suffered a lot from bad advisors, but I often wonder if I can be better than them. Toxic advisors result from systematic academia problems, and changing the system is hard. That’s why good advisors are rare and worth being recognized and appreciated.</p>
+<p>When pressured with tenure, funding, and publication, will I be as nice/patient/motivating/caring as I imagined myself to be?</p>
 
 
+</section>
 
-
-<div class="quarto-listing quarto-listing-container-default" id="listing-listing">
-<div class="list quarto-listing-default">
-<div class="quarto-post image-right" data-index="0" data-categories="" data-listing-date-sort="1715040000000" data-listing-file-modified-sort="1715108004351" data-listing-date-modified-sort="1715040000000" data-listing-reading-time-sort="5" data-listing-word-count-sort="803">
-<div class="thumbnail">
-<p><a href="./posts/good-advisor/index.html" class="no-external"></a></p><a href="./posts/good-advisor/index.html" class="no-external">
-<div class="listing-item-img-placeholder card-img-top" >&nbsp;</div>
-</a><p><a href="./posts/good-advisor/index.html" class="no-external"></a></p>
-</div>
-<div class="body">
-<h3 class="no-anchor listing-title">
-<a href="./posts/good-advisor/index.html" class="no-external">Three types of good academic advisors</a>
-</h3>
-<div class="listing-subtitle">
-<a href="./posts/good-advisor/index.html" class="no-external"></a>
-</div>
-<div class="listing-description">
-<a href="./posts/good-advisor/index.html" class="no-external">Entrepreneurs, innovators, and educators.</a>
-</div>
-</div>
-<div class="metadata">
-<a href="./posts/good-advisor/index.html" class="no-external">
-<div class="listing-date">
-May 7, 2024
-</div>
-</a>
-</div>
-</div>
-<div class="quarto-post image-right" data-index="1" data-categories="" data-listing-date-sort="1714089600000" data-listing-file-modified-sort="1715108004351" data-listing-date-modified-sort="1714435200000" data-listing-reading-time-sort="12" data-listing-word-count-sort="2279">
-<div class="thumbnail">
-<p><a href="./posts/sql-to-results/index.html" class="no-external"></a></p><a href="./posts/sql-to-results/index.html" class="no-external">
-<p class="card-img-top"><img src="posts/sql-to-results/f4.png"  class="thumbnail-image card-img"/></p>
-</a><p><a href="./posts/sql-to-results/index.html" class="no-external"></a></p>
-</div>
-<div class="body">
-<h3 class="no-anchor listing-title">
-<a href="./posts/sql-to-results/index.html" class="no-external">What happens when you type a SQL in the database</a>
-</h3>
-<div class="listing-subtitle">
-<a href="./posts/sql-to-results/index.html" class="no-external"></a>
-</div>
-<div class="listing-description">
-<a href="./posts/sql-to-results/index.html" class="no-external">A database can be complex; it involves almost all aspects (research communities) of computer science: PL (programming language), SE (software engineering), OS (operating…</a>
-</div>
-</div>
-<div class="metadata">
-<a href="./posts/sql-to-results/index.html" class="no-external">
-<div class="listing-date">
-Apr 26, 2024
-</div>
-</a>
-</div>
-</div>
-</div>
-<div class="listing-no-matching d-none">
-No matching items
-</div>
-</div></main> <!-- /main -->
+</main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">
 window.document.addEventListener("DOMContentLoaded", function (event) {
   const toggleBodyColorMode = (bsSheetEl) => {
