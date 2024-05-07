@@ -8,18 +8,18 @@ toc: true
 
 
 ## Good advisors
-Entrepreneurs, innovators, and educators.
-
-**Entrepreneur**: good at resource acquisition and allocation. Students have enough resources to reach their potential. They connect people and match the right students with the right resources. Example: [Aditya Akella](https://www.cs.utexas.edu/~akella/).
+Innovators, educators, and entrepreneurs.
 
 **Innovator**: good at finding the right thing to do. They have a clear vision of what important problems are. They are often smart people who deeply understand the problems they work on. Students learn a lot about their methodologies, visions, and ways of thinking/reasoning. Example: [Mike Stonebraker](https://en.wikipedia.org/wiki/Michael_Stonebraker).
 
 **Educator**: good at teaching and empowering the students. They empower their student to reach their potential and to find what they are good at. They motivate their students and ignite their passions. Example: [Remzi H. Arpaci-Dusseau](https://pages.cs.wisc.edu/~remzi/)(likely also [Andrea C. Arpaci-Dusseau](https://pages.cs.wisc.edu/~dusseau/), but I haven't worked with her).
 
+**Entrepreneur**: good at resource acquisition and allocation. Students have enough resources to reach their potential. They connect people and match the right students with the right resources. Example: [Aditya Akella](https://www.cs.utexas.edu/~akella/).
+
 A good advisor doesn't necessarily have to be in only one category (e.g., advisors above span multiple categories). Still, a good advisor often has to be in at least one of the categories. 
 
 I'm privileged enough to have worked with all three types of good advisors; however, finding a good advisor requires a lot of luck and effort.
-Reality check: many faculty members (especially in prestigious universities) are not in any of the categories, and most don't even try to be a good advisor.
+Reality check: many faculty members (especially in prestigious universities) are not in any of the categories, and among them, most don't even try to be a good advisor.
 
 ## Signs of bad advisors
 > All happy families are alike; each unhappy family is unhappy in its own way. -- Leo Tolstoy
@@ -28,7 +28,7 @@ Like unhappy families, bad advisors are pretty novel in their ways of being bad;
 Instead, we list some key symptoms of working with a bad advisor.
 
 
-1. **Time-to-recovery**, i.e., how long does it take to recover from a meeting with your advisor?
+1. **Long time-to-recovery**, i.e., too long to recover from a meeting with your advisor?
 
 Regular meetings with your advisor can be stressful; often the time you need to prepare many slides, teach your advisor about your work, and try to get some feedback.
 Often, especially in the early stages of your Ph.D., you don't have good presentation/communication skills to explain your work to your advisor. 
@@ -39,7 +39,7 @@ The question is, how long does it take to recover from this meeting?
 I have experienced that it can take a few hours, or even an entire day, to recover from the frustration and continue to work on my research.
 However, it does not have to be this way; a good advisor can motivate students and give concrete feedback to help them improve.
 
-2. **Being treated like a human**, i.e., not a tool/machine to generate papers.
+2. **Not being treated like a human**, i.e., a tool/machine to generate papers.
 
 Graduate students are first humans, then students, and then researchers, but never tools/machines to generate papers.
 
@@ -55,7 +55,7 @@ They are given more work to do, and the cycle repeats.
 Graduate study is a long journey; without being treated like a real human, you **feel** suffering, lonely, and lost.
 But you deserve a supportive, fruitful, and enjoyable PhD study.
 
-3. **Being aware of power dynamics**, you are my boss.
+3. **Not aware of power dynamics**, but you are my boss.
 
 Many people dreamed an advisor-advisee relationship would be like a marriage partnership: they respect, trust, and work together to achieve common goals.
 
