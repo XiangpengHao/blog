@@ -4,7 +4,7 @@
     "href": "index.html",
     "title": "Database/storage systems",
     "section": "",
-    "text": "Three types of good academic advisors\n\n\n\n\n\n\n\n\n\n\n\nMay 7, 2024\n\n\n\n\n\n\n\n\n\n\n\n\nWhat happens when you type a SQL in the database\n\n\n\n\n\n\n\n\n\n\n\nApr 26, 2024\n\n\n\n\n\n\nNo matching items"
+    "text": "InfluxData &gt; Google and Microsoft\n\n\n\n\n\n\n\n\n\n\n\nAug 18, 2024\n\n\n\n\n\n\n\n\n\n\n\n\nThree types of good academic advisors\n\n\n\n\n\n\n\n\n\n\n\nMay 7, 2024\n\n\n\n\n\n\n\n\n\n\n\n\nWhat happens when you type a SQL in the database\n\n\n\n\n\n\n\n\n\n\n\nApr 26, 2024\n\n\n\n\n\n\nNo matching items"
   },
   {
     "objectID": "posts/sql-to-results/index.html",
@@ -61,6 +61,48 @@
     "title": "What happens when you type a SQL in the database",
     "section": "Section 6: Query Execution",
     "text": "Section 6: Query Execution\n\nInput\nA physical plan\n\n\nOutput\nThe final output is like this:\n+------------+------------+-------------+\n| l_orderkey | l_shipdate | o_orderdate |\n+------------+------------+-------------+\n| 1          | 1994-06-01 | 1994-05-01  |\n+------------+------------+-------------+\n\n\nExecution order\nThe simplest execution model is pull-based execution, which implements a post-order traversal of the physical plan. For a tree (like blow), we get a traversal order of D -&gt; E -&gt; B -&gt; F -&gt; G -&gt; C -&gt; A: \nApplying our physical graph above, we get an execution order of:\n\nCsvExec (orders.csv)\nRepartitionExec\nFilterExec\nCoalesceBatchesExec\nRepartitionExec\nCoalesceBatchesExec\nCsvExec (lineitem.csv)\nRepartitionExec\nRepartitionExec\nCoalesceBatchesExec\nHashJoinExec\nCoalesceBatchesExec\nProjectionExec\n\nThe RepartitionExec and CoalesceBatchesExec are executors that partition the data for multi-thread processing (based on the Volcano execution style).\nA simplified, single-threaded, no-partitioned execution order would be:\n\n\n\n\n\ngraph LR;\n    e1[\"CsvExec (orders.csv)\"] --&gt; FilterExec\n    FilterExec --&gt; e2 \n    e2[\"CsvExec (lineitem.csv)\"] --&gt; HashJoinExec\n    HashJoinExec --&gt; ProjectionExec\n\n\n\n\n\n\n\n\nReading from disk\nCSV files are row-based, and we read them row by row, it is efficient when we frequently need to read the whole row. However, modern data analytic workloads do not always need to read the whole row; they often only need to read a subset of columns. In our example above, we only need to read l_orderkey, l_shipdate, o_orderdate, o_orderkey from the tables. If using a row-based file format (like CSV), we need to load all columns into memory, which is inefficient. Column-based file formats (like Apache Parquet) can be more efficient in this case.\nTODO: draw a figure about columnar and row storage format."
+  },
+  {
+    "objectID": "posts/working-at-influxdata/index.html",
+    "href": "posts/working-at-influxdata/index.html",
+    "title": "InfluxData > Google and Microsoft",
+    "section": "",
+    "text": "I have interned at Google, Microsoft (Research), and InfluxData. The experience at InfluxData has been the most enjoyable, and this blog post explains why.\nSmaller companies are more connected to the real business, more connected within the company, and more willing to connect you to the rest of the world."
+  },
+  {
+    "objectID": "posts/working-at-influxdata/index.html#problem-definition",
+    "href": "posts/working-at-influxdata/index.html#problem-definition",
+    "title": "InfluxData > Google and Microsoft",
+    "section": "Problem definition",
+    "text": "Problem definition\nNon-problems\nI have worked on great projects: (1) auto-tuned BigTable, (2) designed a new B-Tree system, and (3) implemented StringView in DataFusion.\nI have met great people: Yixin Luo, Badrish Chandramouli, and Andrew Lamb. They are professional and helpful, and I learned a lot from them.\nThe problem\nThe problem is connectivity: Is the project connected to the real product/customer? Am I connected to the company? Am I visible to the rest of the world?\nBig tech has systematic cultural issues that prevent each individual from being connected, and there’s no easy way to fix it."
+  },
+  {
+    "objectID": "posts/working-at-influxdata/index.html#connect-to-business",
+    "href": "posts/working-at-influxdata/index.html#connect-to-business",
+    "title": "InfluxData > Google and Microsoft",
+    "section": "Connect to business",
+    "text": "Connect to business\nI have constantly been reminded to connect my intern project to the InfluxData business – how it improves InfluxDB3.0, what Influx queries it can accelerate, how it compares with the current approaches, etc.\nAndrew expects my project to deploy in production rather than behind a feature gate that no one uses, and he worked very hard to make it happen. Andrew also reminded me to connect my presentation to InfluxDB3.0 and discuss how the benefits propagate to the product.\nThis is an important feeling of real – I’m not being paid to work on a toy exploration, not a project that requires five extra teams to reach customers. Instead, it is a project grounded by real systems and real needs, and it will be running as part of a real product.\nBeing real means my time and efforts are respected and valued. Most importantly, it means the investment is sustainable because some kind of return is expected."
+  },
+  {
+    "objectID": "posts/working-at-influxdata/index.html#connect-to-peers",
+    "href": "posts/working-at-influxdata/index.html#connect-to-peers",
+    "title": "InfluxData > Google and Microsoft",
+    "section": "Connect to peers",
+    "text": "Connect to peers\nDespite being a remote-only company, InfluxData is highly connected: cross-team collaborations, company-wide acknowledgments for great work, and short turn-around for approval.\nI only learned to appreciate the above after seeing teams fighting for the same project, achievements downplayed due to politics, and bureaucratic processes blocking individual growth.\nConnecting to peers means working with real people, rather than a faceless bureaucratic system. You work towards a shared goal, not a surprise order from high above. When unexpected happens, you know who to talk to, and you can reason the consequences by common sense, not with a rule book or guessing what the boss wants.\nBeing treated as a respected individual, rather than some resource/tool/refillable, is sometimes more important than being paid well."
+  },
+  {
+    "objectID": "posts/working-at-influxdata/index.html#connect-to-the-world",
+    "href": "posts/working-at-influxdata/index.html#connect-to-the-world",
+    "title": "InfluxData > Google and Microsoft",
+    "section": "Connect to the world",
+    "text": "Connect to the world\nBig techs have trust and ego issues. They develop/control their own programming languages, frameworks, platforms, etc. They do not sincerely share with the rest of the world, and they design procedures to prevent individuals from doing so. This means your work is only visible to a small group of people, even if it could have a much broader impact.\nAt InfluxData, I have seen the opposite. Not only is all of my work open source, but the company is actively helping me share it on the company blog, X, and LinkedIn. Andrew even took me to a DataFusion meetup and introduced me to the larger FDAP community. (Meanwhile, Microsoft asks students to pay the travel fee to present company work at conferences)\nOpen source at InfluxData means not simply moving the repo to the public domain but sincerely engaging with the community, cultivating an environment where everyone is welcome to contribute, and making sure the goals and intentions are clear and well-communicated. As an example, Andrew and I have spent an extensive amount of time writing the blog post and trying our best to share what we have learned with the community, while we could have just merged the PR and moved forward."
+  },
+  {
+    "objectID": "posts/working-at-influxdata/index.html#what-makes-a-connected-culture",
+    "href": "posts/working-at-influxdata/index.html#what-makes-a-connected-culture",
+    "title": "InfluxData > Google and Microsoft",
+    "section": "What makes a connected culture?",
+    "text": "What makes a connected culture?\nSmall companies don’t automatically gain a connected culture, but I can tell that InfluxData and Andrew have made deliberate efforts to make it happen.\nLarge companies, on the other hand, have systematic issues that prevent this connected culture. Even though every individual I met at Google and Microsoft was nice and kind, there’s little they can do to fix the problem from the faceless bureaucratic system – you can’t even name a person to blame; it is the procedure.\nOne of my dreams is to create an employee-first company that prioritizes respect for individuals, explores new ways to organize and connect people, and focuses on maximizing their happiness and creativity rather than just pursuing profit.\n(I’d like to thank Xuanwo for encouraging me to finish this blog post!)"
   },
   {
     "objectID": "posts/good-advisor/index.html",
