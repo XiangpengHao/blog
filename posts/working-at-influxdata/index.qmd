@@ -1,0 +1,74 @@
+---
+title: "InfluxData > Google and Microsoft"
+date: "2024-08-18"
+date-modified: "2024-08-18"
+categories: []
+toc: true
+---
+
+I have interned at Google, Microsoft (Research), and InfluxData. The experience at InfluxData has been the most enjoyable, and this blog post explains why. 
+
+Smaller companies are more **connected** to the real world, more **connected** within the company, and more willing to **connect** you to the rest of the world.
+
+
+## Problem definition
+**Non-problems**
+
+I have worked on great projects: (1) auto-tuned BigTable, (2) designed new systems and published in VLDB, and (3) [implemented StringView](https://www.youtube.com/watch?v=RVLshX6fbds) in DataFusion.
+
+I have met great people: [Yixin Luo](https://www.cs.cmu.edu/~yixinluo/), [Badrish Chandramouli](https://www.microsoft.com/en-us/research/people/badrishc/), and [Andrew Lamb](http://andrew.nerdnetworks.org).
+They are professional and helpful, and I learned a lot from them. 
+
+
+**The problem**
+
+The problem is connectivity: Is the project I worked on connected to the real product/customer? Am I connected to the rest of the company? Am I visible to the rest of the world?
+
+Big tech has systematic cultural issues that prevent each individual from being connected, and there's no easy way to fix it. 
+
+## Connect to business
+
+I have constantly been reminded to connect my intern project to the InfluxData business -- how it improves the performance of InfluxDB3.0, what kinds of Influx queries it can accelerate, how it compares with the current approaches, etc.
+
+
+Andrew expects my project to be enabled by default rather than behind a feature gate that no one uses, and he worked very hard to make it happen.
+Andrew also reminded me to connect my presentation to InfluxDB3.0 and discuss how the performance gain propagates to the product. 
+
+This is important because it makes me feel real -- I'm not being paid to work on a toy exploration project, not a project with an unclear impact on real business. Instead, it is a project grounded in real systems and real needs, and it will be running as part of a real system.
+
+Being real means my time and efforts are respected and valued. Most importantly, the investment is sustainable because some kind of return is expected.
+
+
+## Connect to peers 
+
+Despite being a remote-only company, InfluxData is highly connected: cross-team collaborations, company-wide acknowledgments when great work is done, and short turn-around when something approval is needed.
+
+I only learned to appreciate these after seeing multiple teams fight on the same project, achievements being downplayed due to organizational politics and bureaucratic processes blocking individual growth. 
+
+Connecting to peers means working with real people, not a faceless bureaucratic system. 
+You work towards a shared goal, not a random order from high above.
+When unexpected happens, you know who to talk to.
+You reason the output with common sense, not with a rule book or guessing what the boss wants.
+
+Being treated as a respected individual, rather than some resource/tool/refillable, is the key to a happy work life.
+
+## Connect to the world
+
+Big tech has trust and ego issues. They develop/control their own programming languages, frameworks, platforms, etc.
+They do not sincerely share with the rest of the world, and they design bureaucratic processes to prevent individuals from doing so.
+This means your work is only visible to a small group of people, even if it could have a much broader impact.
+
+At InfluxData, I have seen almost the opposite. Not only is all of my work open source, but the company is actively helping me share it on the company blog, X, and LinkedIn.
+Andrew even took me to a DataFusion meetup and introduced me to the larger FDAP community. (Meanwhile, Microsoft asks students to pay the travel fee to present company work at conferences)
+
+Open source at InfluxData means not simply moving the repo to the public domain but sincerely engaging with the community, cultivating an environment where everyone is welcome to contribute, and making sure the goals and intentions are clear and transparent.
+As an example, Andrew and I have spent an extensive amount of time writing the blog post and trying our best to share what we have learned with the community, 
+while we could have just merged the PR and moved forward.
+
+
+## What makes a connected culture? 
+
+Small companies don't automatically have a connected culture, but I can tell that InfluxData and Andrew have made deliberate efforts to make it happen.
+
+Large companies, on the other hand, have systematic issues that prevent this connected culture. This aligns with my experience: every individual I have met at Google and Microsoft is nice and kind, 
+but there's little they can do to fix the problem from the faceless bureaucratic system -- you can't even name a person to blame; it is the procedure.
