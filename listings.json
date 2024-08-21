@@ -2,6 +2,7 @@
   {
     "listing": "/index.html",
     "items": [
+      "/posts/research-statement/index.html",
       "/posts/working-at-influxdata/index.html",
       "/posts/good-advisor/index.html",
       "/posts/sql-to-results/index.html"

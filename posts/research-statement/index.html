@@ -6,8 +6,9 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
+<meta name="dcterms.date" content="2024-08-21">
 
-<title>Database/storage systems – Xiangpeng’s blog</title>
+<title>What kinds of research I do – Xiangpeng’s blog</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -23,24 +24,22 @@ ul.task-list li input[type="checkbox"] {
 </style>
 
 
-<script src="site_libs/quarto-nav/quarto-nav.js"></script>
-<script src="site_libs/quarto-nav/headroom.min.js"></script>
-<script src="site_libs/clipboard/clipboard.min.js"></script>
-<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
-<script src="site_libs/quarto-search/fuse.min.js"></script>
-<script src="site_libs/quarto-search/quarto-search.js"></script>
-<meta name="quarto:offset" content="./">
-<script src="site_libs/quarto-listing/list.min.js"></script>
-<script src="site_libs/quarto-listing/quarto-listing.js"></script>
-<script src="site_libs/quarto-html/quarto.js"></script>
-<script src="site_libs/quarto-html/popper.min.js"></script>
-<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
-<script src="site_libs/quarto-html/anchor.min.js"></script>
-<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
-<script src="site_libs/bootstrap/bootstrap.min.js"></script>
-<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<script src="../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../">
+<script src="../../site_libs/quarto-html/quarto.js"></script>
+<script src="../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -65,72 +64,16 @@ ul.task-list li input[type="checkbox"] {
     "search-label": "Search"
   }
 }</script>
-<script>
-
-  window.document.addEventListener("DOMContentLoaded", function (_event) {
-    const listingTargetEl = window.document.querySelector('#listing-listing .list');
-    if (!listingTargetEl) {
-      // No listing discovered, do not attach.
-      return; 
-    }
-
-    const options = {
-      valueNames: ['listing-date','listing-title','listing-author','listing-image','listing-description',{ data: ['index'] },{ data: ['categories'] },{ data: ['listing-date-sort'] },{ data: ['listing-file-modified-sort'] }],
-      
-      searchColumns: ["listing-date","listing-title","listing-author","listing-image","listing-description"],
-    };
-
-    window['quarto-listings'] = window['quarto-listings'] || {};
-    window['quarto-listings']['listing-listing'] = new List('listing-listing', options);
-
-    if (window['quarto-listing-loaded']) {
-      window['quarto-listing-loaded']();
-    }
-  });
-
-  window.addEventListener('hashchange',() => {
-    if (window['quarto-listing-loaded']) {
-      window['quarto-listing-loaded']();
-    }
-  })
-  </script>
 <!-- Cloudflare Web Analytics -->
 <script defer="" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon="{&quot;token&quot;: &quot;eb43fd3c2c574a2590aae63c67009129&quot;}"></script><!-- End Cloudflare Web Analytics -->
 
-  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
 
-<script type="text/javascript">
-const typesetMath = (el) => {
-  if (window.MathJax) {
-    // MathJax Typeset
-    window.MathJax.typeset([el]);
-  } else if (window.katex) {
-    // KaTeX Render
-    var mathElements = el.getElementsByClassName("math");
-    var macros = [];
-    for (var i = 0; i < mathElements.length; i++) {
-      var texText = mathElements[i].firstChild;
-      if (mathElements[i].tagName == "SPAN") {
-        window.katex.render(texText.data, mathElements[i], {
-          displayMode: mathElements[i].classList.contains('display'),
-          throwOnError: false,
-          macros: macros,
-          fleqn: false
-        });
-      }
-    }
-  }
-}
-window.Quarto = {
-  typesetMath
-};
-</script>
-
-<link rel="stylesheet" href="styles.css">
-<link rel="alternate" type="application/rss+xml" title="Xiangpeng's blog" href="index.xml" data-external="1"><meta property="og:title" content="Database/storage systems – Xiangpeng’s blog">
+<link rel="stylesheet" href="../../styles.css">
+<meta property="og:title" content="What kinds of research I do – Xiangpeng’s blog">
+<meta property="og:description" content="">
 <meta property="og:site_name" content="Xiangpeng's blog">
-<meta name="twitter:title" content="Database/storage systems – Xiangpeng’s blog">
+<meta name="twitter:title" content="What kinds of research I do – Xiangpeng’s blog">
+<meta name="twitter:description" content="">
 <meta name="twitter:card" content="summary">
 </head>
 
@@ -141,7 +84,7 @@ window.Quarto = {
     <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
       <div class="navbar-container container-fluid">
       <div class="navbar-brand-container mx-auto">
-    <a class="navbar-brand" href="./index.html">
+    <a class="navbar-brand" href="../../index.html">
     <span class="navbar-title">Xiangpeng’s blog</span>
     </a>
   </div>
@@ -167,7 +110,7 @@ window.Quarto = {
 <span class="menu-text"></span></a>
   </li>  
   <li class="nav-item compact">
-    <a class="nav-link" href="./index.xml"> <i class="bi bi-rss" role="img">
+    <a class="nav-link" href="../../index.xml"> <i class="bi bi-rss" role="img">
 </i> 
 <span class="menu-text"></span></a>
   </li>  
@@ -181,142 +124,131 @@ window.Quarto = {
 <!-- content -->
 <header id="title-block-header" class="quarto-title-block default page-columns page-full">
   <div class="quarto-title-banner page-columns page-full">
-    <div class="quarto-title column-page">
-      <h1 class="title">Database/storage systems</h1>
+    <div class="quarto-title column-body">
+      <h1 class="title">What kinds of research I do</h1>
                       </div>
   </div>
     
   
-  <div class="quarto-title-meta column-page">
+  <div class="quarto-title-meta">
 
       
+      <div>
+      <div class="quarto-title-meta-heading">Published</div>
+      <div class="quarto-title-meta-contents">
+        <p class="date">August 21, 2024</p>
+      </div>
+    </div>
     
+      <div>
+      <div class="quarto-title-meta-heading">Modified</div>
+      <div class="quarto-title-meta-contents">
+        <p class="date-modified">August 21, 2024</p>
+      </div>
+    </div>
       
     </div>
     
   
-  </header><div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-full page-navbar">
+  </header><div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
 <!-- sidebar -->
 <!-- margin-sidebar -->
-    
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#north-star" id="toc-north-star" class="nav-link active" data-scroll-target="#north-star">North star</a></li>
+  <li><a href="#impact-definition" id="toc-impact-definition" class="nav-link" data-scroll-target="#impact-definition">Impact definition</a></li>
+  <li><a href="#no-goals" id="toc-no-goals" class="nav-link" data-scroll-target="#no-goals">No-goals</a></li>
+  <li><a href="#todays-problem-vs-tomorrows-problem" id="toc-todays-problem-vs-tomorrows-problem" class="nav-link" data-scroll-target="#todays-problem-vs-tomorrows-problem">Today’s problem vs tomorrow’s problem</a></li>
+  <li><a href="#engineering-problem-vs-research-problem" id="toc-engineering-problem-vs-research-problem" class="nav-link" data-scroll-target="#engineering-problem-vs-research-problem">Engineering problem vs research problem</a></li>
+  </ul>
+</nav>
+    </div>
 <!-- main -->
-<main class="content quarto-banner-title-block column-page" id="quarto-document-content">
+<main class="content quarto-banner-title-block" id="quarto-document-content">
 
 
 
 
 
+<section id="north-star" class="level3">
+<h3 class="anchored" data-anchor-id="north-star">North star</h3>
+<p><img src="20240808145348.png" class="img-fluid"></p>
+<p><strong>Research should benefit real people.</strong></p>
+</section>
+<section id="impact-definition" class="level3">
+<h3 class="anchored" data-anchor-id="impact-definition">Impact definition</h3>
+<p>Research impact is defined by the number of connections between the paper and the users.</p>
+<p>Note that the research paper itself does not produce an impact, as nobody’s life is changed because of reading a paper—we are not philosophers. This means that the research impact is always indirect; we have to apply the research to a system with real users.</p>
+<p>Due to the indirect nature of the research’s impact, some effort must be made to connect the research to users.</p>
+<p>My take: Researchers should take a holistic approach, seamlessly threading their work from the research paper to individual users.</p>
+</section>
+<section id="no-goals" class="level3">
+<h3 class="anchored" data-anchor-id="no-goals">No-goals</h3>
+<p>No goals help define goals. I’ve made all three types of mistakes, and this is my self-reflection to avoid repeating them.</p>
+<p><img src="20240808113448.png" class="img-fluid"> We are tempted to work on projects proven to be publishable, e.g., improving an existing published method. However, it is not uncommon to see chains of research papers working on a topic irrelevant to the rest of the world. In other words, the impact of a research paper is not defined by how many papers cite it.</p>
+<p><img src="20240808145432.png" class="img-fluid"> Researchers have the privilege to go wild and think big. But this privilege can be misused. Often, it is used to fool ourselves. Physics and math are/can be far from users, but not for computer science – one kind of <em>applied science</em>. As applied scientists, we must ensure our “science” applies to the real world instead of just intellectual exercise.<br>
+Some research (e.g., theory) in applied science still enjoys greater freedom than others. However, my research topics are outside them.</p>
+<p><img src="20240808153415.png" class="img-fluid"> This is the most common research mistake. We often believe that researchers should focus on making good ideas, and someone else will go off to make it happen. This is not true. There are way too many good ideas, yet only some are impactful. Most ideas are just combinations of existing techniques, and it is hard to believe anything fundamental will be discovered in system research.</p>
+<p>Most importantly, a good idea evolves with the system it builds upon. It is a feedback loop that tries, fails, and repeats. And the great idea that comes out of the system always differs from its initial version. It is never the case that the research flow is a single-directional graph with no feedback from downstream users.</p>
+</section>
+<section id="todays-problem-vs-tomorrows-problem" class="level3">
+<h3 class="anchored" data-anchor-id="todays-problem-vs-tomorrows-problem">Today’s problem vs tomorrow’s problem</h3>
+<p>Both types of problems are important and meaningful. I don’t work on tomorrow’s problems (but I agree that someone must work on future problems).</p>
+<p>Why not work on future problems: - We have enough of today’s problems to work on. - It’s easier to fool ourselves while working on future problems</p>
+<p>Don’t fool ourselves: - We like tomorrow’s problem because it’s easier to claim novelty – future problems naturally come with novelty. - We like tomorrow’s problem because we don’t have to establish user connections. Instead, we use it as an excuse to avoid working on the most important and challenging parts. We are free to propose anything we want, work around any challenges, and eventually disconnect from the rest of the world. - How do we avoid imaginary research? How can we ensure today’s solution is not funny when tomorrow’s problem arrives? Why work on it when future researchers will beat today’s solution with much more practical considerations?</p>
+</section>
+<section id="engineering-problem-vs-research-problem" class="level3">
+<h3 class="anchored" data-anchor-id="engineering-problem-vs-research-problem">Engineering problem vs research problem</h3>
+<p><img src="20240821153927.png" class="img-fluid"> I have some radical claims on research vs engineering problems:</p>
+<ul>
+<li><p><em>All</em> engineering problems are meaningful as they come from users and practitioners—no one invented them out of thin air.</p></li>
+<li><p><em>All</em> research problems are publishable by definition.</p></li>
+<li><p><em>Most</em> engineering problems are also research problems, evidenced by the fact that they haven’t been solved—meaning they are challenging, resource-consuming, or require a deep understanding of practical nuances.</p></li>
+<li><p>Research problems, without being grounded by engineering problems, are unlikely to be meaningful.</p></li>
+</ul>
+<!-- 
+### Practical considerations
+I have declared to do and not to do. But it is easier to say than execute. 
+Everyone wanted impactful research, yet few had the power to stay unchanged. 
+Below is my attempt.
+
+
+
+Some of these are more of "ultimate life goals" rather than "research goals." Those are things that I believe a reasonable person in this society should pursue. One should definitely optimize for global goals rather than local goals.
+
+With that said, local-goals often conflict with global-goals. For example, if the local-goal is to "publish enough to get tenure", then that goal might conflict with the goal of "do good research", or "be a reasonable person".
+
+This process is alienation. Where people in the small community are trained to work towards a goal that is not properly aligned with the social goal or their global goal. When this happens, we either leave the community, or do whatever possible to make sure the goals are aligned.
+
+That's why we need to write down our thoughts and make sure we do not fool ourselves and have enough resource to fight against alienation.
+
+The value of axioms is that it provides a north star to where we want to go, we might need to deviate the route a bit to get somewhere, but we want to make sure we are on the right path in the long run.
+
+
+Axioms are only meaningful when goals are conflicting with each other.
+
+Example 1:
+We designed a fancy new data structure that performs super well in our benchmark. And of course we published a paper in top tier conferences. And we just tell others "here's the great idea" and of course they can go off and reimplement it and use it in production.
 
 
 
 
-<div class="quarto-listing quarto-listing-container-default" id="listing-listing">
-<div class="list quarto-listing-default">
-<div class="quarto-post image-right" data-index="0" data-categories="" data-listing-date-sort="1724169600000" data-listing-file-modified-sort="1724228192920" data-listing-date-modified-sort="1724169600000" data-listing-reading-time-sort="6" data-listing-word-count-sort="1008">
-<div class="thumbnail">
-<p><a href="./posts/research-statement/index.html" class="no-external"></a></p><a href="./posts/research-statement/index.html" class="no-external">
-<p class="card-img-top"><img src="posts/research-statement/20240808145348.png"  class="thumbnail-image card-img"/></p>
-</a><p><a href="./posts/research-statement/index.html" class="no-external"></a></p>
-</div>
-<div class="body">
-<h3 class="no-anchor listing-title">
-<a href="./posts/research-statement/index.html" class="no-external">What kinds of research I do</a>
-</h3>
-<div class="listing-subtitle">
-<a href="./posts/research-statement/index.html" class="no-external"></a>
-</div>
-<div class="listing-description">
-<a href="./posts/research-statement/index.html" class="no-external"><strong>Research should benefit real people.</strong></a>
-</div>
-</div>
-<div class="metadata">
-<a href="./posts/research-statement/index.html" class="no-external">
-<div class="listing-date">
-Aug 21, 2024
-</div>
-</a>
-</div>
-</div>
-<div class="quarto-post image-right" data-index="1" data-categories="" data-listing-date-sort="1723910400000" data-listing-file-modified-sort="1723988907857" data-listing-date-modified-sort="1723910400000" data-listing-reading-time-sort="4" data-listing-word-count-sort="747">
-<div class="thumbnail">
-<p><a href="./posts/working-at-influxdata/index.html" class="no-external"></a></p><a href="./posts/working-at-influxdata/index.html" class="no-external">
-<div class="listing-item-img-placeholder card-img-top" >&nbsp;</div>
-</a><p><a href="./posts/working-at-influxdata/index.html" class="no-external"></a></p>
-</div>
-<div class="body">
-<h3 class="no-anchor listing-title">
-<a href="./posts/working-at-influxdata/index.html" class="no-external">InfluxData &gt; Google and Microsoft</a>
-</h3>
-<div class="listing-subtitle">
-<a href="./posts/working-at-influxdata/index.html" class="no-external"></a>
-</div>
-<div class="listing-description">
-<a href="./posts/working-at-influxdata/index.html" class="no-external">I have interned at Google, Microsoft (Research), and InfluxData. The experience at InfluxData has been the most enjoyable, and this blog post explains why.</a>
-</div>
-</div>
-<div class="metadata">
-<a href="./posts/working-at-influxdata/index.html" class="no-external">
-<div class="listing-date">
-Aug 18, 2024
-</div>
-</a>
-</div>
-</div>
-<div class="quarto-post image-right" data-index="2" data-categories="" data-listing-date-sort="1715011200000" data-listing-file-modified-sort="1715109424724" data-listing-date-modified-sort="1715011200000" data-listing-reading-time-sort="4" data-listing-word-count-sort="798">
-<div class="thumbnail">
-<p><a href="./posts/good-advisor/index.html" class="no-external"></a></p><a href="./posts/good-advisor/index.html" class="no-external">
-<div class="listing-item-img-placeholder card-img-top" >&nbsp;</div>
-</a><p><a href="./posts/good-advisor/index.html" class="no-external"></a></p>
-</div>
-<div class="body">
-<h3 class="no-anchor listing-title">
-<a href="./posts/good-advisor/index.html" class="no-external">Three types of good academic advisors</a>
-</h3>
-<div class="listing-subtitle">
-<a href="./posts/good-advisor/index.html" class="no-external"></a>
-</div>
-<div class="listing-description">
-<a href="./posts/good-advisor/index.html" class="no-external">Innovators, educators, and entrepreneurs.</a>
-</div>
-</div>
-<div class="metadata">
-<a href="./posts/good-advisor/index.html" class="no-external">
-<div class="listing-date">
-May 7, 2024
-</div>
-</a>
-</div>
-</div>
-<div class="quarto-post image-right" data-index="3" data-categories="" data-listing-date-sort="1714060800000" data-listing-file-modified-sort="1714711864770" data-listing-date-modified-sort="1714406400000" data-listing-reading-time-sort="12" data-listing-word-count-sort="2279">
-<div class="thumbnail">
-<p><a href="./posts/sql-to-results/index.html" class="no-external"></a></p><a href="./posts/sql-to-results/index.html" class="no-external">
-<p class="card-img-top"><img src="posts/sql-to-results/f4.png"  class="thumbnail-image card-img"/></p>
-</a><p><a href="./posts/sql-to-results/index.html" class="no-external"></a></p>
-</div>
-<div class="body">
-<h3 class="no-anchor listing-title">
-<a href="./posts/sql-to-results/index.html" class="no-external">What happens when you type a SQL in the database</a>
-</h3>
-<div class="listing-subtitle">
-<a href="./posts/sql-to-results/index.html" class="no-external"></a>
-</div>
-<div class="listing-description">
-<a href="./posts/sql-to-results/index.html" class="no-external">A database can be complex; it involves almost all aspects (research communities) of computer science: PL (programming language), SE (software engineering), OS (operating…</a>
-</div>
-</div>
-<div class="metadata">
-<a href="./posts/sql-to-results/index.html" class="no-external">
-<div class="listing-date">
-Apr 26, 2024
-</div>
-</a>
-</div>
-</div>
-</div>
-<div class="listing-no-matching d-none">
-No matching items
-</div>
-</div></main> <!-- /main -->
+#### How about failed projects
+
+### Not attacking junior researchers
+everyone make mistakes. we improve ourselves by making mistakes. And the research communities train junior researchers by allowing them to make mistakes.
+This is my research statement, and it should not be used to attack anyone else. By reading this statement you agree that our planet is large enough to allow people with different opinions live.
+### Counter arguments
+Research teams explores different path, and provide intelligence when we need to choose one.
+In this case, researcher should still be connected to users on every path they explores. If a path is not connected to any user, why would it waste time exploring it? -->
+
+
+</section>
+
+</main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">
 window.document.addEventListener("DOMContentLoaded", function (event) {
   const toggleBodyColorMode = (bsSheetEl) => {
