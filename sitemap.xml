@@ -1,23 +1,23 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://blog.haoxp.xyz/index.html</loc>
-    <lastmod>2024-04-27T15:29:20.655Z</lastmod>
-  </url>
-  <url>
-    <loc>https://blog.haoxp.xyz/posts/research-statement/index.html</loc>
-    <lastmod>2024-08-21T08:16:32.920Z</lastmod>
-  </url>
-  <url>
     <loc>https://blog.haoxp.xyz/posts/working-at-influxdata/index.html</loc>
-    <lastmod>2024-08-18T13:48:27.857Z</lastmod>
+    <lastmod>2024-08-21T08:31:11.379Z</lastmod>
   </url>
   <url>
     <loc>https://blog.haoxp.xyz/posts/sql-to-results/index.html</loc>
-    <lastmod>2024-05-03T04:51:04.770Z</lastmod>
+    <lastmod>2024-08-21T08:31:11.379Z</lastmod>
+  </url>
+  <url>
+    <loc>https://blog.haoxp.xyz/index.html</loc>
+    <lastmod>2024-08-21T08:31:11.371Z</lastmod>
+  </url>
+  <url>
+    <loc>https://blog.haoxp.xyz/posts/research-statement/index.html</loc>
+    <lastmod>2024-08-21T08:31:11.375Z</lastmod>
   </url>
   <url>
     <loc>https://blog.haoxp.xyz/posts/good-advisor/index.html</loc>
-    <lastmod>2024-05-07T19:17:04.724Z</lastmod>
+    <lastmod>2024-08-21T08:31:11.371Z</lastmod>
   </url>
 </urlset>

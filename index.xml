@@ -10,7 +10,7 @@
 <atom:link href="https://blog.haoxp.xyz/index.xml" rel="self" type="application/rss+xml"/>
 <description></description>
 <generator>quarto-1.5.56</generator>
-<lastBuildDate>Tue, 20 Aug 2024 16:00:00 GMT</lastBuildDate>
+<lastBuildDate>Wed, 21 Aug 2024 00:00:00 GMT</lastBuildDate>
 <item>
   <title>What kinds of research I do</title>
   <link>https://blog.haoxp.xyz/posts/research-statement/</link>
@@ -97,7 +97,7 @@ In this case, researcher should still be connected to users on every path they e
 
  ]]></description>
   <guid>https://blog.haoxp.xyz/posts/research-statement/</guid>
-  <pubDate>Tue, 20 Aug 2024 16:00:00 GMT</pubDate>
+  <pubDate>Wed, 21 Aug 2024 00:00:00 GMT</pubDate>
 </item>
 <item>
   <title>InfluxData &gt; Google and Microsoft</title>
@@ -151,7 +151,7 @@ In this case, researcher should still be connected to users on every path they e
 
  ]]></description>
   <guid>https://blog.haoxp.xyz/posts/working-at-influxdata/</guid>
-  <pubDate>Sat, 17 Aug 2024 16:00:00 GMT</pubDate>
+  <pubDate>Sun, 18 Aug 2024 00:00:00 GMT</pubDate>
 </item>
 <item>
   <title>Three types of good academic advisors</title>
@@ -207,7 +207,7 @@ In this case, researcher should still be connected to users on every path they e
 
  ]]></description>
   <guid>https://blog.haoxp.xyz/posts/good-advisor/</guid>
-  <pubDate>Mon, 06 May 2024 16:00:00 GMT</pubDate>
+  <pubDate>Tue, 07 May 2024 00:00:00 GMT</pubDate>
 </item>
 <item>
   <title>What happens when you type a SQL in the database</title>
@@ -875,7 +875,7 @@ Note
 
  ]]></description>
   <guid>https://blog.haoxp.xyz/posts/sql-to-results/</guid>
-  <pubDate>Thu, 25 Apr 2024 16:00:00 GMT</pubDate>
+  <pubDate>Fri, 26 Apr 2024 00:00:00 GMT</pubDate>
 </item>
 </channel>
 </rss>
