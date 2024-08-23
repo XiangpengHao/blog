@@ -1,7 +1,7 @@
 ---
-title: "What kinds of research I do"
+title: "My research statement"
 date: "2024-08-21"
-date-modified: "2024-08-21"
+date-modified: "2024-08-23"
 categories: []
 toc: true
 ---
@@ -12,7 +12,7 @@ toc: true
 
 ![](20240808145348.png)
 
-**Research should benefit real people.** 
+Research should connect to real people.
 
 
 ### Impact definition
@@ -32,13 +32,15 @@ We are tempted to work on projects proven to be publishable, e.g., improving an 
 
 ![](20240808145432.png)
 Researchers have the privilege to go wild and think big. But this privilege can be misused. Often, it is used to fool ourselves.
-Physics and math are/can be far from users, but not for computer science -- one kind of *applied science*.  As applied scientists, we must ensure our "science" applies to the real world instead of just intellectual exercise.  
+Some research (e.g., physics and math) are/can be far from users, but not computer science -- one of *applied science*.  As applied scientists, we must ensure our "science" applies to the real world instead of just intellectual exercise.  
 Some research (e.g., theory) in applied science still enjoys greater freedom than others. However, my research topics are outside them.
 
 
 ![](20240808153415.png)
 This is the most common research mistake. We often believe that researchers should focus on making good ideas, and someone else will go off to make it happen.
-This is not true. There are way too many good ideas, yet only some are impactful. Most ideas are just combinations of existing techniques, and it is hard to believe anything fundamental will be discovered in system research.
+This is not true. There are way too many good ideas, yet few are impactful. 
+
+Most ideas are just combinations of existing techniques, and it is hard to believe anything fundamental will be discovered in system research.
 
 Most importantly, a good idea evolves with the system it builds upon. It is a feedback loop that tries, fails, and repeats. And the great idea that comes out of the system always differs from its initial version. It is never the case that the research flow is a single-directional graph with no feedback from downstream users.
 
@@ -47,26 +49,45 @@ Both types of problems are important and meaningful.
 I don't work on tomorrow's problems (but I agree that someone must work on future problems).
 
 Why not work on future problems:
+
 - We have enough of today's problems to work on.
-- It's easier to fool ourselves while working on future problems
+
+- It's easier to fool ourselves while working on future problems.
 
 Don't fool ourselves:
+
 - We like tomorrow's problem because it's easier to claim novelty -- future problems naturally come with novelty.
+
 - We like tomorrow's problem because we don't have to establish user connections. Instead, we use it as an excuse to avoid working on the most important and challenging parts. We are free to propose anything we want, work around any challenges, and eventually disconnect from the rest of the world.
+
 - How do we avoid imaginary research? How can we ensure today's solution is not funny when tomorrow's problem arrives? Why work on it when future researchers will beat today's solution with much more practical considerations?
 
 ### Engineering problem vs research problem
 
 ![](20240821153927.png)
-I have some radical claims on research vs engineering problems:
+My take on research vs engineering problems:
 
 - *All* engineering problems are meaningful as they come from users and practitioners—no one invented them out of thin air.
 
 - *All* research problems are publishable by definition.
 
-- *Most* engineering problems are also research problems, evidenced by the fact that they haven't been solved—meaning they are challenging, resource-consuming, or require a deep understanding of practical nuances.
+- *Most* engineering problems are also research problems, evidenced by the fact that they haven't been solved — meaning they are challenging, resource-consuming, or require a deep understanding of practical nuances, which are the definitions of *research problems*.
 
 - Research problems, without being grounded by engineering problems, are unlikely to be meaningful.
+
+
+### Why this statement?
+
+I probably only need to publish one more paper to graduate, as I have already published two papers in VLDB/SIGMOD.
+Moreover, my chance to stay in academia is quite low, meaning that this one-more-paper is likely the last paper I drive to publish in my career.
+
+I have lots of cool ideas, but I have to choose only one.
+This statement helps me to crystalize my thoughts when deciding what to work on.
+It would be great if I knew all of these early in my Ph.D., but it is still not too late to write them down.
+
+I can get lost when struggling to publish a paper or being determined to secure a faculty job.
+Everyone starts with the intention of doing meaningful research, but practical considerations forced them to do otherwise.
+If I encounter those situations (again), this statement would remind me of my north star.
 
 <!-- 
 ### Practical considerations

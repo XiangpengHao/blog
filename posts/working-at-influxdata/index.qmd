@@ -1,7 +1,7 @@
 ---
 title: "InfluxData > Google and Microsoft"
 date: "2024-08-18"
-date-modified: "2024-08-18"
+date-modified: "2024-08-23"
 categories: []
 toc: true
 ---
@@ -22,7 +22,7 @@ They are professional and helpful, and I learned a lot from them.
 
 **The problem**
 
-The problem is *connectivity*: Is the project connected to the real product/customer? Am I connected to the company? Am I visible to the rest of the world?
+The problem is *connectivity*: Is the project connected to the real product/customer? Am I connected to the company? Am I connected to the rest of the world?
 
 Big tech has systematic cultural issues that prevent each individual from being connected, and there's no easy way to fix it. 
 
@@ -31,7 +31,7 @@ Big tech has systematic cultural issues that prevent each individual from being 
 I have constantly been reminded to connect my intern project to the InfluxData business -- how it improves InfluxDB3.0, what Influx queries it can accelerate, how it compares with the current approaches, etc.
 
 Andrew expects my project to deploy in production rather than behind a feature gate that no one uses, and he worked very hard to make it happen.
-Andrew also reminded me to connect my presentation to InfluxDB3.0 and discuss how the benefits propagate to the product. 
+Andrew also reminded me to connect my presentation to InfluxDB3.0 and discuss how it benefits the product. 
 
 This is an important feeling of real -- I'm not being paid to work on a toy exploration, not a project that requires five extra teams to reach customers. Instead, it is a project grounded by real systems and real needs, and it will be running as part of a real product.
 
@@ -65,7 +65,7 @@ As an example, Andrew and I have spent an extensive amount of time writing the b
 while we could have just merged the PR and moved forward.
 
 
-## What makes a connected culture? 
+## What prevents a connected culture? 
 
 Small companies don't automatically gain a connected culture, but I can tell that InfluxData and Andrew have made deliberate efforts to make it happen.
 
