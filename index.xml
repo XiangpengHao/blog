@@ -10,9 +10,9 @@
 <atom:link href="https://blog.haoxp.xyz/index.xml" rel="self" type="application/rss+xml"/>
 <description></description>
 <generator>quarto-1.5.56</generator>
-<lastBuildDate>Wed, 21 Aug 2024 00:00:00 GMT</lastBuildDate>
+<lastBuildDate>Tue, 20 Aug 2024 16:00:00 GMT</lastBuildDate>
 <item>
-  <title>What kinds of research I do</title>
+  <title>My research statement</title>
   <link>https://blog.haoxp.xyz/posts/research-statement/</link>
   <description><![CDATA[ 
 
@@ -23,7 +23,7 @@
 <section id="north-star" class="level3">
 <h3 class="anchored" data-anchor-id="north-star">North star</h3>
 <p><img src="https://blog.haoxp.xyz/posts/research-statement/20240808145348.png" class="img-fluid"></p>
-<p><strong>Research should benefit real people.</strong></p>
+<p>Research should connect to real people.</p>
 </section>
 <section id="impact-definition" class="level3">
 <h3 class="anchored" data-anchor-id="impact-definition">Impact definition</h3>
@@ -36,26 +36,42 @@
 <h3 class="anchored" data-anchor-id="no-goals">No-goals</h3>
 <p>No goals help define goals. I’ve made all three types of mistakes, and this is my self-reflection to avoid repeating them.</p>
 <p><img src="https://blog.haoxp.xyz/posts/research-statement/20240808113448.png" class="img-fluid"> We are tempted to work on projects proven to be publishable, e.g., improving an existing published method. However, it is not uncommon to see chains of research papers working on a topic irrelevant to the rest of the world. In other words, the impact of a research paper is not defined by how many papers cite it.</p>
-<p><img src="https://blog.haoxp.xyz/posts/research-statement/20240808145432.png" class="img-fluid"> Researchers have the privilege to go wild and think big. But this privilege can be misused. Often, it is used to fool ourselves. Physics and math are/can be far from users, but not for computer science – one kind of <em>applied science</em>. As applied scientists, we must ensure our “science” applies to the real world instead of just intellectual exercise.<br>
+<p><img src="https://blog.haoxp.xyz/posts/research-statement/20240808145432.png" class="img-fluid"> Researchers have the privilege to go wild and think big. But this privilege can be misused. Often, it is used to fool ourselves. Some research (e.g., physics and math) are/can be far from users, but not computer science – one of <em>applied science</em>. As applied scientists, we must ensure our “science” applies to the real world instead of just intellectual exercise.<br>
 Some research (e.g., theory) in applied science still enjoys greater freedom than others. However, my research topics are outside them.</p>
-<p><img src="https://blog.haoxp.xyz/posts/research-statement/20240808153415.png" class="img-fluid"> This is the most common research mistake. We often believe that researchers should focus on making good ideas, and someone else will go off to make it happen. This is not true. There are way too many good ideas, yet only some are impactful. Most ideas are just combinations of existing techniques, and it is hard to believe anything fundamental will be discovered in system research.</p>
+<p><img src="https://blog.haoxp.xyz/posts/research-statement/20240808153415.png" class="img-fluid"> This is the most common research mistake. We often believe that researchers should focus on making good ideas, and someone else will go off to make it happen. This is not true. There are way too many good ideas, yet few are impactful.</p>
+<p>Most ideas are just combinations of existing techniques, and it is hard to believe anything fundamental will be discovered in system research.</p>
 <p>Most importantly, a good idea evolves with the system it builds upon. It is a feedback loop that tries, fails, and repeats. And the great idea that comes out of the system always differs from its initial version. It is never the case that the research flow is a single-directional graph with no feedback from downstream users.</p>
 </section>
 <section id="todays-problem-vs-tomorrows-problem" class="level3">
 <h3 class="anchored" data-anchor-id="todays-problem-vs-tomorrows-problem">Today’s problem vs tomorrow’s problem</h3>
 <p>Both types of problems are important and meaningful. I don’t work on tomorrow’s problems (but I agree that someone must work on future problems).</p>
-<p>Why not work on future problems: - We have enough of today’s problems to work on. - It’s easier to fool ourselves while working on future problems</p>
-<p>Don’t fool ourselves: - We like tomorrow’s problem because it’s easier to claim novelty – future problems naturally come with novelty. - We like tomorrow’s problem because we don’t have to establish user connections. Instead, we use it as an excuse to avoid working on the most important and challenging parts. We are free to propose anything we want, work around any challenges, and eventually disconnect from the rest of the world. - How do we avoid imaginary research? How can we ensure today’s solution is not funny when tomorrow’s problem arrives? Why work on it when future researchers will beat today’s solution with much more practical considerations?</p>
+<p>Why not work on future problems:</p>
+<ul>
+<li><p>We have enough of today’s problems to work on.</p></li>
+<li><p>It’s easier to fool ourselves while working on future problems.</p></li>
+</ul>
+<p>Don’t fool ourselves:</p>
+<ul>
+<li><p>We like tomorrow’s problem because it’s easier to claim novelty – future problems naturally come with novelty.</p></li>
+<li><p>We like tomorrow’s problem because we don’t have to establish user connections. Instead, we use it as an excuse to avoid working on the most important and challenging parts. We are free to propose anything we want, work around any challenges, and eventually disconnect from the rest of the world.</p></li>
+<li><p>How do we avoid imaginary research? How can we ensure today’s solution is not funny when tomorrow’s problem arrives? Why work on it when future researchers will beat today’s solution with much more practical considerations?</p></li>
+</ul>
 </section>
 <section id="engineering-problem-vs-research-problem" class="level3">
 <h3 class="anchored" data-anchor-id="engineering-problem-vs-research-problem">Engineering problem vs research problem</h3>
-<p><img src="https://blog.haoxp.xyz/posts/research-statement/20240821153927.png" class="img-fluid"> I have some radical claims on research vs engineering problems:</p>
+<p><img src="https://blog.haoxp.xyz/posts/research-statement/20240821153927.png" class="img-fluid"> My take on research vs engineering problems:</p>
 <ul>
 <li><p><em>All</em> engineering problems are meaningful as they come from users and practitioners—no one invented them out of thin air.</p></li>
 <li><p><em>All</em> research problems are publishable by definition.</p></li>
-<li><p><em>Most</em> engineering problems are also research problems, evidenced by the fact that they haven’t been solved—meaning they are challenging, resource-consuming, or require a deep understanding of practical nuances.</p></li>
+<li><p><em>Most</em> engineering problems are also research problems, evidenced by the fact that they haven’t been solved — meaning they are challenging, resource-consuming, or require a deep understanding of practical nuances, which are the definitions of <em>research problems</em>.</p></li>
 <li><p>Research problems, without being grounded by engineering problems, are unlikely to be meaningful.</p></li>
 </ul>
+</section>
+<section id="why-this-statement" class="level3">
+<h3 class="anchored" data-anchor-id="why-this-statement">Why this statement?</h3>
+<p>I probably only need to publish one more paper to graduate, as I have already published two papers in VLDB/SIGMOD. Moreover, my chance to stay in academia is quite low, meaning that this one-more-paper is likely the last paper I drive to publish in my career.</p>
+<p>I have lots of cool ideas, but I have to choose only one. This statement helps me to crystalize my thoughts when deciding what to work on. It would be great if I knew all of these early in my Ph.D., but it is still not too late to write them down.</p>
+<p>I can get lost when struggling to publish a paper or being determined to secure a faculty job. Everyone starts with the intention of doing meaningful research, but practical considerations forced them to do otherwise. If I encounter those situations (again), this statement would remind me of my north star.</p>
 <!-- 
 ### Practical considerations
 I have declared to do and not to do. But it is easier to say than execute. 
@@ -97,7 +113,7 @@ In this case, researcher should still be connected to users on every path they e
 
  ]]></description>
   <guid>https://blog.haoxp.xyz/posts/research-statement/</guid>
-  <pubDate>Wed, 21 Aug 2024 00:00:00 GMT</pubDate>
+  <pubDate>Tue, 20 Aug 2024 16:00:00 GMT</pubDate>
 </item>
 <item>
   <title>InfluxData &gt; Google and Microsoft</title>
@@ -116,13 +132,13 @@ In this case, researcher should still be connected to users on every path they e
 <p>I have worked on great projects: (1) auto-tuned BigTable, (2) designed a new B-Tree system, and (3) <a href="https://www.youtube.com/watch?v=RVLshX6fbds">implemented StringView</a> in DataFusion.</p>
 <p>I have met great people: <a href="https://www.cs.cmu.edu/~yixinluo/">Yixin Luo</a>, <a href="https://www.microsoft.com/en-us/research/people/badrishc/">Badrish Chandramouli</a>, and <a href="http://andrew.nerdnetworks.org">Andrew Lamb</a>. They are professional and helpful, and I learned a lot from them.</p>
 <p><strong>The problem</strong></p>
-<p>The problem is <em>connectivity</em>: Is the project connected to the real product/customer? Am I connected to the company? Am I visible to the rest of the world?</p>
+<p>The problem is <em>connectivity</em>: Is the project connected to the real product/customer? Am I connected to the company? Am I connected to the rest of the world?</p>
 <p>Big tech has systematic cultural issues that prevent each individual from being connected, and there’s no easy way to fix it.</p>
 </section>
 <section id="connect-to-business" class="level2">
 <h2 class="anchored" data-anchor-id="connect-to-business">Connect to business</h2>
 <p>I have constantly been reminded to connect my intern project to the InfluxData business – how it improves InfluxDB3.0, what Influx queries it can accelerate, how it compares with the current approaches, etc.</p>
-<p>Andrew expects my project to deploy in production rather than behind a feature gate that no one uses, and he worked very hard to make it happen. Andrew also reminded me to connect my presentation to InfluxDB3.0 and discuss how the benefits propagate to the product.</p>
+<p>Andrew expects my project to deploy in production rather than behind a feature gate that no one uses, and he worked very hard to make it happen. Andrew also reminded me to connect my presentation to InfluxDB3.0 and discuss how it benefits the product.</p>
 <p>This is an important feeling of real – I’m not being paid to work on a toy exploration, not a project that requires five extra teams to reach customers. Instead, it is a project grounded by real systems and real needs, and it will be running as part of a real product.</p>
 <p>Being real means my time and efforts are respected and valued. Most importantly, it means the investment is sustainable because some kind of return is expected.</p>
 </section>
@@ -139,8 +155,8 @@ In this case, researcher should still be connected to users on every path they e
 <p>At InfluxData, I have seen the opposite. Not only is all of my work open source, but the company is actively helping me share it on the company blog, X, and LinkedIn. Andrew even took me to a DataFusion meetup and introduced me to the larger FDAP community. (Meanwhile, Microsoft asks students to pay the travel fee to present company work at conferences)</p>
 <p>Open source at InfluxData means not simply moving the repo to the public domain but sincerely engaging with the community, cultivating an environment where everyone is welcome to contribute, and making sure the goals and intentions are clear and well-communicated. As an example, Andrew and I have spent an extensive amount of time writing the blog post and trying our best to share what we have learned with the community, while we could have just merged the PR and moved forward.</p>
 </section>
-<section id="what-makes-a-connected-culture" class="level2">
-<h2 class="anchored" data-anchor-id="what-makes-a-connected-culture">What makes a connected culture?</h2>
+<section id="what-prevents-a-connected-culture" class="level2">
+<h2 class="anchored" data-anchor-id="what-prevents-a-connected-culture">What prevents a connected culture?</h2>
 <p>Small companies don’t automatically gain a connected culture, but I can tell that InfluxData and Andrew have made deliberate efforts to make it happen.</p>
 <p>Large companies, on the other hand, have systematic issues that prevent this connected culture. Even though every individual I met at Google and Microsoft was nice and kind, there’s little they can do to fix the problem from the <a href="https://en.wikipedia.org/wiki/The_Trial">faceless bureaucratic system</a> – you can’t even name a person to blame; it is the procedure.</p>
 <p>One of my dreams is to create an employee-first company that prioritizes respect for individuals, explores new ways to organize and connect people, and focuses on maximizing their happiness and creativity rather than just pursuing profit.</p>
@@ -151,7 +167,7 @@ In this case, researcher should still be connected to users on every path they e
 
  ]]></description>
   <guid>https://blog.haoxp.xyz/posts/working-at-influxdata/</guid>
-  <pubDate>Sun, 18 Aug 2024 00:00:00 GMT</pubDate>
+  <pubDate>Sat, 17 Aug 2024 16:00:00 GMT</pubDate>
 </item>
 <item>
   <title>Three types of good academic advisors</title>
@@ -178,12 +194,12 @@ In this case, researcher should still be connected to users on every path they e
 </blockquote>
 <p>Like unhappy families, bad advisors are pretty novel in their ways of being bad; we don’t summarize them here. Instead, we list some key symptoms of working with a bad advisor.</p>
 <ol type="1">
-<li><strong>Long time-to-recovery</strong>, i.e., too long to recover from a meeting with your advisor?</li>
+<li><strong>Long time-to-recovery</strong>, i.e., too long to recover from a meeting with your advisor.</li>
 </ol>
 <p>Regular meetings with your advisor can be stressful; often the time you need to prepare many slides, teach your advisor about your work, and try to get some feedback. Often, especially in the early stages of your Ph.D., you don’t have good presentation/communication skills to explain your work to your advisor. Your advisor can get impatient and think you are not progressing or working hard enough.</p>
 <p>This can be frustrating and demotivating, and this pattern repeats every week. The question is, how long does it take to recover from this meeting? I have experienced that it can take a few hours, or even an entire day, to recover from the frustration and continue to work on my research. However, it does not have to be this way; a good advisor can motivate students and give concrete feedback to help them improve.</p>
 <ol start="2" type="1">
-<li><strong>Not being treated like a human</strong>, i.e., a tool/machine to generate papers.</li>
+<li><strong>Not being treated like a human</strong>, but a tool/machine to generate papers.</li>
 </ol>
 <p>Graduate students are first humans, then students, and then researchers, but never tools/machines to generate papers.</p>
 <p>Most bad advisors treat their students as leverage to fulfill their own goals. They often have very concrete expectations from their students: publish X papers in Y top-tier conferences/journals and work on Z topics with W skill sets. They evaluate their student by whether they can meet those expectations; even worse, those expectations are often inexplicit and change over time.</p>
@@ -193,7 +209,7 @@ In this case, researcher should still be connected to users on every path they e
 <li><strong>Not aware of power dynamics</strong>, but you are my boss.</li>
 </ol>
 <p>Many people dreamed an advisor-advisee relationship would be like a marriage partnership: they respect, trust, and work together to achieve common goals.</p>
-<p>But that is never the case in reality; we should stop pretending and wake up from that dream. Advisors pay their students’ salaries, and they can decide whether they can graduate or not. The conversation between an advisor and a student is never equal, and the power dynamics are always there.</p>
+<p>But that is never the case in reality; advisors pay their students’ salaries, and they can decide when they can graduate. The conversation between an advisor and a student is never equal, and the power dynamics are always there.</p>
 <p>The real challenge is whether the advisor is aware of these power dynamics and how they use them. When in disagreement, does the student have the real freedom to say no? Does the advisor sincerely feel comfortable to be challenged? Navigating these power dynamics is art for both students and advisors, but it’s on the advisors to practice and ensure students feel safe and respected.</p>
 </section>
 <section id="self-reflections" class="level2">
@@ -207,7 +223,7 @@ In this case, researcher should still be connected to users on every path they e
 
  ]]></description>
   <guid>https://blog.haoxp.xyz/posts/good-advisor/</guid>
-  <pubDate>Tue, 07 May 2024 00:00:00 GMT</pubDate>
+  <pubDate>Mon, 06 May 2024 16:00:00 GMT</pubDate>
 </item>
 <item>
   <title>What happens when you type a SQL in the database</title>
@@ -875,7 +891,7 @@ Note
 
  ]]></description>
   <guid>https://blog.haoxp.xyz/posts/sql-to-results/</guid>
-  <pubDate>Fri, 26 Apr 2024 00:00:00 GMT</pubDate>
+  <pubDate>Thu, 25 Apr 2024 16:00:00 GMT</pubDate>
 </item>
 </channel>
 </rss>
