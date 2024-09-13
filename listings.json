@@ -2,6 +2,7 @@
   {
     "listing": "/index.html",
     "items": [
+      "/posts/string-view-datafusion/index.html",
       "/posts/research-statement/index.html",
       "/posts/working-at-influxdata/index.html",
       "/posts/good-advisor/index.html",

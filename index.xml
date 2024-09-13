@@ -9,8 +9,996 @@
 <link>https://blog.haoxp.xyz/</link>
 <atom:link href="https://blog.haoxp.xyz/index.xml" rel="self" type="application/rss+xml"/>
 <description></description>
-<generator>quarto-1.5.56</generator>
-<lastBuildDate>Wed, 21 Aug 2024 00:00:00 GMT</lastBuildDate>
+<generator>quarto-1.5.57</generator>
+<lastBuildDate>Fri, 13 Sep 2024 00:00:00 GMT</lastBuildDate>
+<item>
+  <title>Use StringView to make DataFusion faster</title>
+  <dc:creator>Xiangpeng Hao, Andrew Lamb</dc:creator>
+  <link>https://blog.haoxp.xyz/posts/string-view-datafusion/</link>
+  <description><![CDATA[ 
+
+
+
+
+
+<p>Editor note: This blog post is adapted from the InfluxData blog post series, make sure to also check out the original posts <a href="https://www.influxdata.com/blog/faster-queries-with-stringview-part-one-influxdb/">1</a> <a href="https://www.influxdata.com/blog/faster-queries-with-stringview-part-two-influxdb/">2</a>.</p>
+<p>Note: Thanks to InfluxData for sponsoring this work as a summer intern project</p>
+<hr>
+<p>This blog describes our experience implementing <a href="https://arrow.apache.org/docs/format/Columnar.html#variable-size-binary-view-layout">StringView</a> in the <a href="https://github.com/apache/arrow-rs">Rust implementation</a> of <a href="https://arrow.apache.org/">Apache Arrow</a>, and integrating it into <a href="https://datafusion.apache.org/">Apache DataFusion</a>, significantly accelerating string-intensive queries in the <a href="https://benchmark.clickhouse.com/">ClickBench</a> benchmark by 20%- 200% (Figure 1<sup>1</sup>).</p>
+<p>Getting significant end-to-end performance improvements was non-trivial. Implementing StringView itself was only a fraction of the effort required. Among other things, we had to optimize UTF-8 validation, implement unintuitive compiler optimizations, tune block sizes, and time GC to realize the <a href="https://www.influxdata.com/blog/flight-datafusion-arrow-parquet-fdap-architecture-influxdb/">FDAP ecosystem</a>’s benefit. With other members of the open source community, we were able to overcome performance bottlenecks that could have killed the project. We would like to contribute by explaining the challenges and solutions in more detail so that more of the community can learn from our experience.&nbsp;</p>
+<p>StringView is based on a simple idea: avoid some string copies and accelerate comparisons with inlined prefixes. Like most great ideas, it is “obvious” only after <a href="https://db.in.tum.de/~freitag/papers/p29-neumann-cidr20.pdf">someone describes it clearly</a>. Although simple, straightforward implementation actually <em>slows down performance for almost every query</em>. We must, therefore, apply astute observations and diligent engineering to realize the actual benefits from StringView.&nbsp;</p>
+<p>Although this journey was successful, not all research ideas are as lucky. To accelerate the adoption of research into industry, it is valuable to integrate research prototypes with practical systems. Understanding the nuances of real-world systems makes it more likely that research designs will lead to practical system improvements.</p>
+<p>StringView support was released as part of arrow-rs <a href="https://crates.io/crates/arrow/52.2.0">v52.2.0</a> and DataFusion v41.0.0. You can try it by setting the <code>schema_force_string_view</code> <a href="https://datafusion.apache.org/user-guide/configs.html">DataFusion configuration option</a>, and we are <a href="https://github.com/apache/datafusion/issues/11682">hard at work with the community to</a> make it the default. We invite everyone to try it out, take advantage of the effort invested so far, and contribute to making it better.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="https://blog.haoxp.xyz/posts/string-view-datafusion/click-perf.png" class="img-fluid figure-img"></p>
+<figcaption>Figure 1: StringView improves string-intensive ClickBench query performance by 20% - 200%</figcaption>
+</figure>
+</div>
+<section id="section-1-what-is-stringview" class="level2">
+<h2 class="anchored" data-anchor-id="section-1-what-is-stringview">Section 1: What is StringView?</h2>
+<p>The concept of inlined strings with prefixes (called “German Strings” <a href="https://x.com/andy_pavlo/status/1813258735965643203">by Andy Pavlo</a>, in homage to <a href="https://www.tum.de/">TUM</a>, where the <a href="https://db.in.tum.de/~freitag/papers/p29-neumann-cidr20.pdf">Umbra paper that describes</a> them originated) has been used in many recent database systems (<a href="https://engineering.fb.com/2024/02/20/developer-tools/velox-apache-arrow-15-composable-data-management/">Velox</a>, <a href="https://pola.rs/posts/polars-string-type/">Polars</a>, <a href="https://duckdb.org/2021/12/03/duck-arrow.html">DuckDB</a>, <a href="https://cedardb.com/blog/german_strings/">CedarDB</a>, etc.) and was introduced to Arrow as a new <a href="https://arrow.apache.org/docs/format/Columnar.html#variable-size-binary-view-layout">StringViewArray</a><sup>2</sup> type. Arrow’s original <a href="https://arrow.apache.org/docs/format/Columnar.html#variable-size-binary-layout">StringArray</a> is very memory efficient but less effective for certain operations. StringViewArray accelerates string-intensive operations via prefix inlining and a more flexible and compact string representation.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="https://blog.haoxp.xyz/posts/string-view-datafusion/string-view.png" class="img-fluid figure-img"></p>
+<figcaption>Figure 2: Use StringArray and StringViewArray to represent the same string content.</figcaption>
+</figure>
+</div>
+<p>A StringViewArray consists of three components:</p>
+<ol type="1">
+<li>The <em><code>view</code></em> array<br>
+</li>
+<li>The buffers<br>
+</li>
+<li>The buffer pointers (IDs) that map buffer offsets to their physical locations</li>
+</ol>
+<p>Each <code>view</code> is 16 bytes long, and its contents differ based on the string’s length:</p>
+<ul>
+<li>string length &lt; 12 bytes: the first four bytes store the string length, and the remaining 12 bytes store the inlined string.<br>
+</li>
+<li>string length &gt; 12 bytes: the string is stored in a separate buffer. The length is again stored in the first 4 bytes, followed by the buffer id (4 bytes), the buffer offset (4 bytes), and the prefix (first 4 bytes) of the string.</li>
+</ul>
+<p>Figure 2 shows an example of the same logical content (left) using StringArray (middle) and StringViewArray (right):</p>
+<ul>
+<li>The first string – <code>“Apache DataFusion”</code> – is 17 bytes long, and both StringArray and StringViewArray store the string’s bytes at the beginning of the buffer. The StringViewArray also inlines the first 4 bytes – <code>“Apac”</code> – in the view.<br>
+</li>
+<li>The second string, <code>“InfluxDB”</code> is only 8 bytes long, so StringViewArray completely inlines the string content in the <code>view</code> struct while StringArray stores the string in the buffer as well.<br>
+</li>
+<li>The third string <code>“Arrow Rust Impl”</code> is 15 bytes long and cannot be fully inlined. StringViewArray stores this in the same form as the first string.<br>
+</li>
+<li>The last string <code>“Apache DataFusion”</code> has the same content as the first string. It’s possible to use StringViewArray to avoid this duplication and reuse the bytes by pointing the view to the previous location.</li>
+</ul>
+<p>StringViewArray provides three opportunities for outperforming StringArray:</p>
+<ol type="1">
+<li>Less copying via the offset + buffer format<br>
+</li>
+<li>Faster comparisons using the inlined string prefix<br>
+</li>
+<li>Reusing repeated string values with the flexible <code>view</code> layout</li>
+</ol>
+<p>The rest of this blog post discusses how to apply these opportunities in real query scenarios to improve performance, what challenges we encountered along the way, and how we solved them.</p>
+</section>
+<section id="section-2-faster-parquet-loading" class="level2">
+<h2 class="anchored" data-anchor-id="section-2-faster-parquet-loading">Section 2: Faster Parquet Loading</h2>
+<p><a href="https://parquet.apache.org/">Apache Parquet</a> is the de facto format for storing large-scale analytical data commonly stored LakeHouse-style, such as <a href="https://iceberg.apache.org">Apache Iceberg</a> and <a href="https://delta.io">Delta Lake</a>. Efficiently loading data from Parquet is thus critical to query performance in many important real-world workloads.</p>
+<p>Parquet encodes strings (i.e., <a href="https://docs.rs/parquet/latest/parquet/data_type/struct.ByteArray.html">byte array</a>) in a slightly different format than required for the original Arrow StringArray. The string length is encoded inline with the actual string data (as shown in Figure 4 left). As mentioned previously, StringArray requires the data buffer to be continuous and compact—the strings have to follow one after another. This requirement means that reading Parquet string data into an Arrow StringArray requires copying and consolidating the string bytes to a new buffer and tracking offsets in a separate array. Copying these strings is often wasteful. Typical queries filter out most data immediately after loading, so most of the copied data is quickly discarded.</p>
+<p>On the other hand, reading Parquet data as a StringViewArray can re-use the same data buffer as storing the Parquet pages because StringViewArray does not require strings to be contiguous. For example, in Figure 4, the StringViewArray directly references the buffer with the decoded Parquet page. The string <code>“Arrow Rust Impl”</code> is represented by a <code>view</code> with offset 37 and length 15 into that buffer.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="https://blog.haoxp.xyz/posts/string-view-datafusion/parquet.png" class="img-fluid figure-img" style="width:70.0%"></p>
+<figcaption>Figure 4: StringViewArray avoids copying by reusing decoded Parquet pages.</figcaption>
+</figure>
+</div>
+<p><strong>Mini benchmark</strong><br>
+Reusing Parquet buffers is great in theory, but how much does saving a copy actually matter? We can run the following benchmark in arrow-rs to find out:</p>
+<div class="sourceCode" id="cb1" style="background: #f1f3f5;"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb1-1"><span class="ex" style="color: null;
+background-color: null;
+font-style: inherit;">cargo</span> bench <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">--bench</span> arrow_reader <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">--features</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"arrow test_common experimental"</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"arrow_array_reader/Binary.*Array/plain encoded"</span></span></code></pre></div>
+<p>Our benchmarking machine shows that loading <em>BinaryViewArray</em> is almost 2x faster than loading BinaryArray (see next section about why this isn’t <em>String</em>ViewArray).</p>
+<div class="sourceCode" id="cb2" style="background: #f1f3f5;"><pre class="sourceCode txt code-with-copy"><code class="sourceCode default"><span id="cb2-1">arrow_array_reader/BinaryArray/plain encoded                        time:   [315.86 µs 317.47 µs 319.00 µs]</span>
+<span id="cb2-2"></span>
+<span id="cb2-3">arrow_array_reader/BinaryViewArray/plain encoded</span>
+<span id="cb2-4">time:   [162.08 µs 162.20 µs 162.32 µs]</span></code></pre></div>
+<p>You can read more on this arrow-rs issue: <a href="https://github.com/apache/arrow-rs/issues/5904">https://github.com/apache/arrow-rs/issues/5904</a></p>
+<section id="section-2.1-from-binary-to-strings" class="level3">
+<h3 class="anchored" data-anchor-id="section-2.1-from-binary-to-strings">Section 2.1: From Binary to Strings</h3>
+<p>You may wonder why we reported performance for BinaryViewArray when this post is about StringViewArray. Surprisingly, initially, our implementation to read StringViewArray from Parquet was much <em>slower</em> than StringArray. Why? TLDR: Although reading StringViewArray copied less data, the initial implementation also spent much more time validating <a href="https://en.wikipedia.org/wiki/UTF-8#:~:text=UTF%2D8%20is%20a%20variable,Unicode%20Standard">UTF-8</a> (as shown in Figure 5).</p>
+<p>Strings are stored as byte sequences. When reading data from (potentially untrusted) Parquet files, a Parquet decoder must ensure those byte sequences are valid UTF-8 strings, and most programming languages, including Rust, include highly <a href="https://doc.rust-lang.org/std/str/fn.from_utf8.html">optimized routines</a> for doing so.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="https://blog.haoxp.xyz/posts/string-view-datafusion/utf8-perf.png" class="img-fluid figure-img" style="width:70.0%"></p>
+<figcaption>Figure 5: Time to load strings from Parquet. The UTF-8 validation advantage initially eliminates the advantage of reduced copying for StringViewArray.</figcaption>
+</figure>
+</div>
+<p>A StringArray can be validated in a single call to the UTF-8 validation function as it has a continuous string buffer. As long as the underlying buffer is UTF-8<sup>3</sup>, all strings in the array must be UTF-8. The Rust parquet reader makes a single function call to validate the entire buffer.</p>
+<p>However, validating an arbitrary StringViewArray requires validating each string with a separate call to the validation function, as the underlying buffer may also contain non-string data (for example, the lengths in Parquet pages).</p>
+<p>UTF-8 validation in Rust is highly optimized and favors longer strings (as shown in Figure 6), likely because it leverages SIMD instructions to perform parallel validation. The benefit of a single function call to validate UTF-8 over a function call for each string more than eliminates the advantage of avoiding the copy for StringViewArray.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="https://blog.haoxp.xyz/posts/string-view-datafusion/simd-utf8.png" class="img-fluid figure-img" style="width:80.0%"></p>
+<figcaption>Figure 6: UTF-8 validation throughput vs string length—StringArray’s contiguous buffer can be validated much faster than StringViewArray’s buffer.</figcaption>
+</figure>
+</div>
+<p>Does this mean we should only use StringArray? No! Thankfully, there’s a clever way out. The key observation is that in many real-world datasets, <a href="https://www.vldb.org/pvldb/vol17/p148-zeng.pdf">99% of strings are shorter than 128 bytes</a>, meaning the encoded length values are smaller than 128, <strong>in which case the length itself is also valid UTF-8</strong> (in fact, it is <a href="https://en.wikipedia.org/wiki/ASCII">ASCII</a>).</p>
+<p>This observation means we can optimize validating UTF-8 strings in Parquet pages by treating the length bytes as part of a single large string as long as the length <em>value</em> is less than 128. Put another way, prior to this optimization, the length bytes act as string boundaries, which require a UTF-8 validation on each string. After this optimization, only those strings with lengths larger than 128 bytes (less than 1% of the strings in the ClickBench dataset) are string boundaries, significantly increasing the UTF-8 validation chunk size and thus improving performance.</p>
+<p>The <a href="https://github.com/apache/arrow-rs/pull/6009/files">actual implementation</a> is only nine lines of Rust (with 30 lines of comments). You can find more details in the related arrow-rs issue: <a href="https://github.com/apache/arrow-rs/issues/5995">https://github.com/apache/arrow-rs/issues/5995</a>. As expected, with this optimization, loading StringViewArray is almost 2x faster than loading StringArray.</p>
+</section>
+<section id="section-2.2-be-careful-about-implicit-copies" class="level3">
+<h3 class="anchored" data-anchor-id="section-2.2-be-careful-about-implicit-copies">Section 2.2: Be Careful About Implicit Copies</h3>
+<p>After all the work to avoid copying strings when loading from Parquet, performance was still not as good as expected. We tracked the problem to a few implicit data copies that we weren’t aware of, as described in <a href="https://github.com/apache/arrow-rs/issues/6033">this issue</a>.</p>
+<p>The copies we eventually identified come from the following innocent-looking line of Rust code, where <code>self.buf</code> is a <a href="https://en.wikipedia.org/wiki/Reference_counting">reference counted</a> pointer that should transform without copying into a buffer for use in StringViewArray.</p>
+<div class="sourceCode" id="cb3" style="background: #f1f3f5;"><pre class="sourceCode rust code-with-copy"><code class="sourceCode rust"><span id="cb3-1"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">let</span> block_id <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> output<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span>append_block(<span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">self</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span>buf<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span>clone()<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span>into())<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">;</span></span></code></pre></div>
+<p>However, Rust-type coercion rules favored a blanket implementation that <em>did</em> copy data. This implementation is shown in the following code block where the <code>impl&lt;T: AsRef&lt;[u8]&gt;&gt;</code> will accept any type that implements <code>AsRef&lt;[u8]&gt;</code> and copies the data to create a new buffer. To avoid copying, users need to explicitly call <code>from_vec</code>, which consumes the <code>Vec</code> and transforms it into a buffer.</p>
+<div class="sourceCode" id="cb4" style="background: #f1f3f5;"><pre class="sourceCode rust code-with-copy"><code class="sourceCode rust"><span id="cb4-1"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">impl</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&lt;</span>T<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">:</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">AsRef</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&lt;</span>[<span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">u8</span>]<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&gt;&gt;</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">From</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&lt;</span>T<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&gt;</span> <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">for</span> Buffer <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{</span></span>
+<span id="cb4-2">    <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">fn</span> from(p<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">:</span> T) <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-&gt;</span> <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">Self</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{</span></span>
+<span id="cb4-3">        <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">// copies data here</span></span>
+<span id="cb4-4">     <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">...</span></span>
+<span id="cb4-5">    <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">}</span></span>
+<span id="cb4-6"><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">}</span></span>
+<span id="cb4-7"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">impl</span> Buffer <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{</span> </span>
+<span id="cb4-8">  <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">pub</span> <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">fn</span> from_vec<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&lt;</span>T<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&gt;</span>(data<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">:</span> <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">Vec</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&lt;</span>T<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&gt;</span>) <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-&gt;</span> <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">Self</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{</span></span>
+<span id="cb4-9"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">// zero-copy transformation</span></span>
+<span id="cb4-10"><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">...</span></span>
+<span id="cb4-11">  <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">}</span></span>
+<span id="cb4-12"><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">}</span></span></code></pre></div>
+<p>Diagnosing this implicit copy was time-consuming as it relied on subtle Rust language semantics. We needed to track every step of the data flow to ensure every copy was necessary. To help other users and prevent future mistakes, we also <a href="https://github.com/apache/arrow-rs/pull/6043">removed</a> the implicit API from arrow-rs in favor of an explicit API. Using this approach, we found and fixed several <a href="https://github.com/apache/arrow-rs/pull/6039">other unintentional copies</a> in the code base—hopefully, the change will help other <a href="https://github.com/spiraldb/vortex/pull/504">downstream users</a> avoid unnecessary copies.</p>
+</section>
+<section id="section-2.3-help-the-compiler-by-giving-it-more-information" class="level3">
+<h3 class="anchored" data-anchor-id="section-2.3-help-the-compiler-by-giving-it-more-information">Section 2.3: Help the Compiler by Giving it More Information</h3>
+<p>The Rust compiler’s automatic optimizations mostly work very well for a wide variety of use cases, but sometimes, it needs additional hints to generate the most efficient code. When profiling the performance of <code>view</code> construction, we found, counterintuitively, that constructing <strong>long</strong> strings was 10x faster than constructing <strong>short</strong> strings, which made short strings slower on StringViewArray than on StringArray!</p>
+<p>As described in Section 1, StringViewArray treats long and short strings differently. Short strings (&lt;12 bytes) directly inline to the <code>view</code> struct, while long strings only inline the first 4 bytes. The code to construct a <code>view</code> looks something like this:</p>
+<div class="sourceCode" id="cb5" style="background: #f1f3f5;"><pre class="sourceCode rust code-with-copy"><code class="sourceCode rust"><span id="cb5-1"><span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">if</span> len <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&lt;=</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">12</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{</span></span>
+<span id="cb5-2">   <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">// Construct 16 byte view for short string</span></span>
+<span id="cb5-3">   <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">let</span> <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">mut</span> view_buffer <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> [<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">;</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">16</span>]<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">;</span></span>
+<span id="cb5-4">   view_buffer[<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">..</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">4</span>]<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span>copy_from_slice(<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&amp;</span>len<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span>to_le_bytes())<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">;</span></span>
+<span id="cb5-5">   view_buffer[<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">4</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">..</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">4</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">+</span> data<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span>len()]<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span>copy_from_slice(data)<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">;</span></span>
+<span id="cb5-6">   <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">...</span></span>
+<span id="cb5-7"><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">}</span> <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">else</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{</span>      </span>
+<span id="cb5-8">   <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">// Construct 16 byte view for long string</span></span>
+<span id="cb5-9">   ByteView <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{</span></span>
+<span id="cb5-10">       length<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">:</span> len<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span></span>
+<span id="cb5-11">       prefix<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">:</span> <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">u32</span><span class="pp" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">::</span>from_le_bytes(data[<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">..</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">4</span>]<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span>try_into()<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span>unwrap())<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span></span>
+<span id="cb5-12">       buffer_index<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">:</span> block_id<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span></span>
+<span id="cb5-13">       offset<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span></span>
+<span id="cb5-14">   <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">}</span></span>
+<span id="cb5-15"><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">}</span></span></code></pre></div>
+<p>It appears that both branches of the code should be fast: they both involve copying at most 16 bytes of data and some memory shift/store operations. How could the branch for short strings be 10x slower?</p>
+<p>Looking at the assembly code using <a href="https://godbolt.org/">godbolt</a>, we (with help from <a href="https://github.com/aoli-al">Ao Li</a>) found the compiler used CPU <strong>load instructions</strong> to copy the fixed-sized 4 bytes to the <code>view</code> for long strings, but it calls a function, <a href="https://doc.rust-lang.org/std/ptr/fn.copy_nonoverlapping.html"><code>ptr::copy_non_overlapping</code></a>, to copy the inlined bytes to the <code>view</code> for short strings. The difference is that long strings have a prefix size (4 bytes) known at compile time, so the compiler directly uses efficient CPU instructions. But, since the size of the short string is unknown to the compiler, it has to call the general-purpose function <code>ptr::copy_non_coverlapping</code>. Making a function call is significant unnecessary overhead compared to a CPU copy instruction.</p>
+<p>However, we know something the compiler doesn’t know: the short string size is not arbitrary—it must be between 0 and 12 bytes, and we can leverage this information to avoid the function call. Our solution generates 13 copies of the function using generics, one for each of the possible prefix lengths. The code looks as follows, and <a href="https://godbolt.org/z/685YPsd5G">checking the assembly code</a>, we confirmed there are no calls to <code>ptr::copy_non_overlapping</code>, and only native CPU instructions are used. For more details, see <a href="https://github.com/apache/arrow-rs/issues/6034">the ticket</a>.</p>
+<div class="sourceCode" id="cb6" style="background: #f1f3f5;"><pre class="sourceCode rust code-with-copy"><code class="sourceCode rust"><span id="cb6-1"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">fn</span> make_inlined_view<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&lt;</span><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">const</span> LEN<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">:</span> <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">usize</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&gt;</span>(data<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">:</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&amp;</span>[<span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">u8</span>]) <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-&gt;</span> <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">u128</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{</span></span>
+<span id="cb6-2">     <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">let</span> <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">mut</span> view_buffer <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> [<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">;</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">16</span>]<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">;</span></span>
+<span id="cb6-3">     view_buffer[<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">..</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">4</span>]<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span>copy_from_slice(<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&amp;</span>(LEN <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">as</span> <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">u32</span>)<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span>to_le_bytes())<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">;</span></span>
+<span id="cb6-4">     view_buffer[<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">4</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">..</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">4</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">+</span> LEN]<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span>copy_from_slice(<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&amp;</span>data[<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">..</span>LEN])<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">;</span></span>
+<span id="cb6-5">     <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">u128</span><span class="pp" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">::</span>from_le_bytes(view_buffer)</span>
+<span id="cb6-6"><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">}</span></span>
+<span id="cb6-7"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">pub</span> <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">fn</span> make_view(data<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">:</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&amp;</span>[<span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">u8</span>]<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span> block_id<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">:</span> <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">u32</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span> offset<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">:</span> <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">u32</span>) <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-&gt;</span> <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">u128</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{</span></span>
+<span id="cb6-8">     <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">let</span> len <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> data<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span>len()<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">;</span></span>
+<span id="cb6-9">     <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">// generate special code for each of the 13 possible lengths</span></span>
+<span id="cb6-10">     <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">match</span> len <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{</span></span>
+<span id="cb6-11">         <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=&gt;</span> <span class="pp" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">make_inlined_view::</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&lt;</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&gt;</span>(data)<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span></span>
+<span id="cb6-12">         <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=&gt;</span> <span class="pp" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">make_inlined_view::</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&lt;</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&gt;</span>(data)<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span></span>
+<span id="cb6-13">         <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=&gt;</span> <span class="pp" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">make_inlined_view::</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&lt;</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&gt;</span>(data)<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span></span>
+<span id="cb6-14">         <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">3</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=&gt;</span> <span class="pp" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">make_inlined_view::</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&lt;</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">3</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&gt;</span>(data)<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span></span>
+<span id="cb6-15">         <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">4</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=&gt;</span> <span class="pp" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">make_inlined_view::</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&lt;</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">4</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&gt;</span>(data)<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span></span>
+<span id="cb6-16">         <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">5</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=&gt;</span> <span class="pp" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">make_inlined_view::</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&lt;</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">5</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&gt;</span>(data)<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span></span>
+<span id="cb6-17">         <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">6</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=&gt;</span> <span class="pp" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">make_inlined_view::</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&lt;</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">6</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&gt;</span>(data)<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span></span>
+<span id="cb6-18">         <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">7</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=&gt;</span> <span class="pp" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">make_inlined_view::</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&lt;</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">7</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&gt;</span>(data)<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span></span>
+<span id="cb6-19">         <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">8</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=&gt;</span> <span class="pp" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">make_inlined_view::</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&lt;</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">8</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&gt;</span>(data)<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span></span>
+<span id="cb6-20">         <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">9</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=&gt;</span> <span class="pp" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">make_inlined_view::</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&lt;</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">9</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&gt;</span>(data)<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span></span>
+<span id="cb6-21">         <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">10</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=&gt;</span> <span class="pp" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">make_inlined_view::</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&lt;</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">10</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&gt;</span>(data)<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span></span>
+<span id="cb6-22">         <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">11</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=&gt;</span> <span class="pp" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">make_inlined_view::</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&lt;</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">11</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&gt;</span>(data)<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span></span>
+<span id="cb6-23">         <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">12</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=&gt;</span> <span class="pp" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">make_inlined_view::</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&lt;</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">12</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&gt;</span>(data)<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span></span>
+<span id="cb6-24">         _ <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=&gt;</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{</span></span>
+<span id="cb6-25">           <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">// handle long string</span></span>
+<span id="cb6-26"><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">}}}</span></span></code></pre></div>
+</section>
+<section id="section-2.4-end-to-end-query-performance" class="level3">
+<h3 class="anchored" data-anchor-id="section-2.4-end-to-end-query-performance">Section 2.4: End-to-End Query Performance</h3>
+<p>In the previous sections, we went out of our way to make sure loading StringViewArray is faster than StringArray. Before going further, we wanted to verify if obsessing about reducing copies and function calls has actually improved end-to-end performance in real-life queries. To do this, we evaluated a ClickBench query (Q20) in DataFusion that counts how many URLs contain the word <code>"google"</code>:</p>
+<div class="sourceCode" id="cb7" style="background: #f1f3f5;"><pre class="sourceCode sql code-with-copy"><code class="sourceCode sql"><span id="cb7-1"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">SELECT</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">COUNT</span>(<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span>) <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">FROM</span> hits <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">WHERE</span> <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">"URL"</span> <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">LIKE</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'%google%'</span>;</span></code></pre></div>
+<p>This is a relatively simple query; most of the time is spent on loading the “URL” column to find matching rows. The query plan looks like this:</p>
+<div class="sourceCode" id="cb8" style="background: #f1f3f5;"><pre class="sourceCode txt code-with-copy"><code class="sourceCode default"><span id="cb8-1">Projection: COUNT(*) [COUNT(*):Int64;N]</span>
+<span id="cb8-2">  Aggregate: groupBy=[[]], aggr=[[COUNT(*)]] [COUNT(*):Int64;N]</span>
+<span id="cb8-3">    Filter: hits.URL LIKE Utf8("%google%")</span>
+<span id="cb8-4">      TableScan: hits </span></code></pre></div>
+<p>We ran the benchmark in the DataFusion repo like this:</p>
+<div class="sourceCode" id="cb9" style="background: #f1f3f5;"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb9-1"><span class="ex" style="color: null;
+background-color: null;
+font-style: inherit;">cargo</span> run <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">--profile</span> release-nonlto <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">--bin</span> dfbench <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">--</span> clickbench <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">--queries-path</span> benchmarks/queries/clickbench/queries.sql <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">--iterations</span> 3 <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">--query</span> 20 <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">--path</span> benchmarks/data/hits.parquet <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">--string-view</span></span></code></pre></div>
+<p>With StringViewArray we saw a 24% end-to-end performance improvement, as shown in Figure 7. With the <code>--string-view</code> argument, the end-to-end query time is <code>944.3 ms, 869.6 ms, 861.9 ms</code> (three iterations). Without <code>--string-view</code>, the end-to-end query time is <code>1186.1 ms, 1126.1 ms, 1138.3 ms</code>.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="https://blog.haoxp.xyz/posts/string-view-datafusion/quer_time.png" class="img-fluid figure-img" style="width:70.0%"></p>
+<figcaption>Figure 7: StringView reduces end-to-end query time by 24% on ClickBench Q20.</figcaption>
+</figure>
+</div>
+<p>We also double-checked with detailed profiling and verified that the time reduction is indeed due to faster Parquet loading.</p>
+</section>
+</section>
+<section id="section-3-faster-string-operations" class="level2">
+<h2 class="anchored" data-anchor-id="section-3-faster-string-operations">Section 3: Faster String Operations</h2>
+<p>We have discussed the nuances required to accelerate Parquet loading using StringViewArray by reusing buffers and reducing copies. In this second part of the post, we describe the rest of the journey: implementing additional efficient operations for real query processing.</p>
+<section id="section-3.1-faster-comparison" class="level3">
+<h3 class="anchored" data-anchor-id="section-3.1-faster-comparison">Section 3.1: Faster comparison</h3>
+<p>String comparison is ubiquitous; it is the core of <a href="https://docs.rs/arrow/latest/arrow/compute/kernels/cmp/index.html"><code>cmp</code></a>, <a href="https://docs.rs/arrow/latest/arrow/compute/fn.min.html"><code>min</code></a><code>/max</code>, and <a href="https://docs.rs/arrow/latest/arrow/compute/kernels/comparison/fn.like.html"><code>like</code></a><code>/ilike</code> kernels. StringViewArray is designed to accelerate such comparisons using the inlined prefix—the key observation is that, in many cases, only the first few bytes of the string determine the string comparison results.</p>
+<p>For example, to compare the strings <code>InfluxDB</code> with <code>Apache DataFusion</code>, we only need to look at the first byte to determine the string ordering or equality. In this case, since <code>A</code> is earlier in the alphabet than <code>I,</code> <code>Apache DataFusion</code> sorts first, and we know the strings are not equal. Despite only needing the first byte, comparing these strings when stored as a StringArray requires two memory accesses: 1) load the string offset and 2) use the offset to locate the string bytes. For low-level operations such as <code>cmp</code> that are invoked millions of times in the very hot paths of queries, avoiding this extra memory access can make a measurable difference in query performance.</p>
+<p>For StringViewArray, typically, only one memory access is needed to load the view struct. Only if the result can not be determined from the prefix is the second memory access required. For the example above, there is no need for the second access. This technique is very effective in practice: the second access is never necessary for the more than <a href="https://www.vldb.org/pvldb/vol17/p148-zeng.pdf">60% of real-world strings which are shorter than 12 bytes</a>, as they are stored completely in the prefix.</p>
+<p>However, functions that operate on strings must be specialized to take advantage of the inlined prefix. In addition to low-level comparison kernels, we implemented <a href="https://github.com/apache/arrow-rs/issues/5374">a wide range</a> of other StringViewArray operations that cover the functions and operations seen in ClickBench queries. Supporting StringViewArray in all string operations takes quite a bit of effort, and thankfully the Arrow and DataFusion communities are already hard at work doing so (see <a href="https://github.com/apache/datafusion/issues/11752">https://github.com/apache/datafusion/issues/11752</a> if you want to help out).</p>
+</section>
+<section id="section-3.2-faster-take-and-filter" class="level3">
+<h3 class="anchored" data-anchor-id="section-3.2-faster-take-and-filter">Section 3.2: Faster <code>take</code> and <code>filter</code></h3>
+<p>After a filter operation such as <code>WHERE url &lt;&gt; ‘’</code> to avoid processing empty urls, DataFusion will often <em>coalesce</em> results to form a new array with only the passing elements. This coalescing ensures the batches are sufficiently sized to benefit from <a href="https://www.vldb.org/pvldb/vol11/p2209-kersten.pdf">vectorized processing</a> in subsequent steps.</p>
+<p>The coalescing operation is implemented using the <a href="https://docs.rs/arrow/latest/arrow/compute/fn.take.html">take</a> and <a href="https://arrow.apache.org/rust/arrow/compute/kernels/filter/fn.filter.html">filter</a> kernels in arrow-rs. For StringArray, these kernels require copying the string contents to a new buffer without “holes” in between. This copy can be expensive especially when the new array is large.</p>
+<p>However, <code>take</code> and <code>filter</code> for StringViewArray can avoid the copy by reusing buffers from the old array. The kernels only need to create a new list of <code>view</code>s that point at the same strings within the old buffers. Figure 8 illustrates the difference between the output of both string representations. StringArray creates two new strings at offsets 0-17 and 17-32, while StringViewArray simply points to the original buffer at offsets 0 and 25.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="https://blog.haoxp.xyz/posts/string-view-datafusion/take.jpg" class="img-fluid figure-img" style="width:70.0%"></p>
+<figcaption>Figure 8: Zero-copy take/filter for StringViewArray</figcaption>
+</figure>
+</div>
+</section>
+<section id="section-3.3-when-to-gc" class="level3">
+<h3 class="anchored" data-anchor-id="section-3.3-when-to-gc">Section 3.3: When to GC?</h3>
+<p>Zero-copy <code>take/filter</code> is great for generating large arrays quickly, but it is suboptimal for highly selective filters, where most of the strings are filtered out. When the cardinality drops, StringViewArray buffers become sparse—only a small subset of the bytes in the buffer’s memory are referred to by any <code>view</code>. This leads to excessive memory usage, especially in a <a href="https://github.com/apache/datafusion/issues/11628">filter-then-coalesce scenario</a>. For example, a StringViewArray with 10M strings may only refer to 1M strings after some filter operations; however, due to zero-copy take/filter, the (reused) 10M buffers can not be released/reused.</p>
+<p>To release unused memory, we implemented a <a href="https://docs.rs/arrow/latest/arrow/array/struct.GenericByteViewArray.html#method.gc">garbage collection (GC)</a> routine to consolidate the data into a new buffer to release the old sparse buffer(s). As the GC operation copies strings, similarly to StringArray, we must be careful about when to call it. If we call GC too early, we cause unnecessary copying, losing much of the benefit of StringViewArray. If we call GC too late, we hold large buffers for too long, increasing memory use and decreasing cache efficiency. The <a href="https://pola.rs/posts/polars-string-type/">Polars blog</a> on StringView also refers to the challenge presented by garbage collection timing.</p>
+<p><code>arrow-rs</code> implements the GC process, but it is up to users to decide when to call it. We leverage the semantics of the query engine and observed that the <a href="https://docs.rs/datafusion/latest/datafusion/physical_plan/coalesce_batches/struct.CoalesceBatchesExec.html"><code>CoalseceBatchesExec</code></a> operator, which merge smaller batches to a larger batch, is often used after the record cardinality is expected to shrink, which aligns perfectly with the scenario of GC in StringViewArray. We, therefore, <a href="https://github.com/apache/datafusion/pull/11587">implemented the GC procedure</a> inside <code>CoalseceBatchesExec[^5],</code>with a heuristic that estimates when the buffers are too sparse.</p>
+</section>
+<section id="section" class="level3">
+<h3 class="anchored" data-anchor-id="section"></h3>
+</section>
+<section id="section-3.4-the-art-of-function-inlining-not-too-much-not-too-little" class="level3">
+<h3 class="anchored" data-anchor-id="section-3.4-the-art-of-function-inlining-not-too-much-not-too-little">Section 3.4: The art of function inlining: not too much, not too little</h3>
+<p>Like string inlining, <em>function</em> inlining is the process of embedding a short function into the caller to avoid the overhead of function calls (caller/callee save). Usually, the Rust compiler does a good job of deciding when to inline. However, it is possible to override its default using the <a href="https://doc.rust-lang.org/reference/attributes/codegen.html#the-inline-attribute"><code>#[inline(always)]</code> directive</a>. In performance-critical code, inlined code allows us to organize large functions into smaller ones without paying the runtime cost of function invocation.</p>
+<p>However, function inlining is <strong><em>not</em></strong> always better, as it leads to larger function bodies that are harder for LLVM to optimize (for example, suboptimal <a href="https://en.wikipedia.org/wiki/Register_allocation">register spilling</a>) and risk overflowing the CPU’s instruction cache. We observed several performance regressions where function inlining caused <em>slower</em> performance when implementing the StringViewArray comparison kernels. Careful inspection and tuning of the code was required to aid the compiler in generating efficient code. More details can be found in this PR: <a href="https://github.com/apache/arrow-rs/pull/5900">https://github.com/apache/arrow-rs/pull/5900</a>.</p>
+</section>
+<section id="section-3.5-buffer-size-tuning" class="level3">
+<h3 class="anchored" data-anchor-id="section-3.5-buffer-size-tuning">Section 3.5: Buffer size tuning</h3>
+<p>StringViewArray permits multiple buffers, which enables a flexible buffer layout and potentially reduces the need to copy data. However, a large number of buffers slows down the performance of other operations. For example, <a href="https://docs.rs/arrow/latest/arrow/array/trait.Array.html#tymethod.get_array_memory_size"><code>get_array_memory_size</code></a><code>()</code> needs to sum the memory size of each buffer, which takes a long time with thousands of small buffers. In certain cases, we found that multiple calls to <a href="https://docs.rs/arrow/latest/arrow/compute/fn.concat_batches.html"><code>concat_batches</code></a> lead to arrays with millions of buffers, which was prohibitively expensive.</p>
+<p>For example, consider a StringViewArray with the previous default buffer size of 8 KB. With this configuration, holding 4GB of string data requires almost half a million buffers! Larger buffer sizes are needed for larger arrays, but we cannot arbitrarily increase the default buffer size, as small arrays would consume too much memory (most arrays require at least one buffer). Buffer sizing is especially problematic in query processing, as we often need to construct small batches of string arrays, and the sizes are unknown at planning time.</p>
+<p>To balance the buffer size trade-off, we again leverage the query processing (DataFusion) semantics to decide when to use larger buffers. While coalescing batches, we combine multiple small string arrays and set a smaller buffer size to keep the total memory consumption low. In string aggregation, we aggregate over an entire Datafusion partition, which can generate a large number of strings, so we set a larger buffer size (2MB).</p>
+<p>To assist situations where the semantics are unknown, we also <a href="https://github.com/apache/arrow-rs/pull/6136">implemented</a> a classic dynamic exponential buffer size growth strategy, which starts with a small buffer size (8KB) and doubles the size of each new buffer up to 2MB. We implemented this strategy in arrow-rs and enabled it by default so that other users of StringViewArray can also benefit from this optimization. See this issue for more details: <a href="https://github.com/apache/arrow-rs/issues/6094">https://github.com/apache/arrow-rs/issues/6094</a>.</p>
+</section>
+<section id="section-3.6-end-to-end-query-performance" class="level3">
+<h3 class="anchored" data-anchor-id="section-3.6-end-to-end-query-performance">Section 3.6: End-to-end query performance</h3>
+<p>We have made significant progress in optimizing StringViewArray filtering operations. Now, let’s test it in the real world to see how it works!</p>
+<p>Let’s consider ClickBench query 22, which selects multiple string fields (<code>URL</code>, <code>Title</code>, and <code>SearchPhase</code>) and applies several filters.</p>
+<div class="sourceCode" id="cb10" style="background: #f1f3f5;"><pre class="sourceCode sql code-with-copy"><code class="sourceCode sql"><span id="cb10-1"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">SELECT</span> </span>
+<span id="cb10-2">  <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">"SearchPhrase"</span>, </span>
+<span id="cb10-3">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">MIN</span>(<span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">"URL"</span>), <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">MIN</span>(<span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">"Title"</span>), <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">COUNT</span>(<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span>) <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">AS</span> c, <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">COUNT</span>(<span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">DISTINCT</span> <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">"UserID"</span>) </span>
+<span id="cb10-4"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">FROM</span> hits </span>
+<span id="cb10-5"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">WHERE</span> </span>
+<span id="cb10-6">  <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">"Title"</span> <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">LIKE</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'%Google%'</span> <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">AND</span> </span>
+<span id="cb10-7">  <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">"URL"</span> <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">NOT</span> <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">LIKE</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'%.google.%'</span> <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">AND</span> </span>
+<span id="cb10-8">  <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">"SearchPhrase"</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&lt;&gt;</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">''</span> </span>
+<span id="cb10-9"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">GROUP</span> <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">BY</span> <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">"SearchPhrase"</span> </span>
+<span id="cb10-10"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">ORDER</span> <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">BY</span> c <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">DESC</span> </span>
+<span id="cb10-11"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">LIMIT</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">10</span>;</span></code></pre></div>
+<p>We ran the benchmark using the following command in the DataFusion repo. Again, the <code>--string-view</code> option means we use StringViewArray instead of StringArray.</p>
+<div class="sourceCode" id="cb11" style="background: #f1f3f5;"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb11-1"><span class="ex" style="color: null;
+background-color: null;
+font-style: inherit;">cargo</span> run <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">--profile</span> release-nonlto <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">--bin</span> dfbench <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">--</span> clickbench <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">--queries-path</span> benchmarks/queries/clickbench/queries.sql <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">--iterations</span> 3 <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">--query</span> 22 <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">--path</span> benchmarks/data/hits.parquet <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">--string-view</span></span></code></pre></div>
+<p>To eliminate the impact of the faster Parquet reading using StringViewArray (see the first part of this blog), Figure 9 plots only the time spent in <code>FilterExec</code>. Without StringViewArray, the filter takes 7.17s; with StringViewArray, the filter only takes 4.86s, a 32% reduction in time. Moreover, we see a 17% improvement in end-to-end query performance.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="https://blog.haoxp.xyz/posts/string-view-datafusion/filter-time.png" class="img-fluid figure-img" style="width:70.0%"></p>
+<figcaption>Figure 9: StringViewArray reduces the filter time by 32% on ClickBench query 22.</figcaption>
+</figure>
+</div>
+</section>
+</section>
+<section id="section-4-faster-string-aggregation" class="level2">
+<h2 class="anchored" data-anchor-id="section-4-faster-string-aggregation">Section 4: Faster String Aggregation</h2>
+<p>So far, we have discussed how to exploit two StringViewArray features: reduced copy and faster filtering. This section focuses on reusing string bytes to repeat string values.</p>
+<p>As described in part one of this blog, if two strings have identical values, StringViewArray can use two different <code>view</code>s pointing at the same buffer range, thus avoiding repeating the string bytes in the buffer. This makes StringViewArray similar to an Arrow <a href="https://docs.rs/arrow/latest/arrow/array/struct.DictionaryArray.html">DictionaryArray</a> that stores Strings—both array types work well for strings with only a few distinct values.</p>
+<p>Deduplicating string values can significantly reduce memory consumption in StringViewArray. However, this process is expensive and involves hashing every string and maintaining a hash table, and so it cannot be done by default when creating a StringViewArray. We introduced an <a href="https://docs.rs/arrow/latest/arrow/array/builder/struct.GenericByteViewBuilder.html#method.with_deduplicate_strings">opt-in string deduplication mode</a> in arrow-rs for advanced users who know their data has a small number of distinct values, and where the benefits of reduced memory consumption outweigh the additional overhead of array construction.</p>
+<p>Once again, we leverage DataFusion query semantics to identify StringViewArray with duplicate values, such as aggregation queries with multiple group keys. For example, some <a href="https://github.com/apache/datafusion/blob/main/benchmarks/queries/clickbench/queries.sql">ClickBench queries</a> group by two columns:</p>
+<ul>
+<li><code>UserID</code> (an integer with close to 1 M distinct values)<br>
+</li>
+<li><code>MobilePhoneModel</code> (a string with less than a hundred distinct values)</li>
+</ul>
+<p>In this case, the output row count is <code>count(distinct UserID) * count(distinct MobilePhoneModel)</code>, which is 100M. Each string value of <code>MobilePhoneModel</code> is repeated 1M times. With StringViewArray, we can save space by pointing the repeating values to the same underlying buffer.</p>
+<p>Faster string aggregation with StringView is part of a larger project to <a href="https://github.com/apache/datafusion/issues/7000">improve DataFusion aggregation performance</a>. We have a <a href="https://github.com/apache/datafusion/pull/11794">proof of concept implementation</a> with StringView that can improve the multi-column string aggregation by 20%. We would love your help to get it production ready!</p>
+</section>
+<section id="section-5-stringview-pitfalls" class="level2">
+<h2 class="anchored" data-anchor-id="section-5-stringview-pitfalls">Section 5: StringView Pitfalls</h2>
+<p>Most existing blog posts (including this one) focus on the benefits of using StringViewArray over other string representations such as StringArray. As we have discussed, even though it requires a significant engineering investment to realize, StringViewArray is a major improvement over StringArray in many cases.</p>
+<p>However, there are several cases where StringViewArray is slower than StringArray. For completeness, we have listed those instances here:</p>
+<ol type="1">
+<li><strong>Tiny strings (when strings are shorter than 8 bytes)</strong>: every element of the StringViewArray consumes at least 16 bytes of memory—the size of the <code>view</code> struct. For an array of tiny strings, StringViewArray consumes more memory than StringArray and thus can cause slower performance due to additional memory pressure on the CPU cache.<br>
+</li>
+<li><strong>Many repeated short strings</strong>: Similar to the first point, StringViewArray can be slower and require more memory than a DictionaryArray because 1) it can only reuse the bytes in the buffer when the strings are longer than 12 bytes and 2) 32-bit offsets are always used, even when a smaller size (8 bit or 16 bit) could represent all the distinct values.<br>
+</li>
+<li><strong>Filtering:</strong> As we mentioned above, StringViewArrays often consume more memory than the corresponding StringArray, and memory bloat quickly dominates the performance without GC. However, invoking GC also reduces the benefits of less copying so must be carefully tuned.</li>
+</ol>
+</section>
+<section id="section-6-conclusion-and-takeaways" class="level2">
+<h2 class="anchored" data-anchor-id="section-6-conclusion-and-takeaways">Section 6: Conclusion and Takeaways</h2>
+<p>In these two blog posts, we discussed what it takes to implement StringViewArray in arrow-rs and then integrate it into DataFusion. Our evaluations on ClickBench queries show that StringView can improve the performance of string-intensive workloads by up to 2x.</p>
+<p>Given that DataFusion already <a href="https://benchmark.clickhouse.com/#eyJzeXN0ZW0iOnsiQWxsb3lEQiI6ZmFsc2UsIkF0aGVuYSAocGFydGl0aW9uZWQpIjpmYWxzZSwiQXRoZW5hIChzaW5nbGUpIjpmYWxzZSwiQXVyb3JhIGZvciBNeVNRTCI6ZmFsc2UsIkF1cm9yYSBmb3IgUG9zdGdyZVNRTCI6ZmFsc2UsIkJ5Q29uaXR5IjpmYWxzZSwiQnl0ZUhvdXNlIjpmYWxzZSwiY2hEQiAoUGFycXVldCwgcGFydGl0aW9uZWQpIjpmYWxzZSwiY2hEQiI6ZmFsc2UsIkNpdHVzIjpmYWxzZSwiQ2xpY2tIb3VzZSBDbG91ZCAoYXdzKSI6ZmFsc2UsIkNsaWNrSG91c2UgQ2xvdWQgKGF3cykgUGFyYWxsZWwgUmVwbGljYXMgT04iOmZhbHNlLCJDbGlja0hvdXNlIENsb3VkIChBenVyZSkiOmZhbHNlLCJDbGlja0hvdXNlIENsb3VkIChBenVyZSkgUGFyYWxsZWwgUmVwbGljYSBPTiI6ZmFsc2UsIkNsaWNrSG91c2UgQ2xvdWQgKEF6dXJlKSBQYXJhbGxlbCBSZXBsaWNhcyBPTiI6ZmFsc2UsIkNsaWNrSG91c2UgQ2xvdWQgKGdjcCkiOmZhbHNlLCJDbGlja0hvdXNlIENsb3VkIChnY3ApIFBhcmFsbGVsIFJlcGxpY2FzIE9OIjpmYWxzZSwiQ2xpY2tIb3VzZSAoZGF0YSBsYWtlLCBwYXJ0aXRpb25lZCkiOmZhbHNlLCJDbGlja0hvdXNlIChkYXRhIGxha2UsIHNpbmdsZSkiOmZhbHNlLCJDbGlja0hvdXNlIChQYXJxdWV0LCBwYXJ0aXRpb25lZCkiOmZhbHNlLCJDbGlja0hvdXNlIChQYXJxdWV0LCBzaW5nbGUpIjpmYWxzZSwiQ2xpY2tIb3VzZSAod2ViKSI6ZmFsc2UsIkNsaWNrSG91c2UiOmZhbHNlLCJDbGlja0hvdXNlICh0dW5lZCkiOmZhbHNlLCJDbGlja0hvdXNlICh0dW5lZCwgbWVtb3J5KSI6ZmFsc2UsIkNsb3VkYmVycnkiOmZhbHNlLCJDcmF0ZURCIjpmYWxzZSwiQ3J1bmNoeSBCcmlkZ2UgZm9yIEFuYWx5dGljcyAoUGFycXVldCkiOmZhbHNlLCJEYXRhYmVuZCI6ZmFsc2UsIkRhdGFGdXNpb24gKFBhcnF1ZXQsIHBhcnRpdGlvbmVkKSI6dHJ1ZSwiRGF0YUZ1c2lvbiAoUGFycXVldCwgc2luZ2xlKSI6ZmFsc2UsIkFwYWNoZSBEb3JpcyI6ZmFsc2UsIkRydWlkIjpmYWxzZSwiRHVja0RCIChQYXJxdWV0LCBwYXJ0aXRpb25lZCkiOnRydWUsIkR1Y2tEQiI6ZmFsc2UsIkVsYXN0aWNzZWFyY2giOmZhbHNlLCJFbGFzdGljc2VhcmNoICh0dW5lZCkiOmZhbHNlLCJHbGFyZURCIjpmYWxzZSwiR3JlZW5wbHVtIjpmYWxzZSwiSGVhdnlBSSI6ZmFsc2UsIkh5ZHJhIjpmYWxzZSwiSW5mb2JyaWdodCI6ZmFsc2UsIktpbmV0aWNhIjpmYWxzZSwiTWFyaWFEQiBDb2x1bW5TdG9yZSI6ZmFsc2UsIk1hcmlhREIiOmZhbHNlLCJNb25ldERCIjpmYWxzZSwiTW9uZ29EQiI6ZmFsc2UsIk1vdGhlcmR1Y2siOmZhbHNlLCJNeVNRTCAoTXlJU0FNKSI6ZmFsc2UsIk15U1FMIjpmYWxzZSwiT3hsYSI6ZmFsc2UsIlBhcmFkZURCIChQYXJxdWV0LCBwYXJ0aXRpb25lZCkiOmZhbHNlLCJQYXJhZGVEQiAoUGFycXVldCwgc2luZ2xlKSI6ZmFsc2UsIlBpbm90IjpmYWxzZSwiUG9zdGdyZVNRTCAodHVuZWQpIjpmYWxzZSwiUG9zdGdyZVNRTCI6ZmFsc2UsIlF1ZXN0REIgKHBhcnRpdGlvbmVkKSI6ZmFsc2UsIlF1ZXN0REIiOmZhbHNlLCJSZWRzaGlmdCI6ZmFsc2UsIlNlbGVjdERCIjpmYWxzZSwiU2luZ2xlU3RvcmUiOmZhbHNlLCJTbm93Zmxha2UiOmZhbHNlLCJTUUxpdGUiOmZhbHNlLCJTdGFyUm9ja3MiOmZhbHNlLCJUYWJsZXNwYWNlIjpmYWxzZSwiVGVtYm8gT0xBUCAoY29sdW1uYXIpIjpmYWxzZSwiVGltZXNjYWxlREIgKGNvbXByZXNzaW9uKSI6ZmFsc2UsIlRpbWVzY2FsZURCIjpmYWxzZSwiVW1icmEiOmZhbHNlfSwidHlwZSI6eyJDIjp0cnVlLCJjb2x1bW4tb3JpZW50ZWQiOnRydWUsIlBvc3RncmVTUUwgY29tcGF0aWJsZSI6dHJ1ZSwibWFuYWdlZCI6dHJ1ZSwiZ2NwIjp0cnVlLCJzdGF0ZWxlc3MiOnRydWUsIkphdmEiOnRydWUsIkMrKyI6dHJ1ZSwiTXlTUUwgY29tcGF0aWJsZSI6dHJ1ZSwicm93LW9yaWVudGVkIjp0cnVlLCJDbGlja0hvdXNlIGRlcml2YXRpdmUiOnRydWUsImVtYmVkZGVkIjp0cnVlLCJzZXJ2ZXJsZXNzIjp0cnVlLCJhd3MiOnRydWUsInBhcmFsbGVsIHJlcGxpY2FzIjp0cnVlLCJBenVyZSI6dHJ1ZSwiYW5hbHl0aWNhbCI6dHJ1ZSwiUnVzdCI6dHJ1ZSwic2VhcmNoIjp0cnVlLCJkb2N1bWVudCI6dHJ1ZSwic29tZXdoYXQgUG9zdGdyZVNRTCBjb21wYXRpYmxlIjp0cnVlLCJ0aW1lLXNlcmllcyI6dHJ1ZX0sIm1hY2hpbmUiOnsiMTYgdkNQVSAxMjhHQiI6dHJ1ZSwiOCB2Q1BVIDY0R0IiOnRydWUsInNlcnZlcmxlc3MiOnRydWUsIjE2YWN1Ijp0cnVlLCJjNmEuNHhsYXJnZSwgNTAwZ2IgZ3AyIjp0cnVlLCJMIjp0cnVlLCJNIjp0cnVlLCJTIjp0cnVlLCJYUyI6dHJ1ZSwiYzZhLm1ldGFsLCA1MDBnYiBncDIiOnRydWUsIjE5MkdCIjp0cnVlLCIyNEdCIjp0cnVlLCIzNjBHQiI6dHJ1ZSwiNDhHQiI6dHJ1ZSwiNzIwR0IiOnRydWUsIjk2R0IiOnRydWUsIjE0MzBHQiI6dHJ1ZSwiZGV2Ijp0cnVlLCI3MDhHQiI6dHJ1ZSwiYzVuLjR4bGFyZ2UsIDUwMGdiIGdwMiI6dHJ1ZSwiQW5hbHl0aWNzLTI1NkdCICg2NCB2Q29yZXMsIDI1NiBHQikiOnRydWUsImM1LjR4bGFyZ2UsIDUwMGdiIGdwMiI6dHJ1ZSwiYzZhLjR4bGFyZ2UsIDE1MDBnYiBncDIiOnRydWUsImNsb3VkIjp0cnVlLCJkYzIuOHhsYXJnZSI6dHJ1ZSwicmEzLjE2eGxhcmdlIjp0cnVlLCJyYTMuNHhsYXJnZSI6dHJ1ZSwicmEzLnhscGx1cyI6dHJ1ZSwiUzIiOnRydWUsIlMyNCI6dHJ1ZSwiMlhMIjp0cnVlLCIzWEwiOnRydWUsIjRYTCI6dHJ1ZSwiWEwiOnRydWUsIkwxIC0gMTZDUFUgMzJHQiI6dHJ1ZSwiYzZhLjR4bGFyZ2UsIDUwMGdiIGdwMyI6dHJ1ZX0sImNsdXN0ZXJfc2l6ZSI6eyIxIjp0cnVlLCIyIjp0cnVlLCI0Ijp0cnVlLCI4Ijp0cnVlLCIxNiI6dHJ1ZSwiMzIiOnRydWUsIjY0Ijp0cnVlLCIxMjgiOnRydWUsInNlcnZlcmxlc3MiOnRydWUsImRlZGljYXRlZCI6dHJ1ZX0sIm1ldHJpYyI6ImhvdCIsInF1ZXJpZXMiOlt0cnVlLHRydWUsdHJ1ZSx0cnVlLHRydWUsdHJ1ZSx0cnVlLHRydWUsdHJ1ZSx0cnVlLHRydWUsdHJ1ZSx0cnVlLHRydWUsdHJ1ZSx0cnVlLH">performs very well on ClickBench</a>, the level of end-to-end performance improvement using StringViewArray shows the power of this technique and, of course, is a win for DataFusion and the systems that build upon it.</p>
+<p>StringView is a big project that has received tremendous community support. Specifically, we would like to thank <a href="https://github.com/tustvold"><span class="citation" data-cites="tustvold">@tustvold</span></a>, <a href="https://github.com/ariesdevil"><span class="citation" data-cites="ariesdevil">@ariesdevil</span></a>, <a href="https://github.com/RinChanNOWWW"><span class="citation" data-cites="RinChanNOWWW">@RinChanNOWWW</span></a>, <a href="https://github.com/ClSlaid"><span class="citation" data-cites="ClSlaid">@ClSlaid</span></a>, <a href="https://github.com/2010YOUY01"><span class="citation" data-cites="2010YOUY01">@2010YOUY01</span></a>, <a href="https://github.com/chloro-pn"><span class="citation" data-cites="chloro-pn">@chloro-pn</span></a>, <a href="https://github.com/a10y"><span class="citation" data-cites="a10y">@a10y</span></a>, <a href="https://github.com/Kev1n8"><span class="citation" data-cites="Kev1n8">@Kev1n8</span></a>, <a href="https://github.com/Weijun-H"><span class="citation" data-cites="Weijun-H">@Weijun-H</span></a>, <a href="https://github.com/PsiACE"><span class="citation" data-cites="PsiACE">@PsiACE</span></a>, <a href="https://github.com/tshauck"><span class="citation" data-cites="tshauck">@tshauck</span></a>, and <a href="https://github.com/xinlifoobar"><span class="citation" data-cites="xinlifoobar">@xinlifoobar</span></a> for their valuable contributions!</p>
+<p>As the introduction states, “German Style Strings” is a relatively straightforward research idea that avoid some string copies and accelerates comparisons. However, applying this (great) idea in practice requires a significant investment in careful software engineering. Again, we encourage the research community to continue to help apply research ideas to industrial systems, such as DataFusion, as doing so provides valuable perspectives when evaluating future research questions for the greatest potential impact.</p>
+
+
+</section>
+
+
+<div id="quarto-appendix" class="default"><section id="footnotes" class="footnotes footnotes-end-of-document"><h2 class="anchored quarto-appendix-heading">Footnotes</h2>
+
+<ol>
+<li id="fn1"><p>Benchmarked with AMD Ryzen 7600x (12 core, 24 threads, 32 MiB L3), WD Black SN770 NVMe SSD (5150MB/4950MB seq RW bandwidth)↩︎</p></li>
+<li id="fn2"><p>There is also a corresponding <em>BinaryViewArray</em> which is similar except that the data is not constrained to be UTF-8 encoded strings.↩︎</p></li>
+<li id="fn3"><p>We also make sure that offsets do not break a UTF-8 code point, which is <a href="https://github.com/apache/arrow-rs/blob/master/parquet/src/arrow/buffer/offset_buffer.rs#L62-L71">cheaply validated</a>.↩︎</p></li>
+</ol>
+</section></div> ]]></description>
+  <guid>https://blog.haoxp.xyz/posts/string-view-datafusion/</guid>
+  <pubDate>Fri, 13 Sep 2024 00:00:00 GMT</pubDate>
+</item>
 <item>
   <title>My research statement</title>
   <link>https://blog.haoxp.xyz/posts/research-statement/</link>
