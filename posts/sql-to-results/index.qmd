@@ -385,6 +385,6 @@ In our example above, we only need to read `l_orderkey`, `l_shipdate`, `o_orderd
 If using a row-based file format (like CSV), we need to load all columns into memory, which is inefficient.
 Column-based file formats (like [Apache Parquet](https://parquet.apache.org/)) can be more efficient in this case.
 
-TODO: draw a figure about columnar and row storage format.
+See the [Parquet pruning in DataFusion](/posts/parquet-to-arrow/) for more details.
 
 
