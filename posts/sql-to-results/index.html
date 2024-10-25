@@ -837,7 +837,7 @@ Note
 <section id="reading-from-disk" class="level3">
 <h3 class="anchored" data-anchor-id="reading-from-disk">Reading from disk</h3>
 <p>CSV files are row-based, and we read them row by row, it is efficient when we frequently need to read the whole row. However, modern data analytic workloads do not always need to read the whole row; they often only need to read a subset of columns. In our example above, we only need to read <code>l_orderkey</code>, <code>l_shipdate</code>, <code>o_orderdate</code>, <code>o_orderkey</code> from the tables. If using a row-based file format (like CSV), we need to load all columns into memory, which is inefficient. Column-based file formats (like <a href="https://parquet.apache.org/">Apache Parquet</a>) can be more efficient in this case.</p>
-<p>TODO: draw a figure about columnar and row storage format.</p>
+<p>See the <a href="../../posts/parquet-to-arrow/">Parquet pruning in DataFusion</a> for more details.</p>
 
 
 </section>

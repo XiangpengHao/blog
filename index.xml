@@ -10,7 +10,66 @@
 <atom:link href="https://blog.haoxp.xyz/index.xml" rel="self" type="application/rss+xml"/>
 <description></description>
 <generator>quarto-1.5.57</generator>
-<lastBuildDate>Fri, 13 Sep 2024 00:00:00 GMT</lastBuildDate>
+<lastBuildDate>Thu, 24 Oct 2024 00:00:00 GMT</lastBuildDate>
+<item>
+  <title>Parquet pruning in DataFusion</title>
+  <dc:creator>Xiangpeng Hao</dc:creator>
+  <link>https://blog.haoxp.xyz/posts/parquet-to-arrow/</link>
+  <description><![CDATA[ 
+
+
+
+
+
+<p>Note: my research is <a href="https://haoxp.xyz/fund/">funded</a> by <a href="https://www.influxdata.com">InfluxData</a>, which made this blog post possible.</p>
+<hr>
+<p>Parquet has become the industry standard for storing columnar data, and reading Parquet efficiently is crucial for query performance.</p>
+<p>To optimize this, DataFusion implements advanced Parquet support for effective data pruning and decoding.</p>
+<p>However, achieving high performance adds complexity, and this is no exception. This post provides an overview of the techniques used in DataFusion to read Parquet files selectively.</p>
+<section id="the-pipeline" class="level3">
+<h3 class="anchored" data-anchor-id="the-pipeline">The pipeline</h3>
+<p><img src="https://blog.haoxp.xyz/posts/parquet-to-arrow/read-parquet.jpg" class="img-fluid"></p>
+<section id="parquet-file-structure" class="level4">
+<h4 class="anchored" data-anchor-id="parquet-file-structure">0. Parquet file structure</h4>
+<p>Parquet structures data into row groups, each row group contains a set of columns, each columns contains a set of pages. Read <a href="https://www.influxdata.com/blog/querying-parquet-millisecond-latency/">Querying Parquet with Millisecond Latency</a> for more details.</p>
+</section>
+<section id="read-metadata" class="level4">
+<h4 class="anchored" data-anchor-id="read-metadata">1. Read metadata</h4>
+<p>DataFusion use Parquet metadata to understand what is in the file. <a href="https://github.com/apache/datafusion/blob/31701b8dc9c6486856c06a29a32107d9f4549cec/datafusion/core/src/datasource/physical_plan/parquet/reader.rs#L118">Reading metadata</a> in the worst case requires two network requests: one to read the footer size, and another one to read the footer itself. <a href="https://www.influxdata.com/blog/how-good-parquet-wide-tables/">Decoding metadata</a> is generally fast, but can be slow for very wide tables.</p>
+<p>DataFusion allows users to cache metadata through the <a href="https://github.com/apache/datafusion/blob/31701b8dc9c6486856c06a29a32107d9f4549cec/datafusion/core/src/datasource/physical_plan/parquet/reader.rs#L39">ParquetFileReaderFactory</a> trait.</p>
+</section>
+<section id="prune-by-projection" class="level4">
+<h4 class="anchored" data-anchor-id="prune-by-projection">2. Prune by projection</h4>
+<p>Queries usually won’t select all columns, e.g., <code>SELECT a from table</code> only reads column <code>a</code>.</p>
+<p>As a <strong>columnar</strong> format, Parquet allows DataFusion to <a href="(https://github.com/apache/datafusion/blob/31701b8dc9c6486856c06a29a32107d9f4549cec/datafusion/core/src/datasource/physical_plan/parquet/mod.rs#L778)">only read</a> the <strong>columns</strong> that are needed.</p>
+</section>
+<section id="prune-by-row-group-stats-and-bloom-filters" class="level4">
+<h4 class="anchored" data-anchor-id="prune-by-row-group-stats-and-bloom-filters">3. Prune by row group stats and Bloom filters</h4>
+<p>Each row group has <a href="https://github.com/apache/datafusion/blob/31701b8dc9c6486856c06a29a32107d9f4549cec/datafusion/core/src/physical_optimizer/pruning.rs#L81">basic stats</a> like min/max values for each column. DataFusion applies the query predicates to these stats to prune row groups, e.g., <code>SELECT * FROM table WHERE a &gt; 10</code> will only read row groups where <code>a</code> has a max value greater than 10.</p>
+<p>Sometimes min/max stats are too simple to prune effectively, so Parquet also supports <a href="https://www.influxdata.com/blog/using-parquets-bloom-filters/">Bloom filters</a>. DataFusion <a href="https://github.com/apache/datafusion/blob/31701b8dc9c6486856c06a29a32107d9f4549cec/datafusion/core/src/datasource/physical_plan/parquet/opener.rs#L202">uses Bloom filter when available</a>.</p>
+</section>
+<section id="prune-by-page-stats" class="level4">
+<h4 class="anchored" data-anchor-id="prune-by-page-stats">4. Prune by page stats</h4>
+<p>Parquet optionally supports <a href="https://github.com/apache/parquet-format/blob/master/PageIndex.md">page-level stats</a> – similar to row group stats but more fine-grained. DataFusion implements the <a href="https://github.com/apache/datafusion/blob/31701b8dc9c6486856c06a29a32107d9f4549cec/datafusion/core/src/datasource/physical_plan/parquet/opener.rs#L219">Page pruning</a> when the stats is present.</p>
+</section>
+<section id="read-from-storage" class="level4">
+<h4 class="anchored" data-anchor-id="read-from-storage">5. Read from storage</h4>
+<p>Now we (hopefully) have pruned the Parquet file into a small ranges of bytes. The last step is to <a href="https://github.com/apache/datafusion/blob/31701b8dc9c6486856c06a29a32107d9f4549cec/datafusion/core/src/datasource/physical_plan/parquet/reader.rs#L103">make requests</a> to fetch those bytes and decode them into Arrow RecordBatch.</p>
+</section>
+</section>
+<section id="bonus-filter-pushdown" class="level3">
+<h3 class="anchored" data-anchor-id="bonus-filter-pushdown">Bonus: filter pushdown</h3>
+<p>Filter pushdown, also known as late materialization or predicate pushdown, is a technique used to dynamically prune data based on what has already been evaluated. Unlike the static pruning methods applied when files are opened, filter pushdown operates during scanning, with filters being generated and applied in the scanner.</p>
+<p><img src="https://blog.haoxp.xyz/posts/parquet-to-arrow/filter-pushdown.jpg" class="img-fluid"> DataFusion <a href="https://github.com/apache/datafusion/blob/31701b8dc9c6486856c06a29a32107d9f4549cec/datafusion/core/src/datasource/physical_plan/parquet/row_filter.rs#L154">implements filter pushdown</a> but has <a href="https://github.com/apache/datafusion/blob/31701b8dc9c6486856c06a29a32107d9f4549cec/datafusion/common/src/config.rs#L382">not enabled by default</a> due to <a href="https://github.com/apache/datafusion/issues/3463">some performance regressions</a>.</p>
+<p>The community (including me) is working on to remove the <a href="https://github.com/apache/arrow-rs/issues/5523#issuecomment-2429470872">remaining performance issues</a> and enable it by default.</p>
+
+
+</section>
+
+ ]]></description>
+  <guid>https://blog.haoxp.xyz/posts/parquet-to-arrow/</guid>
+  <pubDate>Thu, 24 Oct 2024 00:00:00 GMT</pubDate>
+</item>
 <item>
   <title>Use StringView to make DataFusion faster</title>
   <dc:creator>Xiangpeng Hao, Andrew Lamb</dc:creator>
@@ -1871,7 +1930,7 @@ Note
 <section id="reading-from-disk" class="level3">
 <h3 class="anchored" data-anchor-id="reading-from-disk">Reading from disk</h3>
 <p>CSV files are row-based, and we read them row by row, it is efficient when we frequently need to read the whole row. However, modern data analytic workloads do not always need to read the whole row; they often only need to read a subset of columns. In our example above, we only need to read <code>l_orderkey</code>, <code>l_shipdate</code>, <code>o_orderdate</code>, <code>o_orderkey</code> from the tables. If using a row-based file format (like CSV), we need to load all columns into memory, which is inefficient. Column-based file formats (like <a href="https://parquet.apache.org/">Apache Parquet</a>) can be more efficient in this case.</p>
-<p>TODO: draw a figure about columnar and row storage format.</p>
+<p>See the <a href="../../posts/parquet-to-arrow/">Parquet pruning in DataFusion</a> for more details.</p>
 
 
 </section>
