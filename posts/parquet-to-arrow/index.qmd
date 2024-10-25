@@ -1,0 +1,65 @@
+---
+title: "Parquet pruning in DataFusion"
+date: "2024-10-24"
+categories: []
+description: "Read no more than you need"
+author: "Xiangpeng Hao"
+toc: true
+format:
+  html: 
+    highlight-style: tango 
+---
+
+Note: my research is [funded](https://haoxp.xyz/fund/) by [InfluxData](https://www.influxdata.com), which made this blog post possible.
+
+<hr/>
+
+Parquet has become the industry standard for storing columnar data, and reading Parquet efficiently is crucial for query performance.
+
+To optimize this, DataFusion implements advanced Parquet support for effective data pruning and decoding.
+
+However, achieving high performance adds complexity, and this is no exception. This post provides an overview of the techniques used in DataFusion to read Parquet files selectively. 
+
+### The pipeline
+![](read-parquet.jpg)
+
+#### 0. Parquet file structure
+Parquet structures data into row groups, each row group contains a set of columns, each columns contains a set of pages.
+Read [Querying Parquet with Millisecond Latency](https://www.influxdata.com/blog/querying-parquet-millisecond-latency/) for more details.
+
+#### 1. Read metadata
+DataFusion use Parquet metadata to understand what is in the file. 
+[Reading metadata](https://github.com/apache/datafusion/blob/31701b8dc9c6486856c06a29a32107d9f4549cec/datafusion/core/src/datasource/physical_plan/parquet/reader.rs#L118) in the worst case requires two network requests: one to read the footer size, and another one to read the footer itself.
+[Decoding metadata](https://www.influxdata.com/blog/how-good-parquet-wide-tables/) is generally fast, but can be slow for very wide tables.
+
+DataFusion allows users to cache metadata through the [ParquetFileReaderFactory](https://github.com/apache/datafusion/blob/31701b8dc9c6486856c06a29a32107d9f4549cec/datafusion/core/src/datasource/physical_plan/parquet/reader.rs#L39) trait.
+
+
+#### 2. Prune by projection
+Queries usually won't select all columns, e.g., `SELECT a from table` only reads column `a`. 
+
+As a **columnar** format, Parquet allows DataFusion to [only read]((https://github.com/apache/datafusion/blob/31701b8dc9c6486856c06a29a32107d9f4549cec/datafusion/core/src/datasource/physical_plan/parquet/mod.rs#L778)) the **columns** that are needed.
+
+#### 3. Prune by row group stats and Bloom filters
+Each row group has [basic stats](https://github.com/apache/datafusion/blob/31701b8dc9c6486856c06a29a32107d9f4549cec/datafusion/core/src/physical_optimizer/pruning.rs#L81) like min/max values for each column.
+DataFusion applies the query predicates to these stats to prune row groups, e.g., `SELECT * FROM table WHERE a > 10` will only read row groups where `a` has a max value greater than 10.
+
+Sometimes min/max stats are too simple to prune effectively, so Parquet also supports [Bloom filters](https://www.influxdata.com/blog/using-parquets-bloom-filters/). DataFusion [uses Bloom filter when available](https://github.com/apache/datafusion/blob/31701b8dc9c6486856c06a29a32107d9f4549cec/datafusion/core/src/datasource/physical_plan/parquet/opener.rs#L202).
+
+#### 4. Prune by page stats
+Parquet optionally supports [page-level stats](https://github.com/apache/parquet-format/blob/master/PageIndex.md) -- similar to row group stats but more fine-grained.
+DataFusion implements the [Page pruning](https://github.com/apache/datafusion/blob/31701b8dc9c6486856c06a29a32107d9f4549cec/datafusion/core/src/datasource/physical_plan/parquet/opener.rs#L219) when the stats is present. 
+
+
+#### 5. Read from storage 
+Now we (hopefully) have pruned the Parquet file into a small ranges of bytes.
+The last step is to [make requests](https://github.com/apache/datafusion/blob/31701b8dc9c6486856c06a29a32107d9f4549cec/datafusion/core/src/datasource/physical_plan/parquet/reader.rs#L103) to fetch those bytes and decode them into Arrow RecordBatch. 
+
+
+### Bonus: filter pushdown
+Filter pushdown, also known as late materialization or predicate pushdown, is a technique used to dynamically prune data based on what has already been evaluated. Unlike the static pruning methods applied when files are opened, filter pushdown operates during scanning, with filters being generated and applied in the scanner.
+
+![](filter-pushdown.jpg)
+DataFusion [implements filter pushdown](https://github.com/apache/datafusion/blob/31701b8dc9c6486856c06a29a32107d9f4549cec/datafusion/core/src/datasource/physical_plan/parquet/row_filter.rs#L154) but has [not enabled by default](https://github.com/apache/datafusion/blob/31701b8dc9c6486856c06a29a32107d9f4549cec/datafusion/common/src/config.rs#L382) due to [some performance regressions](https://github.com/apache/datafusion/issues/3463).
+
+The community (including me) is working on to remove the [remaining performance issues](https://github.com/apache/arrow-rs/issues/5523#issuecomment-2429470872) and enable it by default.
