@@ -298,8 +298,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="takeaways" class="level4">
 <h4 class="anchored" data-anchor-id="takeaways">Takeaways</h4>
 <ul>
-<li>Caching Arrow consistently outperforms or matches caching Parquet across all queries, demonstrating its effectiveness as an optimization strategy.</li>
-<li>The performance gains vary significantly based on query characteristics:
+<li>Caching Arrow consistently outperforms or matches caching Parquet across all queries.</li>
+<li>The performance gains vary significantly:
 <ul>
 <li>Scan-intensive queries (Q20-Q23) show the largest improvements, with up to 3x speedup, since they benefit directly from avoiding Parquet decoding</li>
 <li>Aggregation-heavy queries (Q8-Q18) see more modest gains, as their execution time is dominated by computation rather than data access</li>
