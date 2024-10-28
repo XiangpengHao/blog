@@ -106,8 +106,8 @@ The figure below compares query latencies between two caching strategies using t
 ![](cache-arrow.png)
 
 #### Takeaways
-- Caching Arrow consistently outperforms or matches caching Parquet across all queries, demonstrating its effectiveness as an optimization strategy.
-- The performance gains vary significantly based on query characteristics:
+- Caching Arrow consistently outperforms or matches caching Parquet across all queries.
+- The performance gains vary significantly:
   - Scan-intensive queries (Q20-Q23) show the largest improvements, with up to 3x speedup, since they benefit directly from avoiding Parquet decoding
   - Aggregation-heavy queries (Q8-Q18) see more modest gains, as their execution time is dominated by computation rather than data access
 - Memory usage can be a concern - Q23 triggered an out-of-memory error when caching Arrow data, highlighting its excessive memory usage.
