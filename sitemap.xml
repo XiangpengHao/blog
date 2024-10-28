@@ -2,30 +2,34 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://blog.haoxp.xyz/posts/parquet-to-arrow/index.html</loc>
-    <lastmod>2024-10-25T01:13:01.804Z</lastmod>
+    <lastmod>2024-10-28T03:44:19.171Z</lastmod>
   </url>
   <url>
     <loc>https://blog.haoxp.xyz/posts/string-view-datafusion/index.html</loc>
-    <lastmod>2024-10-25T01:13:01.816Z</lastmod>
-  </url>
-  <url>
-    <loc>https://blog.haoxp.xyz/posts/research-statement/index.html</loc>
-    <lastmod>2024-10-25T01:13:01.812Z</lastmod>
-  </url>
-  <url>
-    <loc>https://blog.haoxp.xyz/index.html</loc>
-    <lastmod>2024-10-25T01:13:01.800Z</lastmod>
-  </url>
-  <url>
-    <loc>https://blog.haoxp.xyz/posts/sql-to-results/index.html</loc>
-    <lastmod>2024-10-25T01:13:01.812Z</lastmod>
+    <lastmod>2024-10-28T03:44:19.179Z</lastmod>
   </url>
   <url>
     <loc>https://blog.haoxp.xyz/posts/good-advisor/index.html</loc>
-    <lastmod>2024-10-25T01:13:01.800Z</lastmod>
+    <lastmod>2024-10-28T03:44:19.167Z</lastmod>
+  </url>
+  <url>
+    <loc>https://blog.haoxp.xyz/posts/sql-to-results/index.html</loc>
+    <lastmod>2024-10-28T03:44:19.179Z</lastmod>
+  </url>
+  <url>
+    <loc>https://blog.haoxp.xyz/index.html</loc>
+    <lastmod>2024-10-28T03:44:19.163Z</lastmod>
+  </url>
+  <url>
+    <loc>https://blog.haoxp.xyz/posts/research-statement/index.html</loc>
+    <lastmod>2024-10-28T03:44:19.175Z</lastmod>
+  </url>
+  <url>
+    <loc>https://blog.haoxp.xyz/posts/caching-datafusion/index.html</loc>
+    <lastmod>2024-10-28T03:44:19.167Z</lastmod>
   </url>
   <url>
     <loc>https://blog.haoxp.xyz/posts/working-at-influxdata/index.html</loc>
-    <lastmod>2024-10-25T01:13:01.820Z</lastmod>
+    <lastmod>2024-10-28T03:44:19.187Z</lastmod>
   </url>
 </urlset>

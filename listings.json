@@ -2,6 +2,7 @@
   {
     "listing": "/index.html",
     "items": [
+      "/posts/caching-datafusion/index.html",
       "/posts/parquet-to-arrow/index.html",
       "/posts/string-view-datafusion/index.html",
       "/posts/research-statement/index.html",

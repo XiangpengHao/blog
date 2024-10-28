@@ -10,7 +10,434 @@
 <atom:link href="https://blog.haoxp.xyz/index.xml" rel="self" type="application/rss+xml"/>
 <description></description>
 <generator>quarto-1.5.57</generator>
-<lastBuildDate>Thu, 24 Oct 2024 00:00:00 GMT</lastBuildDate>
+<lastBuildDate>Sun, 27 Oct 2024 00:00:00 GMT</lastBuildDate>
+<item>
+  <title>Caching in DataFusion</title>
+  <dc:creator>Xiangpeng Hao</dc:creator>
+  <link>https://blog.haoxp.xyz/posts/caching-datafusion/</link>
+  <description><![CDATA[ 
+
+
+
+
+
+<p>Note: my research is <a href="https://haoxp.xyz/fund/">funded</a> by <a href="https://www.influxdata.com">InfluxData</a>, which made this blog post possible.</p>
+<hr>
+<p>In the <a href="../../posts/parquet-to-arrow/">last post</a>, we discussed how DataFusion prunes Parquet files to read only the necessary data. This post explores DataFusion’s caching mechanisms, which help avoid repeating reads to object storage.</p>
+<section id="current-state" class="level2">
+<h2 class="anchored" data-anchor-id="current-state">Current state</h2>
+<p>DataFusion provides a flexible and layered caching architecture that enables developers to optimize data access at multiple levels. The caching system is designed to be extensible, allowing custom implementations while providing sensible defaults. Let’s examine the built-in caching mechanisms that make DataFusion efficient.</p>
+<section id="list-files-cache" class="level4">
+<h4 class="anchored" data-anchor-id="list-files-cache">1. List files cache</h4>
+<p>The <a href="https://github.com/apache/datafusion/blob/5db274004bc4a7d493aba6764a8521694a67cd11/datafusion/execution/src/cache/cache_unit.rs#L103">list files cache</a> optimizes directory scanning operations in DataFusion. When a <a href="https://github.com/apache/datafusion/blob/5db274004bc4a7d493aba6764a8521694a67cd11/datafusion/core/src/datasource/listing/table.rs#L683">ListingTable</a> needs to access files in a directory, it first checks this cache before performing expensive <a href="https://github.com/apache/datafusion/blob/5db274004bc4a7d493aba6764a8521694a67cd11/datafusion/core/src/datasource/listing/url.rs#L207">filesystem listing operations</a>.</p>
+<p>This cache is implemented as a simple but effective <code>HashMap</code> that stores directory paths as keys and lists of file metadata as values. The metadata includes important file information like size, last modified time, and other attributes that would otherwise require filesystem/network calls to retrieve:</p>
+<div class="sourceCode" id="cb1" style="background: #f1f3f5;"><pre class="sourceCode rust code-with-copy"><code class="sourceCode rust"><span id="cb1-1"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">struct</span> ListFilesCache <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{</span></span>
+<span id="cb1-2">    cached<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">:</span> HashMap<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&lt;</span><span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">Path</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span> <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">Vec</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&lt;</span>ObjectMeta<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&gt;&gt;,</span></span>
+<span id="cb1-3"><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">}</span></span></code></pre></div>
+</section>
+<section id="file-statistics-cache" class="level4">
+<h4 class="anchored" data-anchor-id="file-statistics-cache">2. File statistics cache</h4>
+<p>The <a href="https://github.com/apache/datafusion/blob/5db274004bc4a7d493aba6764a8521694a67cd11/datafusion/execution/src/cache/cache_unit.rs#L31">file statistics cache</a> stores important statistics about each file, such as row count and column statistics (min/max values). These statistics are used by DataFusion’s query optimizer to make better execution decisions, like pruning files that cannot contain matching data.</p>
+<p>The cache avoids having to <a href="https://github.com/apache/datafusion/blob/5db274004bc4a7d493aba6764a8521694a67cd11/datafusion/core/src/datasource/listing/table.rs#L1091">recompute/re-decode these statistics</a> for each query by storing them in a <code>HashMap</code> that maps file paths to both file metadata and statistics:</p>
+<div class="sourceCode" id="cb2" style="background: #f1f3f5;"><pre class="sourceCode rust code-with-copy"><code class="sourceCode rust"><span id="cb2-1"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">struct</span> FileStatisticsCache <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{</span></span>
+<span id="cb2-2">    cached<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">:</span> HashMap<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&lt;</span><span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">Path</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span> (ObjectMeta<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span> Statistics)<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&gt;,</span></span>
+<span id="cb2-3"><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">}</span></span></code></pre></div>
+</section>
+<section id="parquet-metadata-cache" class="level4">
+<h4 class="anchored" data-anchor-id="parquet-metadata-cache">3. Parquet metadata cache</h4>
+<p>Getting Parquet metadata can be costly for two main reasons:</p>
+<ol type="1">
+<li>Network overhead: It requires up to 2 separate network requests to retrieve the raw metadata bytes - one for the footer offset and another for the actual metadata</li>
+<li>Processing overhead: Decoding the metadata can be computationally expensive, especially for <a href="https://www.influxdata.com/blog/how-good-parquet-wide-tables/">tables with many columns</a></li>
+</ol>
+<p>To address these challenges, DataFusion provides the <a href="https://github.com/apache/datafusion/blob/5db274004bc4a7d493aba6764a8521694a67cd11/datafusion/core/src/datasource/physical_plan/parquet/reader.rs#L39">ParquetFileReaderFactory</a> trait. This trait allows developers to implement custom metadata handling strategies. The factory returns an <code>AsyncFileReader</code> that separates metadata access from data page access, enabling different caching and optimization approaches for each:</p>
+<div class="sourceCode" id="cb3" style="background: #f1f3f5;"><pre class="sourceCode rust code-with-copy"><code class="sourceCode rust"><span id="cb3-1"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">pub</span> <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">trait</span> AsyncFileReader<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">:</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">Send</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{</span></span>
+<span id="cb3-2">    <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">fn</span> get_metadata(<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&amp;</span><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">mut</span> <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">self</span>) <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-&gt;</span> BoxFuture<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&lt;</span><span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">'_</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span> <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">Result</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&lt;</span>Arc<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&lt;</span>ParquetMetaData<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&gt;&gt;&gt;;</span></span>
+<span id="cb3-3"></span>
+<span id="cb3-4">    <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">fn</span> get_bytes(<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&amp;</span><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">mut</span> <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">self</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span> range<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">:</span> Range<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&lt;</span><span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">usize</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&gt;</span>) <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-&gt;</span> BoxFuture<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&lt;</span><span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">'_</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span> <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">Result</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&lt;</span>Bytes<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&gt;&gt;;</span></span>
+<span id="cb3-5"></span>
+<span id="cb3-6">    <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">...</span> <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">// other methods</span></span>
+<span id="cb3-7"><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">}</span></span></code></pre></div>
+</section>
+<section id="parquet-file-range-cache" class="level4">
+<h4 class="anchored" data-anchor-id="parquet-file-range-cache">4. Parquet file range cache</h4>
+<p>Lastly and most importantly, DataFusion caches the Parquet file ranges that have been read.</p>
+<p>Under the hood, DataFusion uses <a href="https://docs.rs/object_store/latest/object_store/">object_store</a> to interact with the S3, GCS, or local filesystem. While object_store provides a unified interface for different storage backends, but it does not implement caching by default.</p>
+<p>However, DataFusion’s flexible architecture allows developers to implement custom caching strategies by implementing the <code>AsyncFileReader</code> trait. This enables optimizations like:</p>
+<ul>
+<li>Caching frequently accessed data ranges in memory</li>
+<li>Implementing tiered caching (e.g., memory + local disk)</li>
+<li>Adding compression to reduce memory usage</li>
+<li>Implementing cache eviction policies based on access patterns</li>
+</ul>
+<p>Notably, the <code>AsyncFileReader</code> trait has a <code>get_bytes_ranges</code> method:</p>
+<div class="sourceCode" id="cb4" style="background: #f1f3f5;"><pre class="sourceCode rust code-with-copy"><code class="sourceCode rust"><span id="cb4-1"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">pub</span> <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">trait</span> AsyncFileReader<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">:</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">Send</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{</span></span>
+<span id="cb4-2">    <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">...</span> <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">// previously mentioned methods </span></span>
+<span id="cb4-3"></span>
+<span id="cb4-4">    <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">fn</span> get_byte_ranges(<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&amp;</span><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">mut</span> <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">self</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span> ranges<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">:</span> <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">Vec</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&lt;</span>Range<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&lt;</span><span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">usize</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&gt;&gt;</span>) <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-&gt;</span> BoxFuture<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&lt;</span><span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">'_</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span> <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">Result</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&lt;</span><span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">Vec</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&lt;</span>Bytes<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&gt;&gt;&gt;;</span></span>
+<span id="cb4-5"><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">}</span></span></code></pre></div>
+<p>The default implementation of <code>get_byte_ranges</code> simply calls <code>get_bytes</code> sequentially for each range, which can be inefficient when reading many small ranges. This is because each range requires a separate network request, leading to higher latency and costs.</p>
+<p>However, developers can implement their own <a href="https://xiangpeng-hao.notion.site/Cool-Projects-with-Modern-Data-Analytics-11ed7d7dd30380a888eed5614fb79aa0#11ed7d7dd3038017b7b1e0c589aa6765">IO coalescing logic</a> to optimize performance. For example, they could:</p>
+<ul>
+<li>Merge adjacent or overlapping ranges to reduce the number of requests</li>
+<li>Batch multiple small ranges into a single larger request</li>
+<li>Implement prefetching for ranges likely to be needed soon</li>
+</ul>
+<p>These optimizations can significantly improve read performance and reduce storage costs, especially when working with remote storage like S3 or GCS.</p>
+<p>So far we have discussed the core caching mechanisms built into DataFusion. These caches work together to optimize different aspects of query execution, from file discovery to data access.</p>
+<p>The following sections will explore more advanced topics and future directions for DataFusion’s caching capabilities.</p>
+</section>
+</section>
+<section id="caching-arrow" class="level2">
+<h2 class="anchored" data-anchor-id="caching-arrow">Caching Arrow</h2>
+<p>Arrow is the in-memory columnar format that DataFusion uses to process data efficiently. Before DataFusion can execute any query logic, Parquet data must be <a href="../../posts/parquet-to-arrow/">decoded into Arrow format</a>. This decoding process involves decompressing the data, converting between data types, and validating constraints - operations that recent research<sup>1</sup> has shown can be a performance bottleneck for many analytical workloads.</p>
+<p>One promising optimization approach is to cache the decoded Arrow data rather than the raw Parquet bytes. This allows us to skip the expensive decoding step on subsequent queries, potentially improving query latency significantly.</p>
+<p>The figure below compares query latencies between two caching strategies using the <a href="https://github.com/apache/datafusion/blob/main/benchmarks/queries/clickbench/queries.sql">ClickBench</a> benchmark suite. The x-axis shows the query ID (0-42) and the y-axis shows query latency in milliseconds (lower is better). For each query, we measure the latency when caching the raw Parquet bytes versus caching the decoded Arrow arrays.</p>
+<p><img src="https://blog.haoxp.xyz/posts/caching-datafusion/cache-arrow.png" class="img-fluid"></p>
+<section id="takeaways" class="level4">
+<h4 class="anchored" data-anchor-id="takeaways">Takeaways</h4>
+<ul>
+<li>Caching Arrow consistently outperforms or matches caching Parquet across all queries, demonstrating its effectiveness as an optimization strategy.</li>
+<li>The performance gains vary significantly based on query characteristics:
+<ul>
+<li>Scan-intensive queries (Q20-Q23) show the largest improvements, with up to 3x speedup, since they benefit directly from avoiding Parquet decoding</li>
+<li>Aggregation-heavy queries (Q8-Q18) see more modest gains, as their execution time is dominated by computation rather than data access</li>
+</ul></li>
+<li>Memory usage can be a concern - Q23 triggered an out-of-memory error when caching Arrow data, highlighting its excessive memory usage.</li>
+</ul>
+</section>
+<section id="but-at-what-cost" class="level3">
+<h3 class="anchored" data-anchor-id="but-at-what-cost">But at what cost?</h3>
+<p>While caching Arrow data can significantly improve query performance, it comes with substantial memory overhead, as demonstrated by Q23’s out-of-memory error. The figure below compares memory usage between caching Parquet versus Arrow data across the benchmark queries. Since each query was run independently, the measurements reflect the memory requirements for executing a single query in isolation.</p>
+<p><img src="https://blog.haoxp.xyz/posts/caching-datafusion/cache-arrow-memory.png" class="img-fluid"></p>
+<section id="takeaways-1" class="level4">
+<h4 class="anchored" data-anchor-id="takeaways-1">Takeaways</h4>
+<ul>
+<li>Parquet achieves roughly 4x-5x compression ratio compared to Arrow’s in-memory format</li>
+<li>The benefit of caching Arrow data varies, but its cost is consistently 4x-5x higher memory usage.</li>
+</ul>
+</section>
+</section>
+<section id="zoom-in-a-bit" class="level3">
+<h3 class="anchored" data-anchor-id="zoom-in-a-bit">Zoom-in a bit</h3>
+<p>Now we take a closer look at Q21 – one of the queries that benefit a lot from caching Arrow:</p>
+<div class="sourceCode" id="cb5" style="background: #f1f3f5;"><pre class="sourceCode sql code-with-copy"><code class="sourceCode sql"><span id="cb5-1"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">SELECT</span> <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">"SearchPhrase"</span>, <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">MIN</span>(<span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">"URL"</span>), <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">COUNT</span>(<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span>) <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">AS</span> c </span>
+<span id="cb5-2"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">FROM</span> hits </span>
+<span id="cb5-3"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">WHERE</span> <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">"URL"</span> <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">LIKE</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'%google%'</span> </span>
+<span id="cb5-4">      <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">AND</span> <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">"SearchPhrase"</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&lt;&gt;</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">''</span> </span>
+<span id="cb5-5"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">GROUP</span> <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">BY</span> <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">"SearchPhrase"</span> </span>
+<span id="cb5-6"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">ORDER</span> <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">BY</span> c </span>
+<span id="cb5-7"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">DESC</span> <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">LIMIT</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">10</span>;</span></code></pre></div>
+<p>The query scans two string columns (“URL” and “SearchPhrase”) and applies a filter on them.</p>
+<p>Let’s now compare their query time and memory usage – we got roughly 3x speedup by using 4x more memory, not bad! <img src="https://blog.haoxp.xyz/posts/caching-datafusion/cache-arrow-q21.png" class="img-fluid"></p>
+</section>
+<section id="how-to-cache-arrow" class="level3">
+<h3 class="anchored" data-anchor-id="how-to-cache-arrow">How to cache Arrow?</h3>
+<p>The figure below builds on the architecture from our <a href="../../posts/parquet-to-arrow/">previous post</a>, adding the new Arrow cache component. The Arrow cache is positioned between the <a href="https://github.com/apache/datafusion/blob/5db274004bc4a7d493aba6764a8521694a67cd11/datafusion/core/src/datasource/physical_plan/parquet/access_plan.rs#L86">ParquetAccessPlan</a> and the decoded Arrow RecordBatch. When a query requests data:</p>
+<ol type="1">
+<li>First, we check if the requested RecordBatch exists in the cache</li>
+<li>If found, we can skip both fetching and decoding the Parquet data by pruning the AccessPlan</li>
+<li>If not found, we fetch and decode the Parquet data as normal, then insert the resulting Arrow RecordBatch into the cache for future use</li>
+</ol>
+<p><img src="https://blog.haoxp.xyz/posts/caching-datafusion/cache-arrow-arch.jpg" class="img-fluid"></p>
+<p>Although the architecture is simple, implementing it faces several challenges:</p>
+<ol type="1">
+<li>How to map Parquet byte ranges to the corresponding Arrow RecordBatches</li>
+<li>Granularity/shape of caching – column-level vs batch-level caching.</li>
+<li>How to efficiently test if the cached ranges contains the requested range? E.g., request range (1024, 2048), but cached ranges has [(0, 2049), (4096, 3072)].</li>
+<li>Memory management – implementing efficient spill-to-disk strategies</li>
+</ol>
+<p>We are actively working on solutions to these challenges as part of our research into high-performance Arrow caching systems. Our goal is to develop practical implementations that can be integrated into production environments. We plan to publish our findings and release the code as open source in the near future. Consider <a href="https://haoxp.xyz/fund/">funding my research</a> to support this work.</p>
+</section>
+</section>
+<section id="standalone-caching-service" class="level2">
+<h2 class="anchored" data-anchor-id="standalone-caching-service">Standalone caching service</h2>
+<p>So far we have discussed caching within individual DataFusion instances, as shown in the Figure below (upper). While this approach works well for single-instance deployments, it is wasteful when multiple DataFusion instances access the same data.</p>
+<p>A more scalable approach is to implement a standalone shared caching service (lower) that can be accessed by multiple DataFusion instances, with the following advantages:</p>
+<ol type="1">
+<li>Reduced resource usage - By eliminating redundant caching and decoding across instances, it optimizes both memory and CPU utilization</li>
+<li>Improved manageability - Decoupling the caching logic from compute nodes simplifies scaling and operational management</li>
+<li>Consistent performance - No latency spike after compute node restarts. With stateless compute nodes and a persistent centralized cache, the system avoids cache warmup delays after node restarts</li>
+</ol>
+<p><img src="https://blog.haoxp.xyz/posts/caching-datafusion/shared-cache.jpg" class="img-fluid"></p>
+<section id="caching-interface" class="level3">
+<h3 class="anchored" data-anchor-id="caching-interface">Caching interface</h3>
+<p>The simplest caching interface treats the caching service as a transparent proxy for object storage. The service implements DataFusion’s <code>AsyncFileReader</code> trait to intercept Parquet file reads, caching byte ranges as they are accessed.</p>
+<p>The bytes are transferred between DataFusion and the cache service using HTTP and can be implemented in any programming languages. This simple interface requires minimal changes to DataFusion.</p>
+<p>A more sophisticated approach is to implement caching through the Arrow Flight protocol, with the caching service running as a full DataFusion instance capable of executing query plans. Rather than just serving cached bytes, this design allows the caching service to process queries directly.</p>
+<p>When a querier needs data, it sends the complete <code>ParquetExec</code> physical plan to the caching service. The service can then:</p>
+<ol type="1">
+<li>Execute the plan against its cached data</li>
+<li>Apply filters and projections directly on the cached data (filter pushdown)</li>
+<li>Return only the necessary Arrow RecordBatches to the querier</li>
+</ol>
+<p>This architecture provides several advantages: - Reduced network transfer by filtering data at the cache layer - Lower client-side CPU usage since filtering happens at the cache</p>
+<p>The tradeoff is increased complexity in both the client and cache service implementations compared to the simple byte-range caching approach.</p>
+</section>
+<section id="caching-medium" class="level3">
+<h3 class="anchored" data-anchor-id="caching-medium">Caching medium</h3>
+<p>The standalone caching service allows a diverse set of storage mediums to optimize the performance and cost.</p>
+<p>The most obvious choice is to cache data in memory, which is fast but expensive. We can do better by spilling the data to SSD when memory is full, and to HDD when SSD is full.</p>
+</section>
+</section>
+<section id="conclusion" class="level2">
+<h2 class="anchored" data-anchor-id="conclusion">Conclusion</h2>
+<p>In this post, we discussed DataFusion’s caching mechanisms and explored the potential of caching Arrow data in standalone caching services. We believe that caching is a key component for every cloud-native analytics systems, and my research project is actively building systems that bridges the gap between what academia known as the state-of-the-art and what industry can actually use.</p>
+
+
+</section>
+
+
+<div id="quarto-appendix" class="default"><section id="footnotes" class="footnotes footnotes-end-of-document"><h2 class="anchored quarto-appendix-heading">Footnotes</h2>
+
+<ol>
+<li id="fn1"><p>BtrBlocks: Efficient Columnar Compression for Data Lakes (<a href="https://www.cs.cit.tum.de/fileadmin/w00cfj/dis/papers/btrblocks.pdf">SIGMOD 2023 Paper</a>)↩︎</p></li>
+</ol>
+</section></div> ]]></description>
+  <guid>https://blog.haoxp.xyz/posts/caching-datafusion/</guid>
+  <pubDate>Sun, 27 Oct 2024 00:00:00 GMT</pubDate>
+</item>
 <item>
   <title>Parquet pruning in DataFusion</title>
   <dc:creator>Xiangpeng Hao</dc:creator>
