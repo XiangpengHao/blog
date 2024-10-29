@@ -5,6 +5,9 @@ categories: []
 description: "Read no more than you need"
 author: "Xiangpeng Hao"
 toc: true
+comments:
+  giscus: 
+    repo: XiangpengHao/blog
 format:
   html: 
     highlight-style: tango 

@@ -5,6 +5,9 @@ date-modified: "2024-09-13"
 categories: []
 author: "Xiangpeng Hao, Andrew Lamb"
 toc: true
+comments:
+  giscus: 
+    repo: XiangpengHao/blog
 format:
   html: 
     highlight-style: tango 
