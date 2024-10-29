@@ -5,6 +5,9 @@ categories: []
 description: "Don't read twice."
 author: "Xiangpeng Hao"
 toc: true
+comments:
+  giscus: 
+    repo: XiangpengHao/blog
 format:
   html: 
     highlight-style: tango 
