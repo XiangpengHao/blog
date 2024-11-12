@@ -5,6 +5,11 @@ categories: []
 description: "No JS, no server, just Rust"
 author: "Xiangpeng Hao"
 toc: true
+lightbox:
+  match: auto
+  effect: fade
+  desc-position: right
+  loop: false
 format:
   html: 
     highlight-style: tango 
@@ -21,13 +26,13 @@ Source code: [parquet-viewer](https://github.com/XiangpengHao/parquet-viewer)
 
 
 **Run SQL queries**
-![](screenshot1.jpg)
+![](screenshot1.jpg){group="my-gallery"}
 
 **Visualize query plans**
-![](screenshot2.jpg)
+![](screenshot2.jpg){group="my-gallery"}
 
 **Examine metadata**
-![](screenshot3.jpg)
+![](screenshot3.jpg){group="my-gallery"}
 
 
 ## How it works
