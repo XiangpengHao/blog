@@ -10,7 +10,66 @@
 <atom:link href="https://blog.haoxp.xyz/index.xml" rel="self" type="application/rss+xml"/>
 <description></description>
 <generator>quarto-1.5.57</generator>
-<lastBuildDate>Sun, 27 Oct 2024 00:00:00 GMT</lastBuildDate>
+<lastBuildDate>Tue, 12 Nov 2024 00:00:00 GMT</lastBuildDate>
+<item>
+  <title>Online Parquet Viewer with Rust</title>
+  <dc:creator>Xiangpeng Hao</dc:creator>
+  <link>https://blog.haoxp.xyz/posts/parquet-viewer/</link>
+  <description><![CDATA[ 
+
+
+
+
+
+<section id="quick-look" class="level2">
+<h2 class="anchored" data-anchor-id="quick-look">Quick look</h2>
+<p>Online here: <a href="https://xiangpenghao.github.io/parquet-explorer">https://xiangpenghao.github.io/parquet-explorer</a></p>
+<p>Source code: <a href="https://github.com/XiangpengHao/parquet-viewer">parquet-viewer</a></p>
+<p><img src="https://blog.haoxp.xyz/posts/parquet-viewer/screenshot4.jpg" class="img-fluid" style="width:40.0%"></p>
+<p><strong>Run SQL queries</strong> <img src="https://blog.haoxp.xyz/posts/parquet-viewer/screenshot1.jpg" class="img-fluid"></p>
+<p><strong>Visualize query plans</strong> <img src="https://blog.haoxp.xyz/posts/parquet-viewer/screenshot2.jpg" class="img-fluid"></p>
+<p><strong>Examine metadata</strong> <img src="https://blog.haoxp.xyz/posts/parquet-viewer/screenshot3.jpg" class="img-fluid"></p>
+</section>
+<section id="how-it-works" class="level2">
+<h2 class="anchored" data-anchor-id="how-it-works">How it works</h2>
+<p>It compiles Parquet/Arrow/DataFusion to webassembly which runs in the browser.</p>
+<p>Specifically, it uses <a href="https://trunkrs.dev"><code>trunk</code></a> to pack wasm files, <a href="https://leptos.dev"><code>leptos</code></a> to build reactive UI components, and <a href="https://tailwindcss.com"><code>Tailwind CSS</code></a> for styling.</p>
+<p>And most importantly, LLM wrote most of the code.</p>
+</section>
+<section id="why-do-i-need-this" class="level2">
+<h2 class="anchored" data-anchor-id="why-do-i-need-this">Why do I need this?</h2>
+<p>Parquet files are not human-readable, you can’t just open them like CSV or JSON files.</p>
+<p>Of course, there are many CLI tools that allow you to inspect file content – if you enjoy deciphering cryptic CLI args.</p>
+<p>There are also Java/C#/Windows applications that provide GUI options – if you’re nostalgia for the 90s.</p>
+<p>But with this tool, everything happens inside your favorite browser, written in your favorite language, using your favorite tech stack.</p>
+<p>Simply drag and drop the file, and all the important information is in front of you.</p>
+</section>
+<section id="rust-for-frontend" class="level2">
+<h2 class="anchored" data-anchor-id="rust-for-frontend">Rust for frontend?</h2>
+<section id="the-good" class="level4">
+<h4 class="anchored" data-anchor-id="the-good">The good</h4>
+<ul>
+<li>Leptos is surprisingly intuitive and easy-to-use.</li>
+<li>DataFusion/Arrow/Parquet compiles to wasm with <em>almost</em> no modification.</li>
+<li>There’s surprisingly small amount of code needed to build an interactive UI.</li>
+</ul>
+</section>
+<section id="the-bad" class="level4">
+<h4 class="anchored" data-anchor-id="the-bad">The bad</h4>
+<ul>
+<li>Build size is large, debug build is 100MB, release build is 40MB. Poor dev experience due to laggy edit-build-run cycle. (User experience is fine, though)</li>
+<li>Not every crate is wasm-compatible, and it’s very difficult to triangle down the root cause.</li>
+<li>I haven’t figure out how to nicely use JavaScript yet – sometimes you do need JS.</li>
+</ul>
+
+
+</section>
+</section>
+
+ ]]></description>
+  <guid>https://blog.haoxp.xyz/posts/parquet-viewer/</guid>
+  <pubDate>Tue, 12 Nov 2024 00:00:00 GMT</pubDate>
+</item>
 <item>
   <title>Caching in DataFusion</title>
   <dc:creator>Xiangpeng Hao</dc:creator>

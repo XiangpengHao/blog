@@ -151,7 +151,42 @@
     "href": "index.html",
     "title": "Database/storage systems",
     "section": "",
-    "text": "Caching in DataFusion\n\n\n\n\n\nDon’t read twice.\n\n\n\n\n\nOct 27, 2024\n\n\nXiangpeng Hao\n\n\n\n\n\n\n\n\n\n\n\n\nParquet pruning in DataFusion\n\n\n\n\n\nRead no more than you need\n\n\n\n\n\nOct 24, 2024\n\n\nXiangpeng Hao\n\n\n\n\n\n\n\n\n\n\n\n\nUse StringView to make DataFusion faster\n\n\n\n\n\n\n\n\n\n\n\nSep 13, 2024\n\n\nXiangpeng Hao, Andrew Lamb\n\n\n\n\n\n\n\n\n\n\n\n\nMy research statement\n\n\n\n\n\n\n\n\n\n\n\nAug 21, 2024\n\n\n\n\n\n\n\n\n\n\n\n\nInfluxData &gt; Google and Microsoft\n\n\n\n\n\n\n\n\n\n\n\nAug 18, 2024\n\n\n\n\n\n\n\n\n\n\n\n\nThree types of good academic advisors\n\n\n\n\n\n\n\n\n\n\n\nMay 7, 2024\n\n\n\n\n\n\n\n\n\n\n\n\nWhat happens when you type a SQL in the database\n\n\n\n\n\n\n\n\n\n\n\nApr 26, 2024\n\n\n\n\n\n\nNo matching items"
+    "text": "Online Parquet Viewer with Rust\n\n\n\n\n\nNo JS, no server, just Rust\n\n\n\n\n\nNov 12, 2024\n\n\nXiangpeng Hao\n\n\n\n\n\n\n\n\n\n\n\n\nCaching in DataFusion\n\n\n\n\n\nDon’t read twice.\n\n\n\n\n\nOct 27, 2024\n\n\nXiangpeng Hao\n\n\n\n\n\n\n\n\n\n\n\n\nParquet pruning in DataFusion\n\n\n\n\n\nRead no more than you need\n\n\n\n\n\nOct 24, 2024\n\n\nXiangpeng Hao\n\n\n\n\n\n\n\n\n\n\n\n\nUse StringView to make DataFusion faster\n\n\n\n\n\n\n\n\n\n\n\nSep 13, 2024\n\n\nXiangpeng Hao, Andrew Lamb\n\n\n\n\n\n\n\n\n\n\n\n\nMy research statement\n\n\n\n\n\n\n\n\n\n\n\nAug 21, 2024\n\n\n\n\n\n\n\n\n\n\n\n\nInfluxData &gt; Google and Microsoft\n\n\n\n\n\n\n\n\n\n\n\nAug 18, 2024\n\n\n\n\n\n\n\n\n\n\n\n\nThree types of good academic advisors\n\n\n\n\n\n\n\n\n\n\n\nMay 7, 2024\n\n\n\n\n\n\n\n\n\n\n\n\nWhat happens when you type a SQL in the database\n\n\n\n\n\n\n\n\n\n\n\nApr 26, 2024\n\n\n\n\n\n\nNo matching items"
+  },
+  {
+    "objectID": "posts/parquet-viewer/index.html",
+    "href": "posts/parquet-viewer/index.html",
+    "title": "Online Parquet Viewer with Rust",
+    "section": "",
+    "text": "Online here: https://xiangpenghao.github.io/parquet-explorer\nSource code: parquet-viewer\n\nRun SQL queries \nVisualize query plans \nExamine metadata"
+  },
+  {
+    "objectID": "posts/parquet-viewer/index.html#quick-look",
+    "href": "posts/parquet-viewer/index.html#quick-look",
+    "title": "Online Parquet Viewer with Rust",
+    "section": "",
+    "text": "Online here: https://xiangpenghao.github.io/parquet-explorer\nSource code: parquet-viewer\n\nRun SQL queries \nVisualize query plans \nExamine metadata"
+  },
+  {
+    "objectID": "posts/parquet-viewer/index.html#how-it-works",
+    "href": "posts/parquet-viewer/index.html#how-it-works",
+    "title": "Online Parquet Viewer with Rust",
+    "section": "How it works",
+    "text": "How it works\nIt compiles Parquet/Arrow/DataFusion to webassembly which runs in the browser.\nSpecifically, it uses trunk to pack wasm files, leptos to build reactive UI components, and Tailwind CSS for styling.\nAnd most importantly, LLM wrote most of the code."
+  },
+  {
+    "objectID": "posts/parquet-viewer/index.html#why-do-i-need-this",
+    "href": "posts/parquet-viewer/index.html#why-do-i-need-this",
+    "title": "Online Parquet Viewer with Rust",
+    "section": "Why do I need this?",
+    "text": "Why do I need this?\nParquet files are not human-readable, you can’t just open them like CSV or JSON files.\nOf course, there are many CLI tools that allow you to inspect file content – if you enjoy deciphering cryptic CLI args.\nThere are also Java/C#/Windows applications that provide GUI options – if you’re nostalgia for the 90s.\nBut with this tool, everything happens inside your favorite browser, written in your favorite language, using your favorite tech stack.\nSimply drag and drop the file, and all the important information is in front of you."
+  },
+  {
+    "objectID": "posts/parquet-viewer/index.html#rust-for-frontend",
+    "href": "posts/parquet-viewer/index.html#rust-for-frontend",
+    "title": "Online Parquet Viewer with Rust",
+    "section": "Rust for frontend?",
+    "text": "Rust for frontend?\n\nThe good\n\nLeptos is surprisingly intuitive and easy-to-use.\nDataFusion/Arrow/Parquet compiles to wasm with almost no modification.\nThere’s surprisingly small amount of code needed to build an interactive UI.\n\n\n\nThe bad\n\nBuild size is large, debug build is 100MB, release build is 40MB. Poor dev experience due to laggy edit-build-run cycle. (User experience is fine, though)\nNot every crate is wasm-compatible, and it’s very difficult to triangle down the root cause.\nI haven’t figure out how to nicely use JavaScript yet – sometimes you do need JS."
   },
   {
     "objectID": "posts/research-statement/index.html",
