@@ -25,10 +25,10 @@
 <h2 class="anchored" data-anchor-id="quick-look">Quick look</h2>
 <p>Online here: <a href="https://xiangpenghao.github.io/parquet-explorer">https://xiangpenghao.github.io/parquet-explorer</a></p>
 <p>Source code: <a href="https://github.com/XiangpengHao/parquet-viewer">parquet-viewer</a></p>
-<p><img src="https://blog.haoxp.xyz/posts/parquet-viewer/screenshot4.jpg" class="img-fluid" style="width:40.0%"></p>
-<p><strong>Run SQL queries</strong> <img src="https://blog.haoxp.xyz/posts/parquet-viewer/screenshot1.jpg" class="img-fluid"></p>
-<p><strong>Visualize query plans</strong> <img src="https://blog.haoxp.xyz/posts/parquet-viewer/screenshot2.jpg" class="img-fluid"></p>
-<p><strong>Examine metadata</strong> <img src="https://blog.haoxp.xyz/posts/parquet-viewer/screenshot3.jpg" class="img-fluid"></p>
+<p><a href="screenshot4.jpg" class="lightbox" data-gallery="quarto-lightbox-gallery-1"><img src="https://blog.haoxp.xyz/posts/parquet-viewer/screenshot4.jpg" class="img-fluid" style="width:40.0%"></a></p>
+<p><strong>Run SQL queries</strong> <img src="https://blog.haoxp.xyz/posts/parquet-viewer/screenshot1.jpg" class="img-fluid" data-group="my-gallery"></p>
+<p><strong>Visualize query plans</strong> <img src="https://blog.haoxp.xyz/posts/parquet-viewer/screenshot2.jpg" class="img-fluid" data-group="my-gallery"></p>
+<p><strong>Examine metadata</strong> <img src="https://blog.haoxp.xyz/posts/parquet-viewer/screenshot3.jpg" class="img-fluid" data-group="my-gallery"></p>
 </section>
 <section id="how-it-works" class="level2">
 <h2 class="anchored" data-anchor-id="how-it-works">How it works</h2>
