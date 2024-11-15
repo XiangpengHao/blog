@@ -23,7 +23,7 @@
 
 <section id="quick-look" class="level2">
 <h2 class="anchored" data-anchor-id="quick-look">Quick look</h2>
-<p>Online here: <a href="https://xiangpenghao.github.io/parquet-viewer">https://xiangpenghao.github.io/parquet-explorer</a></p>
+<p>Online here: <a href="https://xiangpenghao.github.io/parquet-viewer">https://xiangpenghao.github.io/parquet-viewer</a></p>
 <p>Source code: <a href="https://github.com/XiangpengHao/parquet-viewer">parquet-viewer</a></p>
 <p><a href="screenshot4.jpg" class="lightbox" data-gallery="quarto-lightbox-gallery-1"><img src="https://blog.haoxp.xyz/posts/parquet-viewer/screenshot4.jpg" class="img-fluid" style="width:40.0%"></a></p>
 <p><strong>Run SQL queries</strong> <img src="https://blog.haoxp.xyz/posts/parquet-viewer/screenshot1.jpg" class="img-fluid" data-group="my-gallery"></p>
