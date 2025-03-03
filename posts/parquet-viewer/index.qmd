@@ -56,11 +56,17 @@ Simply drag and drop the file, and all the important information is in front of 
 ## Rust for frontend?
 
 #### The good
+
 - Leptos is surprisingly intuitive and easy-to-use. 
+
 - DataFusion/Arrow/Parquet compiles to wasm with *almost* no modification.
+
 - There's surprisingly small amount of code needed to build an interactive UI.
 
 #### The bad
+
 - Build size is large, debug build is 100MB, release build is 40MB. Poor dev experience due to laggy edit-build-run cycle. (User experience is fine, though)
+
 - Not every crate is wasm-compatible, and it's very difficult to triangle down the root cause.
+
 - I haven't figure out how to nicely use JavaScript yet -- sometimes you do need JS.
