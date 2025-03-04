@@ -13,6 +13,10 @@ format:
     highlight-style: tango 
 ---
 
+**📢📢📢 Checkout [LiquidCache](https://github.com/XiangpengHao/liquid-cache),
+an open-source caching solution that reduces latency by 10x for cloud-native DataFusion.**
+
+
 Note: my research is [funded](https://haoxp.xyz/fund/) by [InfluxData](https://www.influxdata.com), which made this blog post possible.
 
 <hr/>

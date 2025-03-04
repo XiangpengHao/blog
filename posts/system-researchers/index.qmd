@@ -1,0 +1,111 @@
+---
+title: "Where are we now, system researchers?"
+date: "2025-03-02"
+date-modified: "2025-03-02"
+categories: []
+toc: true
+draft: true
+---
+
+We, the system researchers, are undergoing a existential crisis: we don't know what we good at, and we don't know why we exists. 
+
+I'll make some bold, un-grounded judgement in this post, if offended, press `Ctrl+W` to continue life.
+
+## System research is knowing
+The slogan of system research is "We must know, and we will know[^1]." (The opposite of this is AI research, which is about coping with uncertainty, and live with unknowing.)
+
+We study the complex interactions of systems, and practice to know them better. We fight against the seemingly infinite complexity of systems, and uncover the underlying principles.
+
+Knowing requires a lot of practicing. 
+Most of the time, this practice means building systems.
+But we don't have a culture of rewarding system builders.
+We get what we reward -- lots of papers, most of them are for the pure purpose of paper publishing.
+
+## Research is a privilege
+We take taxpayer's money to do research.
+We seems to take this privilege for granted, we convinced ourselves that we have this privilege because we are smart, and we have proven ourself worthy through some sort of exams or paper publications.
+
+I agree with the general idea of spending more money on research is beneficial to the society,
+but I also believe this does not mean we should take the money for granted, unaccountable to the public.
+
+This is especially true when someone pull the plug on the research funding.
+We could easily blame the person, and name a few research achievements that would be impossible without those funding.
+But from the bottom of my heart, I often have the same question that whether some of the research funding would be better spent on something else.
+
+I'm not saying we should only invest in research that we already know is good -- who would know that?
+I'm questioning the way we allocate the research funding is not accountable to the public.
+The funding judges are from the same group of academic people, which are highly alienated and detached from the public.
+We can easily form an echo chamber, and make decisions based on our own interests -- publishing more papers without worrying about the actual impact on real people.
+We don't have to worry about real impact, because there's no way for the public to question it.
+Without a healthy accountability chain, the research community decays gradually.
+
+But the public has one last ultimate weapon -- pull the plug entirely.
+That is a radical move, but it is the only way to propagate the message to the echo chamber.
+
+Research is a privilege, and we should not take it for granted.
+We need to question more about ourselves, whether the money that people invest in us is worth it.
+
+## System research is irrelevant
+System research is irrelevant, and industry seems to be a far better place to do research.
+And in fact, most of the impactful and novel systems come from industry.
+Industry has the money, and the patience to build real systems. 
+But most importantly, industry systems are accountable -- the moment these systems lose their users, they will be immediately phased out.
+Accountable systems struggle to survive, and they are forced to stay relevant.
+
+Due to the unaccountable funding agencies mentioned above, research systems are often one-shot systems -- they are immediately abandoned right after the publication.
+We are frequently stroked by the great systems coming from industry (the most recent one is infra at DeepSeek), and we realized that we are far from competing with them. 
+As a result, we seem to constrain ourselves to a few narrow research topics, solving problems that are difficult to find a single real user (imaginary problems).
+Or we simply adjust our goal from research to education, getting people ready for their industry jobs, so they can continue research there.
+But if that is the case, why would we need research money?
+
+## We are unqualified
+PhD students are just a few years older than undergrads, how can they compete with senior industry practitioners who have been working on the same problems for decades?
+
+Yet we are not even trying to compete.
+We don't like "engineering problems", because we researchers are supposed to work on "research problems".
+
+We like research problems for two simple reasons:
+
+1. Feel researchy makes us feel good about ourselves; simply thinking about those fancy terminology makes us feel fundamental and important.
+
+2. We don't know how to code. 
+
+We waste too much time baffling about the knowledge we learn from papers.
+How to schedule a million machines, how to train a billion parameters, how to design infinitely scalable systems. 
+Just thinking about these problems makes us feel good as researchers, although most of us never have a service deployed in cloud, never used the techniques we proposed, never used the filesystem/kernel/compiler/network/database we studied.
+
+We waste time on those things because we don't know how to code, and are unwilling to learn.
+What I can not create, I do not understand. Just knowing how it works from a 1000 feet view does not mean I can build it.
+Real system nuances are often reasons why systems are built in a particular way, without getting into the details, we are simply scratching the surface.
+
+Here are my bold claims:
+
+- You opinion on overall system research does not matter until you have a project with more than 10k lines of code.
+
+- You opinion on a specific topic does not matter until you write more than 50k loc on it. 
+
+- You start to have a taste about system research after writing 100k loc.
+
+The system research community does not need more novel solutions -- novel solutions are essentially combinations of existing techniques, when we need to solve a problem, we will figure out the solution.
+
+Instead, we need more people willing to sit down and code, build real systems, and talk to real users.
+
+## Our measurement is wrong 
+We ask what's new and what's hard.
+
+All of our research projects start with these two questions, but unfortunately, these two questions guided us to irrelevancy.
+
+Many one-shot papers claimed novelty and disappeared, preventing future research projects from making progress, as they have taken the credit of being the first to come up the idea, although it doesn't work sometimes completely wrong, it requires all future researchers to compare with it.
+Most of the time, the code is terribly implemented or overly simplified, making it impossible to make fair comparisons.
+But reviewers don't care, they see the two papers are informational equivalent -- same idea from 1000 feet view, questioning the authors what's new and what's hard.
+And the difference between the two papers, is often in the numerous small details, which sounds trivial but are in fact essential to be relevant.
+Most of the time, figuring out the details takes much more time and novelty than coming up with the idea itself.
+
+The reviewers -- often are just a few years older than PhD students, don't know how to code, unable to get into the details, 
+and unable to appreciate the real system nuances -- will likely reject the paper for lack of novelty.
+
+
+[^1]: https://en.wikipedia.org/wiki/Ignoramus_et_ignorabimus
+
+
+
