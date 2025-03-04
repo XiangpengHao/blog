@@ -9,7 +9,7 @@
 <link>https://blog.haoxp.xyz/</link>
 <atom:link href="https://blog.haoxp.xyz/index.xml" rel="self" type="application/rss+xml"/>
 <description></description>
-<generator>quarto-1.5.57</generator>
+<generator>quarto-1.6.42</generator>
 <lastBuildDate>Tue, 12 Nov 2024 00:00:00 GMT</lastBuildDate>
 <item>
   <title>Online Parquet Viewer with Rust</title>
@@ -49,17 +49,17 @@
 <section id="the-good" class="level4">
 <h4 class="anchored" data-anchor-id="the-good">The good</h4>
 <ul>
-<li>Leptos is surprisingly intuitive and easy-to-use.</li>
-<li>DataFusion/Arrow/Parquet compiles to wasm with <em>almost</em> no modification.</li>
-<li>There’s surprisingly small amount of code needed to build an interactive UI.</li>
+<li><p>Leptos is surprisingly intuitive and easy-to-use.</p></li>
+<li><p>DataFusion/Arrow/Parquet compiles to wasm with <em>almost</em> no modification.</p></li>
+<li><p>There’s surprisingly small amount of code needed to build an interactive UI.</p></li>
 </ul>
 </section>
 <section id="the-bad" class="level4">
 <h4 class="anchored" data-anchor-id="the-bad">The bad</h4>
 <ul>
-<li>Build size is large, debug build is 100MB, release build is 40MB. Poor dev experience due to laggy edit-build-run cycle. (User experience is fine, though)</li>
-<li>Not every crate is wasm-compatible, and it’s very difficult to triangle down the root cause.</li>
-<li>I haven’t figure out how to nicely use JavaScript yet – sometimes you do need JS.</li>
+<li><p>Build size is large, debug build is 100MB, release build is 40MB. Poor dev experience due to laggy edit-build-run cycle. (User experience is fine, though)</p></li>
+<li><p>Not every crate is wasm-compatible, and it’s very difficult to triangle down the root cause.</p></li>
+<li><p>I haven’t figure out how to nicely use JavaScript yet – sometimes you do need JS.</p></li>
 </ul>
 
 
@@ -80,6 +80,7 @@
 
 
 
+<p><strong>📢📢📢 Checkout <a href="https://github.com/XiangpengHao/liquid-cache">LiquidCache</a>, an open-source caching solution that reduces latency by 10x for cloud-native DataFusion.</strong></p>
 <p>Note: my research is <a href="https://haoxp.xyz/fund/">funded</a> by <a href="https://www.influxdata.com">InfluxData</a>, which made this blog post possible.</p>
 <hr>
 <p>In the <a href="../../posts/parquet-to-arrow/">last post</a>, we discussed how DataFusion prunes Parquet files to read only the necessary data. This post explores DataFusion’s caching mechanisms, which help avoid repeating reads to object storage.</p>

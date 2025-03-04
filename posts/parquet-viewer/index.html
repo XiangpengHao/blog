@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.5.57">
+<meta name="generator" content="quarto-1.6.42">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -38,10 +38,10 @@ ul.task-list li input[type="checkbox"] {
 <script src="../../site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="../../site_libs/quarto-html/anchor.min.js"></script>
 <link href="../../site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="../../site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="../../site_libs/quarto-html/quarto-syntax-highlighting-0de45b8b5f35a93596f1d788d60c4c11.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="../../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../../site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<link href="../../site_libs/bootstrap/bootstrap-1046f148e97bb5e621867d9ec917c2ac.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script src="../../site_libs/quarto-contrib/glightbox/glightbox.min.js"></script>
 <link href="../../site_libs/quarto-contrib/glightbox/glightbox.min.css" rel="stylesheet">
 <link href="../../site_libs/quarto-contrib/glightbox/lightbox.css" rel="stylesheet">
@@ -76,10 +76,12 @@ ul.task-list li input[type="checkbox"] {
 <link rel="stylesheet" href="../../styles.css">
 <meta property="og:title" content="Online Parquet Viewer with Rust – Xiangpeng’s blog">
 <meta property="og:description" content="No JS, no server, just Rust">
+<meta property="og:image" content="https://blog.haoxp.xyz/posts/parquet-viewer/screenshot4.jpg">
 <meta property="og:site_name" content="Xiangpeng's blog">
 <meta name="twitter:title" content="Online Parquet Viewer with Rust – Xiangpeng’s blog">
 <meta name="twitter:description" content="No JS, no server, just Rust">
-<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://blog.haoxp.xyz/posts/parquet-viewer/screenshot4.jpg">
+<meta name="twitter:card" content="summary_large_image">
 </head>
 
 <body class="nav-fixed">
@@ -210,17 +212,17 @@ ul.task-list li input[type="checkbox"] {
 <section id="the-good" class="level4">
 <h4 class="anchored" data-anchor-id="the-good">The good</h4>
 <ul>
-<li>Leptos is surprisingly intuitive and easy-to-use.</li>
-<li>DataFusion/Arrow/Parquet compiles to wasm with <em>almost</em> no modification.</li>
-<li>There’s surprisingly small amount of code needed to build an interactive UI.</li>
+<li><p>Leptos is surprisingly intuitive and easy-to-use.</p></li>
+<li><p>DataFusion/Arrow/Parquet compiles to wasm with <em>almost</em> no modification.</p></li>
+<li><p>There’s surprisingly small amount of code needed to build an interactive UI.</p></li>
 </ul>
 </section>
 <section id="the-bad" class="level4">
 <h4 class="anchored" data-anchor-id="the-bad">The bad</h4>
 <ul>
-<li>Build size is large, debug build is 100MB, release build is 40MB. Poor dev experience due to laggy edit-build-run cycle. (User experience is fine, though)</li>
-<li>Not every crate is wasm-compatible, and it’s very difficult to triangle down the root cause.</li>
-<li>I haven’t figure out how to nicely use JavaScript yet – sometimes you do need JS.</li>
+<li><p>Build size is large, debug build is 100MB, release build is 40MB. Poor dev experience due to laggy edit-build-run cycle. (User experience is fine, though)</p></li>
+<li><p>Not every crate is wasm-compatible, and it’s very difficult to triangle down the root cause.</p></li>
+<li><p>I haven’t figure out how to nicely use JavaScript yet – sometimes you do need JS.</p></li>
 </ul>
 
 
@@ -310,8 +312,6 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
   });
   clipboard.on('success', onCopySuccess);
   if (window.document.getElementById('quarto-embedded-source-code-modal')) {
-    // For code content inside modals, clipBoardJS needs to be initialized with a container option
-    // TODO: Check when it could be a function (https://github.com/zenorocha/clipboard.js/issues/860)
     const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
       text: getTextToCopy,
       container: window.document.getElementById('quarto-embedded-source-code-modal')
@@ -422,7 +422,6 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
       if (window.Quarto?.typesetMath) {
         window.Quarto.typesetMath(note);
       }
-      // TODO in 1.5, we should make sure this works without a callout special case
       if (note.classList.contains("callout")) {
         return note.outerHTML;
       } else {
@@ -649,7 +648,7 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
 });
 </script>
 </div> <!-- /content -->
-<script>var lightboxQuarto = GLightbox({"descPosition":"right","selector":".lightbox","closeEffect":"fade","openEffect":"fade","loop":false});
+<script>var lightboxQuarto = GLightbox({"closeEffect":"fade","descPosition":"right","loop":false,"openEffect":"fade","selector":".lightbox"});
 (function() {
   let previousOnload = window.onload;
   window.onload = () => {

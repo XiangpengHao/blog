@@ -1,39 +1,39 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://blog.haoxp.xyz/posts/parquet-to-arrow/index.html</loc>
-    <lastmod>2024-11-18T17:12:45.108Z</lastmod>
-  </url>
-  <url>
-    <loc>https://blog.haoxp.xyz/posts/string-view-datafusion/index.html</loc>
-    <lastmod>2024-11-18T17:12:45.124Z</lastmod>
-  </url>
-  <url>
-    <loc>https://blog.haoxp.xyz/posts/good-advisor/index.html</loc>
-    <lastmod>2024-11-18T17:12:45.104Z</lastmod>
-  </url>
-  <url>
     <loc>https://blog.haoxp.xyz/posts/sql-to-results/index.html</loc>
-    <lastmod>2024-11-18T17:12:45.120Z</lastmod>
+    <lastmod>2025-03-04T19:26:45.637Z</lastmod>
   </url>
   <url>
-    <loc>https://blog.haoxp.xyz/index.html</loc>
-    <lastmod>2024-11-18T17:12:45.100Z</lastmod>
+    <loc>https://blog.haoxp.xyz/posts/parquet-to-arrow/index.html</loc>
+    <lastmod>2025-03-04T19:26:45.623Z</lastmod>
   </url>
   <url>
     <loc>https://blog.haoxp.xyz/posts/parquet-viewer/index.html</loc>
-    <lastmod>2024-11-18T17:12:45.108Z</lastmod>
+    <lastmod>2025-03-04T19:26:45.624Z</lastmod>
   </url>
   <url>
-    <loc>https://blog.haoxp.xyz/posts/research-statement/index.html</loc>
-    <lastmod>2024-11-18T17:12:45.120Z</lastmod>
+    <loc>https://blog.haoxp.xyz/posts/string-view-datafusion/index.html</loc>
+    <lastmod>2025-03-04T19:26:45.639Z</lastmod>
+  </url>
+  <url>
+    <loc>https://blog.haoxp.xyz/posts/good-advisor/index.html</loc>
+    <lastmod>2025-03-04T19:26:45.621Z</lastmod>
+  </url>
+  <url>
+    <loc>https://blog.haoxp.xyz/index.html</loc>
+    <lastmod>2025-03-04T19:26:45.615Z</lastmod>
   </url>
   <url>
     <loc>https://blog.haoxp.xyz/posts/caching-datafusion/index.html</loc>
-    <lastmod>2024-11-18T17:12:45.104Z</lastmod>
+    <lastmod>2025-03-04T19:26:45.619Z</lastmod>
   </url>
   <url>
     <loc>https://blog.haoxp.xyz/posts/working-at-influxdata/index.html</loc>
-    <lastmod>2024-11-18T17:12:45.128Z</lastmod>
+    <lastmod>2025-03-04T19:26:45.644Z</lastmod>
+  </url>
+  <url>
+    <loc>https://blog.haoxp.xyz/posts/research-statement/index.html</loc>
+    <lastmod>2025-03-04T19:26:45.635Z</lastmod>
   </url>
 </urlset>
