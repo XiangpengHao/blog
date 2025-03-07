@@ -6,15 +6,15 @@
       version="2.0">
 <channel>
 <title>Xiangpeng&#39;s blog</title>
-<link>https://blog.haoxp.xyz/</link>
-<atom:link href="https://blog.haoxp.xyz/index.xml" rel="self" type="application/rss+xml"/>
+<link>https://blog.xiangpeng.systems/</link>
+<atom:link href="https://blog.xiangpeng.systems/index.xml" rel="self" type="application/rss+xml"/>
 <description></description>
 <generator>quarto-1.6.42</generator>
 <lastBuildDate>Tue, 12 Nov 2024 00:00:00 GMT</lastBuildDate>
 <item>
   <title>Online Parquet Viewer with Rust</title>
   <dc:creator>Xiangpeng Hao</dc:creator>
-  <link>https://blog.haoxp.xyz/posts/parquet-viewer/</link>
+  <link>https://blog.xiangpeng.systems/posts/parquet-viewer/</link>
   <description><![CDATA[ 
 
 
@@ -23,12 +23,12 @@
 
 <section id="quick-look" class="level2">
 <h2 class="anchored" data-anchor-id="quick-look">Quick look</h2>
-<p>Online here: <a href="https://parquet-viewer.haoxp.xyz">https://parquet-viewer.haoxp.xyz</a></p>
+<p>Online here: <a href="https://parquet-viewer.xiangpeng.systems">https://parquet-viewer.xiangpeng.systems</a></p>
 <p>Source code: <a href="https://github.com/XiangpengHao/parquet-viewer">parquet-viewer</a></p>
-<p><a href="screenshot4.jpg" class="lightbox" data-gallery="quarto-lightbox-gallery-1"><img src="https://blog.haoxp.xyz/posts/parquet-viewer/screenshot4.jpg" class="img-fluid" style="width:40.0%"></a></p>
-<p><strong>Run SQL queries</strong> <img src="https://blog.haoxp.xyz/posts/parquet-viewer/screenshot1.jpg" class="img-fluid" data-group="my-gallery"></p>
-<p><strong>Visualize query plans</strong> <img src="https://blog.haoxp.xyz/posts/parquet-viewer/screenshot2.jpg" class="img-fluid" data-group="my-gallery"></p>
-<p><strong>Examine metadata</strong> <img src="https://blog.haoxp.xyz/posts/parquet-viewer/screenshot3.jpg" class="img-fluid" data-group="my-gallery"></p>
+<p><a href="screenshot4.jpg" class="lightbox" data-gallery="quarto-lightbox-gallery-1"><img src="https://blog.xiangpeng.systems/posts/parquet-viewer/screenshot4.jpg" class="img-fluid" style="width:40.0%"></a></p>
+<p><strong>Run SQL queries</strong> <img src="https://blog.xiangpeng.systems/posts/parquet-viewer/screenshot1.jpg" class="img-fluid" data-group="my-gallery"></p>
+<p><strong>Visualize query plans</strong> <img src="https://blog.xiangpeng.systems/posts/parquet-viewer/screenshot2.jpg" class="img-fluid" data-group="my-gallery"></p>
+<p><strong>Examine metadata</strong> <img src="https://blog.xiangpeng.systems/posts/parquet-viewer/screenshot3.jpg" class="img-fluid" data-group="my-gallery"></p>
 </section>
 <section id="how-it-works" class="level2">
 <h2 class="anchored" data-anchor-id="how-it-works">How it works</h2>
@@ -67,13 +67,13 @@
 </section>
 
  ]]></description>
-  <guid>https://blog.haoxp.xyz/posts/parquet-viewer/</guid>
+  <guid>https://blog.xiangpeng.systems/posts/parquet-viewer/</guid>
   <pubDate>Tue, 12 Nov 2024 00:00:00 GMT</pubDate>
 </item>
 <item>
   <title>Caching in DataFusion</title>
   <dc:creator>Xiangpeng Hao</dc:creator>
-  <link>https://blog.haoxp.xyz/posts/caching-datafusion/</link>
+  <link>https://blog.xiangpeng.systems/posts/caching-datafusion/</link>
   <description><![CDATA[ 
 
 
@@ -334,7 +334,7 @@ font-style: inherit;">}</span></span></code></pre></div>
 <p>Arrow is the in-memory columnar format that DataFusion uses to process data efficiently. Before DataFusion can execute any query logic, Parquet data must be <a href="../../posts/parquet-to-arrow/">decoded into Arrow format</a>. This decoding process involves decompressing the data, converting between data types, and validating constraints - operations that recent research<sup>1</sup> has shown can be a performance bottleneck for many analytical workloads.</p>
 <p>One promising optimization approach is to cache the decoded Arrow data rather than the raw Parquet bytes. This allows us to skip the expensive decoding step on subsequent queries, potentially improving query latency significantly.</p>
 <p>The figure below compares query latencies between two caching strategies using the <a href="https://github.com/apache/datafusion/blob/main/benchmarks/queries/clickbench/queries.sql">ClickBench</a> benchmark suite. The x-axis shows the query ID (0-42) and the y-axis shows query latency in milliseconds (lower is better). For each query, we measure the latency when caching the raw Parquet bytes versus caching the decoded Arrow arrays.</p>
-<p><img src="https://blog.haoxp.xyz/posts/caching-datafusion/cache-arrow.png" class="img-fluid"></p>
+<p><img src="https://blog.xiangpeng.systems/posts/caching-datafusion/cache-arrow.png" class="img-fluid"></p>
 <section id="takeaways" class="level4">
 <h4 class="anchored" data-anchor-id="takeaways">Takeaways</h4>
 <ul>
@@ -350,7 +350,7 @@ font-style: inherit;">}</span></span></code></pre></div>
 <section id="but-at-what-cost" class="level3">
 <h3 class="anchored" data-anchor-id="but-at-what-cost">But at what cost?</h3>
 <p>While caching Arrow data can significantly improve query performance, it comes with substantial memory overhead, as demonstrated by Q23’s out-of-memory error. The figure below compares memory usage between caching Parquet versus Arrow data across the benchmark queries. Since each query was run independently, the measurements reflect the memory requirements for executing a single query in isolation.</p>
-<p><img src="https://blog.haoxp.xyz/posts/caching-datafusion/cache-arrow-memory.png" class="img-fluid"></p>
+<p><img src="https://blog.xiangpeng.systems/posts/caching-datafusion/cache-arrow-memory.png" class="img-fluid"></p>
 <section id="takeaways-1" class="level4">
 <h4 class="anchored" data-anchor-id="takeaways-1">Takeaways</h4>
 <ul>
@@ -430,7 +430,7 @@ font-style: inherit;">LIMIT</span> <span class="dv" style="color: #AD0000;
 background-color: null;
 font-style: inherit;">10</span>;</span></code></pre></div>
 <p>The query scans two string columns (“URL” and “SearchPhrase”) and applies a filter on them.</p>
-<p>Let’s now compare their query time and memory usage – we got roughly 3x speedup by using 4x more memory, not bad! <img src="https://blog.haoxp.xyz/posts/caching-datafusion/cache-arrow-q21.png" class="img-fluid"></p>
+<p>Let’s now compare their query time and memory usage – we got roughly 3x speedup by using 4x more memory, not bad! <img src="https://blog.xiangpeng.systems/posts/caching-datafusion/cache-arrow-q21.png" class="img-fluid"></p>
 </section>
 <section id="how-to-cache-arrow" class="level3">
 <h3 class="anchored" data-anchor-id="how-to-cache-arrow">How to cache Arrow?</h3>
@@ -440,7 +440,7 @@ font-style: inherit;">10</span>;</span></code></pre></div>
 <li>If found, we can skip both fetching and decoding the Parquet data by pruning the AccessPlan</li>
 <li>If not found, we fetch and decode the Parquet data as normal, then insert the resulting Arrow RecordBatch into the cache for future use</li>
 </ol>
-<p><img src="https://blog.haoxp.xyz/posts/caching-datafusion/cache-arrow-arch.jpg" class="img-fluid"></p>
+<p><img src="https://blog.xiangpeng.systems/posts/caching-datafusion/cache-arrow-arch.jpg" class="img-fluid"></p>
 <p>Although the architecture is simple, implementing it faces several challenges:</p>
 <ol type="1">
 <li>How to map Parquet byte ranges to the corresponding Arrow RecordBatches</li>
@@ -460,7 +460,7 @@ font-style: inherit;">10</span>;</span></code></pre></div>
 <li>Improved manageability - Decoupling the caching logic from compute nodes simplifies scaling and operational management</li>
 <li>Consistent performance - No latency spike after compute node restarts. With stateless compute nodes and a persistent centralized cache, the system avoids cache warmup delays after node restarts</li>
 </ol>
-<p><img src="https://blog.haoxp.xyz/posts/caching-datafusion/shared-cache.jpg" class="img-fluid"></p>
+<p><img src="https://blog.xiangpeng.systems/posts/caching-datafusion/shared-cache.jpg" class="img-fluid"></p>
 <section id="caching-interface" class="level3">
 <h3 class="anchored" data-anchor-id="caching-interface">Caching interface</h3>
 <p>The simplest caching interface treats the caching service as a transparent proxy for object storage. The service implements DataFusion’s <code>AsyncFileReader</code> trait to intercept Parquet file reads, caching byte ranges as they are accessed.</p>
@@ -495,13 +495,13 @@ font-style: inherit;">10</span>;</span></code></pre></div>
 <li id="fn1"><p>BtrBlocks: Efficient Columnar Compression for Data Lakes (<a href="https://www.cs.cit.tum.de/fileadmin/w00cfj/dis/papers/btrblocks.pdf">SIGMOD 2023 Paper</a>)↩︎</p></li>
 </ol>
 </section></div> ]]></description>
-  <guid>https://blog.haoxp.xyz/posts/caching-datafusion/</guid>
+  <guid>https://blog.xiangpeng.systems/posts/caching-datafusion/</guid>
   <pubDate>Sun, 27 Oct 2024 00:00:00 GMT</pubDate>
 </item>
 <item>
   <title>Parquet pruning in DataFusion</title>
   <dc:creator>Xiangpeng Hao</dc:creator>
-  <link>https://blog.haoxp.xyz/posts/parquet-to-arrow/</link>
+  <link>https://blog.xiangpeng.systems/posts/parquet-to-arrow/</link>
   <description><![CDATA[ 
 
 
@@ -515,7 +515,7 @@ font-style: inherit;">10</span>;</span></code></pre></div>
 <p>However, achieving high performance adds complexity, and this is no exception. This post provides an overview of the techniques used in DataFusion to read Parquet files selectively.</p>
 <section id="the-pipeline" class="level3">
 <h3 class="anchored" data-anchor-id="the-pipeline">The pipeline</h3>
-<p><img src="https://blog.haoxp.xyz/posts/parquet-to-arrow/read-parquet.jpg" class="img-fluid"></p>
+<p><img src="https://blog.xiangpeng.systems/posts/parquet-to-arrow/read-parquet.jpg" class="img-fluid"></p>
 <section id="parquet-file-structure" class="level4">
 <h4 class="anchored" data-anchor-id="parquet-file-structure">0. Parquet file structure</h4>
 <p>Parquet structures data into row groups, each row group contains a set of columns, each columns contains a set of pages. Read <a href="https://www.influxdata.com/blog/querying-parquet-millisecond-latency/">Querying Parquet with Millisecond Latency</a> for more details.</p>
@@ -547,20 +547,20 @@ font-style: inherit;">10</span>;</span></code></pre></div>
 <section id="bonus-filter-pushdown" class="level3">
 <h3 class="anchored" data-anchor-id="bonus-filter-pushdown">Bonus: filter pushdown</h3>
 <p>Filter pushdown, also known as late materialization or predicate pushdown, is a technique used to dynamically prune data based on what has already been evaluated. Unlike the static pruning methods applied when files are opened, filter pushdown operates during scanning, with filters being generated and applied in the scanner.</p>
-<p><img src="https://blog.haoxp.xyz/posts/parquet-to-arrow/filter-pushdown.jpg" class="img-fluid"> DataFusion <a href="https://github.com/apache/datafusion/blob/31701b8dc9c6486856c06a29a32107d9f4549cec/datafusion/core/src/datasource/physical_plan/parquet/row_filter.rs#L154">implements filter pushdown</a> but has <a href="https://github.com/apache/datafusion/blob/31701b8dc9c6486856c06a29a32107d9f4549cec/datafusion/common/src/config.rs#L382">not enabled by default</a> due to <a href="https://github.com/apache/datafusion/issues/3463">some performance regressions</a>.</p>
+<p><img src="https://blog.xiangpeng.systems/posts/parquet-to-arrow/filter-pushdown.jpg" class="img-fluid"> DataFusion <a href="https://github.com/apache/datafusion/blob/31701b8dc9c6486856c06a29a32107d9f4549cec/datafusion/core/src/datasource/physical_plan/parquet/row_filter.rs#L154">implements filter pushdown</a> but has <a href="https://github.com/apache/datafusion/blob/31701b8dc9c6486856c06a29a32107d9f4549cec/datafusion/common/src/config.rs#L382">not enabled by default</a> due to <a href="https://github.com/apache/datafusion/issues/3463">some performance regressions</a>.</p>
 <p>The community (including me) is working on to remove the <a href="https://github.com/apache/arrow-rs/issues/5523#issuecomment-2429470872">remaining performance issues</a> and enable it by default.</p>
 
 
 </section>
 
  ]]></description>
-  <guid>https://blog.haoxp.xyz/posts/parquet-to-arrow/</guid>
+  <guid>https://blog.xiangpeng.systems/posts/parquet-to-arrow/</guid>
   <pubDate>Thu, 24 Oct 2024 00:00:00 GMT</pubDate>
 </item>
 <item>
   <title>Use StringView to make DataFusion faster</title>
   <dc:creator>Xiangpeng Hao, Andrew Lamb</dc:creator>
-  <link>https://blog.haoxp.xyz/posts/string-view-datafusion/</link>
+  <link>https://blog.xiangpeng.systems/posts/string-view-datafusion/</link>
   <description><![CDATA[ 
 
 
@@ -577,7 +577,7 @@ font-style: inherit;">10</span>;</span></code></pre></div>
 <p>StringView support was released as part of arrow-rs <a href="https://crates.io/crates/arrow/52.2.0">v52.2.0</a> and DataFusion v41.0.0. You can try it by setting the <code>schema_force_string_view</code> <a href="https://datafusion.apache.org/user-guide/configs.html">DataFusion configuration option</a>, and we are <a href="https://github.com/apache/datafusion/issues/11682">hard at work with the community to</a> make it the default. We invite everyone to try it out, take advantage of the effort invested so far, and contribute to making it better.</p>
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
-<p><img src="https://blog.haoxp.xyz/posts/string-view-datafusion/click-perf.png" class="img-fluid figure-img"></p>
+<p><img src="https://blog.xiangpeng.systems/posts/string-view-datafusion/click-perf.png" class="img-fluid figure-img"></p>
 <figcaption>Figure 1: StringView improves string-intensive ClickBench query performance by 20% - 200%</figcaption>
 </figure>
 </div>
@@ -586,7 +586,7 @@ font-style: inherit;">10</span>;</span></code></pre></div>
 <p>The concept of inlined strings with prefixes (called “German Strings” <a href="https://x.com/andy_pavlo/status/1813258735965643203">by Andy Pavlo</a>, in homage to <a href="https://www.tum.de/">TUM</a>, where the <a href="https://db.in.tum.de/~freitag/papers/p29-neumann-cidr20.pdf">Umbra paper that describes</a> them originated) has been used in many recent database systems (<a href="https://engineering.fb.com/2024/02/20/developer-tools/velox-apache-arrow-15-composable-data-management/">Velox</a>, <a href="https://pola.rs/posts/polars-string-type/">Polars</a>, <a href="https://duckdb.org/2021/12/03/duck-arrow.html">DuckDB</a>, <a href="https://cedardb.com/blog/german_strings/">CedarDB</a>, etc.) and was introduced to Arrow as a new <a href="https://arrow.apache.org/docs/format/Columnar.html#variable-size-binary-view-layout">StringViewArray</a><sup>2</sup> type. Arrow’s original <a href="https://arrow.apache.org/docs/format/Columnar.html#variable-size-binary-layout">StringArray</a> is very memory efficient but less effective for certain operations. StringViewArray accelerates string-intensive operations via prefix inlining and a more flexible and compact string representation.</p>
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
-<p><img src="https://blog.haoxp.xyz/posts/string-view-datafusion/string-view.png" class="img-fluid figure-img"></p>
+<p><img src="https://blog.xiangpeng.systems/posts/string-view-datafusion/string-view.png" class="img-fluid figure-img"></p>
 <figcaption>Figure 2: Use StringArray and StringViewArray to represent the same string content.</figcaption>
 </figure>
 </div>
@@ -631,7 +631,7 @@ font-style: inherit;">10</span>;</span></code></pre></div>
 <p>On the other hand, reading Parquet data as a StringViewArray can re-use the same data buffer as storing the Parquet pages because StringViewArray does not require strings to be contiguous. For example, in Figure 4, the StringViewArray directly references the buffer with the decoded Parquet page. The string <code>“Arrow Rust Impl”</code> is represented by a <code>view</code> with offset 37 and length 15 into that buffer.</p>
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
-<p><img src="https://blog.haoxp.xyz/posts/string-view-datafusion/parquet.png" class="img-fluid figure-img" style="width:70.0%"></p>
+<p><img src="https://blog.xiangpeng.systems/posts/string-view-datafusion/parquet.png" class="img-fluid figure-img" style="width:70.0%"></p>
 <figcaption>Figure 4: StringViewArray avoids copying by reusing decoded Parquet pages.</figcaption>
 </figure>
 </div>
@@ -662,7 +662,7 @@ font-style: inherit;">"arrow_array_reader/Binary.*Array/plain encoded"</span></s
 <p>Strings are stored as byte sequences. When reading data from (potentially untrusted) Parquet files, a Parquet decoder must ensure those byte sequences are valid UTF-8 strings, and most programming languages, including Rust, include highly <a href="https://doc.rust-lang.org/std/str/fn.from_utf8.html">optimized routines</a> for doing so.</p>
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
-<p><img src="https://blog.haoxp.xyz/posts/string-view-datafusion/utf8-perf.png" class="img-fluid figure-img" style="width:70.0%"></p>
+<p><img src="https://blog.xiangpeng.systems/posts/string-view-datafusion/utf8-perf.png" class="img-fluid figure-img" style="width:70.0%"></p>
 <figcaption>Figure 5: Time to load strings from Parquet. The UTF-8 validation advantage initially eliminates the advantage of reduced copying for StringViewArray.</figcaption>
 </figure>
 </div>
@@ -671,7 +671,7 @@ font-style: inherit;">"arrow_array_reader/Binary.*Array/plain encoded"</span></s
 <p>UTF-8 validation in Rust is highly optimized and favors longer strings (as shown in Figure 6), likely because it leverages SIMD instructions to perform parallel validation. The benefit of a single function call to validate UTF-8 over a function call for each string more than eliminates the advantage of avoiding the copy for StringViewArray.</p>
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
-<p><img src="https://blog.haoxp.xyz/posts/string-view-datafusion/simd-utf8.png" class="img-fluid figure-img" style="width:80.0%"></p>
+<p><img src="https://blog.xiangpeng.systems/posts/string-view-datafusion/simd-utf8.png" class="img-fluid figure-img" style="width:80.0%"></p>
 <figcaption>Figure 6: UTF-8 validation throughput vs string length—StringArray’s contiguous buffer can be validated much faster than StringViewArray’s buffer.</figcaption>
 </figure>
 </div>
@@ -1319,7 +1319,7 @@ font-style: inherit;">--string-view</span></span></code></pre></div>
 <p>With StringViewArray we saw a 24% end-to-end performance improvement, as shown in Figure 7. With the <code>--string-view</code> argument, the end-to-end query time is <code>944.3 ms, 869.6 ms, 861.9 ms</code> (three iterations). Without <code>--string-view</code>, the end-to-end query time is <code>1186.1 ms, 1126.1 ms, 1138.3 ms</code>.</p>
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
-<p><img src="https://blog.haoxp.xyz/posts/string-view-datafusion/quer_time.png" class="img-fluid figure-img" style="width:70.0%"></p>
+<p><img src="https://blog.xiangpeng.systems/posts/string-view-datafusion/quer_time.png" class="img-fluid figure-img" style="width:70.0%"></p>
 <figcaption>Figure 7: StringView reduces end-to-end query time by 24% on ClickBench Q20.</figcaption>
 </figure>
 </div>
@@ -1343,7 +1343,7 @@ font-style: inherit;">--string-view</span></span></code></pre></div>
 <p>However, <code>take</code> and <code>filter</code> for StringViewArray can avoid the copy by reusing buffers from the old array. The kernels only need to create a new list of <code>view</code>s that point at the same strings within the old buffers. Figure 8 illustrates the difference between the output of both string representations. StringArray creates two new strings at offsets 0-17 and 17-32, while StringViewArray simply points to the original buffer at offsets 0 and 25.</p>
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
-<p><img src="https://blog.haoxp.xyz/posts/string-view-datafusion/take.jpg" class="img-fluid figure-img" style="width:70.0%"></p>
+<p><img src="https://blog.xiangpeng.systems/posts/string-view-datafusion/take.jpg" class="img-fluid figure-img" style="width:70.0%"></p>
 <figcaption>Figure 8: Zero-copy take/filter for StringViewArray</figcaption>
 </figure>
 </div>
@@ -1491,7 +1491,7 @@ font-style: inherit;">--string-view</span></span></code></pre></div>
 <p>To eliminate the impact of the faster Parquet reading using StringViewArray (see the first part of this blog), Figure 9 plots only the time spent in <code>FilterExec</code>. Without StringViewArray, the filter takes 7.17s; with StringViewArray, the filter only takes 4.86s, a 32% reduction in time. Moreover, we see a 17% improvement in end-to-end query performance.</p>
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
-<p><img src="https://blog.haoxp.xyz/posts/string-view-datafusion/filter-time.png" class="img-fluid figure-img" style="width:70.0%"></p>
+<p><img src="https://blog.xiangpeng.systems/posts/string-view-datafusion/filter-time.png" class="img-fluid figure-img" style="width:70.0%"></p>
 <figcaption>Figure 9: StringViewArray reduces the filter time by 32% on ClickBench query 22.</figcaption>
 </figure>
 </div>
@@ -1542,12 +1542,12 @@ font-style: inherit;">--string-view</span></span></code></pre></div>
 <li id="fn3"><p>We also make sure that offsets do not break a UTF-8 code point, which is <a href="https://github.com/apache/arrow-rs/blob/master/parquet/src/arrow/buffer/offset_buffer.rs#L62-L71">cheaply validated</a>.↩︎</p></li>
 </ol>
 </section></div> ]]></description>
-  <guid>https://blog.haoxp.xyz/posts/string-view-datafusion/</guid>
+  <guid>https://blog.xiangpeng.systems/posts/string-view-datafusion/</guid>
   <pubDate>Fri, 13 Sep 2024 00:00:00 GMT</pubDate>
 </item>
 <item>
   <title>My research statement</title>
-  <link>https://blog.haoxp.xyz/posts/research-statement/</link>
+  <link>https://blog.xiangpeng.systems/posts/research-statement/</link>
   <description><![CDATA[ 
 
 
@@ -1556,7 +1556,7 @@ font-style: inherit;">--string-view</span></span></code></pre></div>
 
 <section id="north-star" class="level3">
 <h3 class="anchored" data-anchor-id="north-star">North star</h3>
-<p><img src="https://blog.haoxp.xyz/posts/research-statement/20240808145348.png" class="img-fluid"></p>
+<p><img src="https://blog.xiangpeng.systems/posts/research-statement/20240808145348.png" class="img-fluid"></p>
 <p>Research should connect to real people.</p>
 </section>
 <section id="impact-definition" class="level3">
@@ -1569,10 +1569,10 @@ font-style: inherit;">--string-view</span></span></code></pre></div>
 <section id="no-goals" class="level3">
 <h3 class="anchored" data-anchor-id="no-goals">No-goals</h3>
 <p>No goals help define goals. I’ve made all three types of mistakes, and this is my self-reflection to avoid repeating them.</p>
-<p><img src="https://blog.haoxp.xyz/posts/research-statement/20240808113448.png" class="img-fluid"> We are tempted to work on projects proven to be publishable, e.g., improving an existing published method. However, it is not uncommon to see chains of research papers working on a topic irrelevant to the rest of the world. In other words, the impact of a research paper is not defined by how many papers cite it.</p>
-<p><img src="https://blog.haoxp.xyz/posts/research-statement/20240808145432.png" class="img-fluid"> Researchers have the privilege to go wild and think big. But this privilege can be misused. Often, it is used to fool ourselves. Some research (e.g., physics and math) are/can be far from users, but not computer science – one of <em>applied science</em>. As applied scientists, we must ensure our “science” applies to the real world instead of just intellectual exercise.<br>
+<p><img src="https://blog.xiangpeng.systems/posts/research-statement/20240808113448.png" class="img-fluid"> We are tempted to work on projects proven to be publishable, e.g., improving an existing published method. However, it is not uncommon to see chains of research papers working on a topic irrelevant to the rest of the world. In other words, the impact of a research paper is not defined by how many papers cite it.</p>
+<p><img src="https://blog.xiangpeng.systems/posts/research-statement/20240808145432.png" class="img-fluid"> Researchers have the privilege to go wild and think big. But this privilege can be misused. Often, it is used to fool ourselves. Some research (e.g., physics and math) are/can be far from users, but not computer science – one of <em>applied science</em>. As applied scientists, we must ensure our “science” applies to the real world instead of just intellectual exercise.<br>
 Some research (e.g., theory) in applied science still enjoys greater freedom than others. However, my research topics are outside them.</p>
-<p><img src="https://blog.haoxp.xyz/posts/research-statement/20240808153415.png" class="img-fluid"> This is the most common research mistake. We often believe that researchers should focus on making good ideas, and someone else will go off to make it happen. This is not true. There are way too many good ideas, yet few are impactful.</p>
+<p><img src="https://blog.xiangpeng.systems/posts/research-statement/20240808153415.png" class="img-fluid"> This is the most common research mistake. We often believe that researchers should focus on making good ideas, and someone else will go off to make it happen. This is not true. There are way too many good ideas, yet few are impactful.</p>
 <p>Most ideas are just combinations of existing techniques, and it is hard to believe anything fundamental will be discovered in system research.</p>
 <p>Most importantly, a good idea evolves with the system it builds upon. It is a feedback loop that tries, fails, and repeats. And the great idea that comes out of the system always differs from its initial version. It is never the case that the research flow is a single-directional graph with no feedback from downstream users.</p>
 </section>
@@ -1593,7 +1593,7 @@ Some research (e.g., theory) in applied science still enjoys greater freedom tha
 </section>
 <section id="engineering-problem-vs-research-problem" class="level3">
 <h3 class="anchored" data-anchor-id="engineering-problem-vs-research-problem">Engineering problem vs research problem</h3>
-<p><img src="https://blog.haoxp.xyz/posts/research-statement/20240821153927.png" class="img-fluid"> My take on research vs engineering problems:</p>
+<p><img src="https://blog.xiangpeng.systems/posts/research-statement/20240821153927.png" class="img-fluid"> My take on research vs engineering problems:</p>
 <ul>
 <li><p><em>All</em> engineering problems are meaningful as they come from users and practitioners—no one invented them out of thin air.</p></li>
 <li><p><em>All</em> research problems are publishable by definition.</p></li>
@@ -1646,12 +1646,12 @@ In this case, researcher should still be connected to users on every path they e
 </section>
 
  ]]></description>
-  <guid>https://blog.haoxp.xyz/posts/research-statement/</guid>
+  <guid>https://blog.xiangpeng.systems/posts/research-statement/</guid>
   <pubDate>Wed, 21 Aug 2024 00:00:00 GMT</pubDate>
 </item>
 <item>
   <title>InfluxData &gt; Google and Microsoft</title>
-  <link>https://blog.haoxp.xyz/posts/working-at-influxdata/</link>
+  <link>https://blog.xiangpeng.systems/posts/working-at-influxdata/</link>
   <description><![CDATA[ 
 
 
@@ -1700,12 +1700,12 @@ In this case, researcher should still be connected to users on every path they e
 </section>
 
  ]]></description>
-  <guid>https://blog.haoxp.xyz/posts/working-at-influxdata/</guid>
+  <guid>https://blog.xiangpeng.systems/posts/working-at-influxdata/</guid>
   <pubDate>Sun, 18 Aug 2024 00:00:00 GMT</pubDate>
 </item>
 <item>
   <title>Three types of good academic advisors</title>
-  <link>https://blog.haoxp.xyz/posts/good-advisor/</link>
+  <link>https://blog.xiangpeng.systems/posts/good-advisor/</link>
   <description><![CDATA[ 
 
 
@@ -1756,12 +1756,12 @@ In this case, researcher should still be connected to users on every path they e
 </section>
 
  ]]></description>
-  <guid>https://blog.haoxp.xyz/posts/good-advisor/</guid>
+  <guid>https://blog.xiangpeng.systems/posts/good-advisor/</guid>
   <pubDate>Tue, 07 May 2024 00:00:00 GMT</pubDate>
 </item>
 <item>
   <title>What happens when you type a SQL in the database</title>
-  <link>https://blog.haoxp.xyz/posts/sql-to-results/</link>
+  <link>https://blog.xiangpeng.systems/posts/sql-to-results/</link>
   <description><![CDATA[ 
 
 
@@ -2378,7 +2378,7 @@ Note
 </section>
 <section id="execution-order" class="level3">
 <h3 class="anchored" data-anchor-id="execution-order">Execution order</h3>
-<p>The simplest execution model is <a href="https://justinjaffray.com/query-engines-push-vs.-pull/">pull-based execution</a>, which implements a <a href="https://www.freecodecamp.org/news/binary-search-tree-traversal-inorder-preorder-post-order-for-bst/">post-order traversal</a> of the physical plan. For a tree (like blow), we get a traversal order of <code>D -&gt; E -&gt; B -&gt; F -&gt; G -&gt; C -&gt; A</code>: <img src="https://blog.haoxp.xyz/posts/sql-to-results/f4.png" class="img-fluid"></p>
+<p>The simplest execution model is <a href="https://justinjaffray.com/query-engines-push-vs.-pull/">pull-based execution</a>, which implements a <a href="https://www.freecodecamp.org/news/binary-search-tree-traversal-inorder-preorder-post-order-for-bst/">post-order traversal</a> of the physical plan. For a tree (like blow), we get a traversal order of <code>D -&gt; E -&gt; B -&gt; F -&gt; G -&gt; C -&gt; A</code>: <img src="https://blog.xiangpeng.systems/posts/sql-to-results/f4.png" class="img-fluid"></p>
 <p>Applying our physical graph above, we get an execution order of:</p>
 <ol type="1">
 <li><p><a href="https://docs.rs/datafusion/37.1.0/datafusion/datasource/physical_plan/struct.CsvExec.html"><code>CsvExec (orders.csv)</code></a></p></li>
@@ -2424,7 +2424,7 @@ Note
 </section>
 
  ]]></description>
-  <guid>https://blog.haoxp.xyz/posts/sql-to-results/</guid>
+  <guid>https://blog.xiangpeng.systems/posts/sql-to-results/</guid>
   <pubDate>Fri, 26 Apr 2024 00:00:00 GMT</pubDate>
 </item>
 </channel>

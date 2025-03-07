@@ -1,39 +1,39 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://blog.haoxp.xyz/posts/sql-to-results/index.html</loc>
-    <lastmod>2025-03-04T19:26:45.637Z</lastmod>
+    <loc>https://blog.xiangpeng.systems/posts/sql-to-results/index.html</loc>
+    <lastmod>2025-03-07T23:00:41.108Z</lastmod>
   </url>
   <url>
-    <loc>https://blog.haoxp.xyz/posts/parquet-to-arrow/index.html</loc>
-    <lastmod>2025-03-04T19:26:45.623Z</lastmod>
+    <loc>https://blog.xiangpeng.systems/posts/parquet-to-arrow/index.html</loc>
+    <lastmod>2025-03-07T23:00:41.094Z</lastmod>
   </url>
   <url>
-    <loc>https://blog.haoxp.xyz/posts/parquet-viewer/index.html</loc>
-    <lastmod>2025-03-04T19:26:45.624Z</lastmod>
+    <loc>https://blog.xiangpeng.systems/posts/parquet-viewer/index.html</loc>
+    <lastmod>2025-03-07T23:00:41.095Z</lastmod>
   </url>
   <url>
-    <loc>https://blog.haoxp.xyz/posts/string-view-datafusion/index.html</loc>
-    <lastmod>2025-03-04T19:26:45.639Z</lastmod>
+    <loc>https://blog.xiangpeng.systems/posts/string-view-datafusion/index.html</loc>
+    <lastmod>2025-03-07T23:00:41.109Z</lastmod>
   </url>
   <url>
-    <loc>https://blog.haoxp.xyz/posts/good-advisor/index.html</loc>
-    <lastmod>2025-03-04T19:26:45.621Z</lastmod>
+    <loc>https://blog.xiangpeng.systems/posts/good-advisor/index.html</loc>
+    <lastmod>2025-03-07T23:00:41.092Z</lastmod>
   </url>
   <url>
-    <loc>https://blog.haoxp.xyz/index.html</loc>
-    <lastmod>2025-03-04T19:26:45.615Z</lastmod>
+    <loc>https://blog.xiangpeng.systems/index.html</loc>
+    <lastmod>2025-03-07T23:00:41.086Z</lastmod>
   </url>
   <url>
-    <loc>https://blog.haoxp.xyz/posts/caching-datafusion/index.html</loc>
-    <lastmod>2025-03-04T19:26:45.619Z</lastmod>
+    <loc>https://blog.xiangpeng.systems/posts/caching-datafusion/index.html</loc>
+    <lastmod>2025-03-07T23:00:41.090Z</lastmod>
   </url>
   <url>
-    <loc>https://blog.haoxp.xyz/posts/working-at-influxdata/index.html</loc>
-    <lastmod>2025-03-04T19:26:45.644Z</lastmod>
+    <loc>https://blog.xiangpeng.systems/posts/working-at-influxdata/index.html</loc>
+    <lastmod>2025-03-07T23:00:41.114Z</lastmod>
   </url>
   <url>
-    <loc>https://blog.haoxp.xyz/posts/research-statement/index.html</loc>
-    <lastmod>2025-03-04T19:26:45.635Z</lastmod>
+    <loc>https://blog.xiangpeng.systems/posts/research-statement/index.html</loc>
+    <lastmod>2025-03-07T23:00:41.105Z</lastmod>
   </url>
 </urlset>
