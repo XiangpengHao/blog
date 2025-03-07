@@ -17,7 +17,7 @@ format:
 
 ## Quick look
 
-Online here: [https://parquet-viewer.haoxp.xyz](https://parquet-viewer.haoxp.xyz)
+Online here: [https://parquet-viewer.xiangpeng.systems](https://parquet-viewer.xiangpeng.systems)
 
 Source code: [parquet-viewer](https://github.com/XiangpengHao/parquet-viewer)
 

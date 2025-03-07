@@ -3,7 +3,7 @@ project:
 
 website:
   title: "Xiangpeng's blog"
-  site-url: https://blog.haoxp.xyz
+  site-url: https://blog.xiangpeng.systems
   open-graph: true
   twitter-card: true
   search: 
@@ -11,7 +11,7 @@ website:
   navbar:
     right:
       - icon: person-circle
-        href: https://haoxp.xyz
+        href: https://xiangpeng.systems
       - icon: github
         href:  https://github.com/XiangpengHao
       - icon: linkedin
