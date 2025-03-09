@@ -2,38 +2,38 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://blog.xiangpeng.systems/posts/sql-to-results/index.html</loc>
-    <lastmod>2025-03-07T23:00:41.108Z</lastmod>
+    <lastmod>2025-03-09T22:04:19.125Z</lastmod>
   </url>
   <url>
     <loc>https://blog.xiangpeng.systems/posts/parquet-to-arrow/index.html</loc>
-    <lastmod>2025-03-07T23:00:41.094Z</lastmod>
+    <lastmod>2025-03-09T22:04:19.111Z</lastmod>
   </url>
   <url>
     <loc>https://blog.xiangpeng.systems/posts/parquet-viewer/index.html</loc>
-    <lastmod>2025-03-07T23:00:41.095Z</lastmod>
+    <lastmod>2025-03-09T22:04:19.113Z</lastmod>
   </url>
   <url>
     <loc>https://blog.xiangpeng.systems/posts/string-view-datafusion/index.html</loc>
-    <lastmod>2025-03-07T23:00:41.109Z</lastmod>
+    <lastmod>2025-03-09T22:04:19.127Z</lastmod>
   </url>
   <url>
     <loc>https://blog.xiangpeng.systems/posts/good-advisor/index.html</loc>
-    <lastmod>2025-03-07T23:00:41.092Z</lastmod>
+    <lastmod>2025-03-09T22:04:19.109Z</lastmod>
   </url>
   <url>
     <loc>https://blog.xiangpeng.systems/index.html</loc>
-    <lastmod>2025-03-07T23:00:41.086Z</lastmod>
+    <lastmod>2025-03-09T22:04:19.103Z</lastmod>
   </url>
   <url>
     <loc>https://blog.xiangpeng.systems/posts/caching-datafusion/index.html</loc>
-    <lastmod>2025-03-07T23:00:41.090Z</lastmod>
+    <lastmod>2025-03-09T22:04:19.108Z</lastmod>
   </url>
   <url>
     <loc>https://blog.xiangpeng.systems/posts/working-at-influxdata/index.html</loc>
-    <lastmod>2025-03-07T23:00:41.114Z</lastmod>
+    <lastmod>2025-03-09T22:04:19.131Z</lastmod>
   </url>
   <url>
     <loc>https://blog.xiangpeng.systems/posts/research-statement/index.html</loc>
-    <lastmod>2025-03-07T23:00:41.105Z</lastmod>
+    <lastmod>2025-03-09T22:04:19.123Z</lastmod>
   </url>
 </urlset>
