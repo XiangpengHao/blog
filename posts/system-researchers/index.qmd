@@ -4,22 +4,11 @@ date: "2025-03-02"
 date-modified: "2025-03-02"
 categories: []
 toc: true
-draft: true
+draft: true 
 ---
 
-We, the system researchers, are undergoing a existential crisis: we don't know what we good at, and we don't know why we exists. 
+We, as system researchers, are undergoing an existential crisis: we don't know what we good at, and we don't know why we exists. 
 
-I'll make some bold, un-grounded judgement in this post, if offended, press `Ctrl+W` to continue life.
-
-## System research is knowing
-The slogan of system research is "We must know, and we will know[^1]." (The opposite of this is AI research, which is about coping with uncertainty, and live with unknowing.)
-
-We study the complex interactions of systems, and practice to know them better. We fight against the seemingly infinite complexity of systems, and uncover the underlying principles.
-
-Knowing requires a lot of practicing. 
-Most of the time, this practice means building systems.
-But we don't have a culture of rewarding system builders.
-We get what we reward -- lots of papers, most of them are for the pure purpose of paper publishing.
 
 ## Research is a privilege
 We take taxpayer's money to do research.
@@ -42,8 +31,7 @@ Without a healthy accountability chain, the research community decays gradually.
 But the public has one last ultimate weapon -- pull the plug entirely.
 That is a radical move, but it is the only way to propagate the message to the echo chamber.
 
-Research is a privilege, and we should not take it for granted.
-We need to question more about ourselves, whether the money that people invest in us is worth it.
+**Research is a privilege, not an entitlement. We must question whether our work truly justifies the public investment we receive and delivers meaningful value to society.**
 
 ## System research is irrelevant
 System research is irrelevant, and industry seems to be a far better place to do research.
@@ -84,11 +72,27 @@ Here are my bold claims:
 
 - You opinion on a specific topic does not matter until you write more than 50k loc on it. 
 
+
 - You start to have a taste about system research after writing 100k loc.
 
 The system research community does not need more novel solutions -- novel solutions are essentially combinations of existing techniques, when we need to solve a problem, we will figure out the solution.
 
-Instead, we need more people willing to sit down and code, build real systems, and talk to real users.
+Instead, **we need more people willing to sit down and code, build real systems, and talk to real users**.
+
+## We waste too much time on publication games
+WE ARE TOO SLOW, because we spend too much time on irrelevant things.
+
+Paper publishing takes too much time.
+We spend too much efforts on arguing what's new and what's hard, instead of focus and build.
+Writing a paper already takes too much time, and we need to anonymize the artifacts, register abstracts, wait for reviews, write a rebuttal, revise the paper, and can still be rejected for whatever reasons.
+The turn around time of a single submission can be up to 6 months.
+
+There are also dark side of paper publishing.
+The entire publication process can be exploited by determined attackers, and we are unwilling to chase them, probably because some big names are involved.
+Young researchers see terrible papers being accepted, yet their own work is rejected for random reasons.
+
+All of these overheads burns our time and energy, pushing young researchers away from the community.
+After all, **research doesn't have to happen in academia**.
 
 ## Our measurement is wrong 
 We ask what's new and what's hard.
@@ -103,6 +107,41 @@ Most of the time, figuring out the details takes much more time and novelty than
 
 The reviewers -- often are just a few years older than PhD students, don't know how to code, unable to get into the details, 
 and unable to appreciate the real system nuances -- will likely reject the paper for lack of novelty.
+
+
+
+## But why we still need system research?
+Despite all previous arguments, I still believe there are values in system research, and I still believe we can be relevant.
+
+Industry is for-profit, research is public-benefit.
+
+Industry is extremely good at solving the immediate problems that are in front of them, but are systematically bad at 
+
+### Tooling
+There's a tremendous gap between a good system and the tooling required to build it. 
+Industry is money driven, they often have to spend the resources on building a system to fix a specific problem, rather than empowering people to build good systems.
+Because industry has spend the resources to build the system, and they can just move on and focus on the next problem.
+
+Industry in general spend way more resources on directly solving problems, rather than building good tooling to help solving problems.
+For example, industry build concurrent systems for better performance, for more profitable business.
+Without a good tooling, they can still build such a system, but requires tremendous amount of resources, and it sometimes becomes a moat for the competitors.
+
+For example, we have a lot of fancy concurrent systems, but we don't have a good tool to debug, profile, and understand them.
+
+### Systems that takes a step back
+
+
+## System research is knowing
+The slogan of system research is "We must know, and we will know[^1]." (The opposite of this is AI research, which is about coping with uncertainty, and live with unknowing.)
+
+We study the complex interactions of systems, and practice to know them better. We fight against the seemingly infinite complexity of systems, and uncover the underlying principles.
+
+Knowing requires a lot of practicing. 
+Most of the time, this practice means building systems.
+But we don't have a culture of rewarding system builders.
+We get what we reward -- lots of papers, most of them are for the pure purpose of paper publishing.
+
+
 
 
 [^1]: https://en.wikipedia.org/wiki/Ignoramus_et_ignorabimus
