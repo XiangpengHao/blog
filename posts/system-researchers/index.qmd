@@ -131,7 +131,7 @@ System research is about knowing -- understanding systems deeply and completely,
 
 We study the complex interactions of systems, and practice to know them better. We fight against the seemingly infinite complexity of systems, and uncover the underlying principles.
 
-**Knowing requires a lot of practicing -- hard work, patience, and a lot of coding, and we need a culture that cultivates this.**
+**Knowing requires a lot of practicing -- hard work, patience, and a lot of coding -- and we need a culture that cultivates this.**
 
 [^1]: https://en.wikipedia.org/wiki/Ignoramus_et_ignorabimus
 
