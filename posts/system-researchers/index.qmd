@@ -16,12 +16,12 @@ We think we deserve this money because we're smart or have fancy degrees, withou
 I think spending money on research is good for everyone,
 but that doesn't mean we can just take the money without being responsible to the public.
 
-This is especially true when someone pull the plug on the research funding.
-We could easily blame the person, and name a few research achievements that would be impossible without those funding.
+When someone pull the plug on the research funding,
+we could easily blame the person, and name a few research achievements that would be impossible without those funding.
 But from the bottom of my heart, I often have the same question that whether some of the research funding would be better spent on something else.
 
 I'm not saying we should only fund research that promises clear results -- that would go against the whole point of exploring new ideas.
-What worries me is how little the public gets to weigh in on research funding decisions.
+What worries me is research funding decisions are unaccountable to the public.
 The people who decide where money goes are usually academics themselves, who are often detached and highly alienated with what regular people actually need or care about.
 We often talk only to each other, praising work that looks good on paper but doesn't help real people.
 Over time, with no one making us prove our worth, our research drifts further from what actually matters.
@@ -35,7 +35,7 @@ This tough move hurts, but sometimes it's the only way to make researchers liste
 System research is irrelevant. Industry has become the better place for meaningful systems work. 
 Most impactful and innovative systems today come from companies, not universities.
 
-Industry as the money and patience to build complete systems.
+Industry has the money and patience to build complete systems.
 But most importantly, industry systems are accountable -- systems that don't deliver value get shut down quickly.
 This accountability creates a natural selection process. 
 Industry systems must stay relevant or die. They evolve to meet real needs or disappear.
