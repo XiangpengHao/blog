@@ -72,7 +72,7 @@ Here are my bold claims:
 
 (Writing code does not make you a good researcher, but not writing code makes you a bad one.)
 
-The system research community does not need more novel solutions -- novel solutions are essentially combinations of existing techniques. When we need to solve a problem, most of us would figure out a similar solution.
+The system research community does not need more novel solutions -- novel solutions are essentially combinations of existing techniques. When we need to solve a problem, most of us would figure out a similar solution, and what matters is the execution of the ideas.
 
 Instead, we need more people willing to sit down and code, build real systems, and talk to real users.
 **Be a solid practitioner, don't be a feel-good researcher.**
