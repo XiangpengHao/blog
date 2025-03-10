@@ -186,7 +186,7 @@
     "href": "index.html",
     "title": "Database/storage systems",
     "section": "",
-    "text": "Online Parquet Viewer with Rust\n\n\n\n\n\nNo JS, no server, just Rust\n\n\n\n\n\nNov 12, 2024\n\n\nXiangpeng Hao\n\n\n\n\n\n\n\n\n\n\n\n\nCaching in DataFusion\n\n\n\n\n\nDon’t read twice.\n\n\n\n\n\nOct 27, 2024\n\n\nXiangpeng Hao\n\n\n\n\n\n\n\n\n\n\n\n\nParquet pruning in DataFusion\n\n\n\n\n\nRead no more than you need\n\n\n\n\n\nOct 24, 2024\n\n\nXiangpeng Hao\n\n\n\n\n\n\n\n\n\n\n\n\nUse StringView to make DataFusion faster\n\n\n\n\n\n\n\n\n\n\n\nSep 13, 2024\n\n\nXiangpeng Hao, Andrew Lamb\n\n\n\n\n\n\n\n\n\n\n\n\nMy research statement\n\n\n\n\n\n\n\n\n\n\n\nAug 21, 2024\n\n\n\n\n\n\n\n\n\n\n\n\nInfluxData &gt; Google and Microsoft\n\n\n\n\n\n\n\n\n\n\n\nAug 18, 2024\n\n\n\n\n\n\n\n\n\n\n\n\nThree types of good academic advisors\n\n\n\n\n\n\n\n\n\n\n\nMay 7, 2024\n\n\n\n\n\n\n\n\n\n\n\n\nWhat happens when you type a SQL in the database\n\n\n\n\n\n\n\n\n\n\n\nApr 26, 2024\n\n\n\n\n\n\nNo matching items"
+    "text": "Where are we now, system researchers?\n\n\n\n\n\n\n\n\n\n\n\nMar 9, 2025\n\n\n\n\n\n\n\n\n\n\n\n\nOnline Parquet Viewer with Rust\n\n\n\n\n\nNo JS, no server, just Rust\n\n\n\n\n\nNov 12, 2024\n\n\nXiangpeng Hao\n\n\n\n\n\n\n\n\n\n\n\n\nCaching in DataFusion\n\n\n\n\n\nDon’t read twice.\n\n\n\n\n\nOct 27, 2024\n\n\nXiangpeng Hao\n\n\n\n\n\n\n\n\n\n\n\n\nParquet pruning in DataFusion\n\n\n\n\n\nRead no more than you need\n\n\n\n\n\nOct 24, 2024\n\n\nXiangpeng Hao\n\n\n\n\n\n\n\n\n\n\n\n\nUse StringView to make DataFusion faster\n\n\n\n\n\n\n\n\n\n\n\nSep 13, 2024\n\n\nXiangpeng Hao, Andrew Lamb\n\n\n\n\n\n\n\n\n\n\n\n\nMy research statement\n\n\n\n\n\n\n\n\n\n\n\nAug 21, 2024\n\n\n\n\n\n\n\n\n\n\n\n\nInfluxData &gt; Google and Microsoft\n\n\n\n\n\n\n\n\n\n\n\nAug 18, 2024\n\n\n\n\n\n\n\n\n\n\n\n\nThree types of good academic advisors\n\n\n\n\n\n\n\n\n\n\n\nMay 7, 2024\n\n\n\n\n\n\n\n\n\n\n\n\nWhat happens when you type a SQL in the database\n\n\n\n\n\n\n\n\n\n\n\nApr 26, 2024\n\n\n\n\n\n\nNo matching items"
   },
   {
     "objectID": "posts/caching-datafusion/index.html",
@@ -229,6 +229,62 @@
     "title": "Caching in DataFusion",
     "section": "Footnotes",
     "text": "Footnotes\n\n\nBtrBlocks: Efficient Columnar Compression for Data Lakes (SIGMOD 2023 Paper)↩︎"
+  },
+  {
+    "objectID": "posts/system-researchers/index.html",
+    "href": "posts/system-researchers/index.html",
+    "title": "Where are we now, system researchers?",
+    "section": "",
+    "text": "We, as system researchers, face an existential crisis. We find ourselves questioning our unique strengths and fundamental purpose where industry increasingly outpaces academic innovation."
+  },
+  {
+    "objectID": "posts/system-researchers/index.html#research-is-a-privilege",
+    "href": "posts/system-researchers/index.html#research-is-a-privilege",
+    "title": "Where are we now, system researchers?",
+    "section": "Research is a privilege",
+    "text": "Research is a privilege\nResearch is funded by taxpayers, yet we often take this privilege for granted. We justify our entitlement to these resources by pointing to our intelligence or academic credentials, rarely questioning whether we truly deserve this support.\nI agree with the general idea of spending more money on research is beneficial to the society, but I also believe this does not mean we should take the money for granted, unaccountable to the public.\nThis is especially true when someone pull the plug on the research funding. We could easily blame the person, and name a few research achievements that would be impossible without those funding. But from the bottom of my heart, I often have the same question that whether some of the research funding would be better spent on something else.\nI’m not suggesting we should limit funding to research with guaranteed outcomes - that would defeat the very purpose of exploration and discovery. I’m concerned about the lack of public accountability in our research funding allocation process. The decision-makers who distribute these funds typically belong to the same academic circles, often disconnected from and unaware of the real needs and concerns of the broader society they’re meant to serve. We easily create echo chambers where we judge work by academic metrics, not real-world value. Without public oversight, we face no consequences for ignoring practical impact. When nobody holds us accountable, our research gradually becomes less relevant and less valuable over time.\nBut the public has one last ultimate weapon — cutting off the money entirely. This tough move hurts, but sometimes it’s the only way to make researchers listen: we need to do work that actually matters to people.\nResearch is a privilege, not an entitlement. We must question whether our work truly justifies the public investment we receive and delivers meaningful value to society."
+  },
+  {
+    "objectID": "posts/system-researchers/index.html#system-research-is-irrelevant",
+    "href": "posts/system-researchers/index.html#system-research-is-irrelevant",
+    "title": "Where are we now, system researchers?",
+    "section": "System research is irrelevant",
+    "text": "System research is irrelevant\nSystem research is irrelevant. Industry has become the better place for meaningful systems work. Most impactful and innovative systems today come from companies, not universities.\nIndustry as the money and patience to build complete systems. But most importantly, industry systems are accountable – systems that don’t deliver value get shut down quickly. This accountability creates a natural selection process. Industry systems must stay relevant or die. They evolve to meet real needs or disappear.\nDue to the unaccountable funding agencies mentioned above, research systems are often one-shot projects —- they are immediately abandoned right after publication. We are frequently impressed by the great systems coming from industry (the most recent example being the infrastructure at DeepSeek), and we’ve realized that we are far from competing with them. As a result, we seem to constrain ourselves to a few narrow research topics, solving problems that are difficult to connect with even a single real user (essentially imaginary problems). Or we simply adjust our goal from research to education, preparing students for their industry jobs, so they can continue research there. But if that is the case, why would we need research funding at all?"
+  },
+  {
+    "objectID": "posts/system-researchers/index.html#we-are-unqualified",
+    "href": "posts/system-researchers/index.html#we-are-unqualified",
+    "title": "Where are we now, system researchers?",
+    "section": "We are unqualified",
+    "text": "We are unqualified\nPhD students are typically only a few years older than undergraduates. How can they possibly compete with senior industry practitioners who have been working on the same problems for decades?\nYet we are not even trying to compete. We don’t like “engineering problems”, because we researchers are supposed to work on “research problems”.\nWe like research problems for two simple reasons:\n\nFeeling “researchy” makes us feel good about ourselves; simply thinking about fancy terminology makes us feel fundamental and important.\nWe don’t know how to code.\n\nWe waste too much time babbling about knowledge we learn from papers. How to schedule a million machines, how to train a billion parameters, how to design infinitely scalable systems. Just thinking about these problems makes us feel important as researchers, although most of us have never deployed a service in the cloud, never used the techniques we proposed, and never worked with the filesystems, kernels, compilers, networks, or databases we studied. We waste time on these theoretical discussions because we don’t know how to code and are unwilling to learn. As Feynman said, “What I cannot create, I do not understand.” Simply knowing how a system works from a high-level perspective doesn’t mean we can build it. The nuances of real systems often explain why they’re built in particular ways. Without diving into these details, we’re merely scratching the surface.\nHere are my bold claims:\n\nYour opinion on overall system research does not matter until you have a project with more than 10k lines of code.\nYour opinion on a specific topic does not matter until you write more than 50k lines of code on it.\nYou start to have a taste for system research after writing 100k lines of code.\n\nThe system research community does not need more novel solutions – novel solutions are essentially combinations of existing techniques. When we need to solve a problem, we will figure out the solution.\nInstead, we need more people willing to sit down and code, build real systems, and talk to real users. Be a solid practitioner, don’t be a feel-good researcher."
+  },
+  {
+    "objectID": "posts/system-researchers/index.html#we-are-pushing-young-researchers-away",
+    "href": "posts/system-researchers/index.html#we-are-pushing-young-researchers-away",
+    "title": "Where are we now, system researchers?",
+    "section": "We are pushing young researchers away",
+    "text": "We are pushing young researchers away\nWE ARE TOO SLOW because we waste too much time on procedural overhead rather than actual scientific exploration.\nPaper publishing takes too much time. We spend too much effort arguing what’s new and what’s hard, instead of focusing on doing the actual research. Writing a paper already takes too much time, and then we need to anonymize artifacts, register abstracts, wait for reviews, write rebuttals, revise the paper, and can still be rejected for arbitrary reasons. The turnaround time for a single submission can be up to 6 months.\nThere is also a dark side to paper publishing. The entire publication process can be exploited by determined actors, and we are unwilling to address this issue, probably because many big names are involved. Young researchers see low-quality papers being accepted, yet their own carefully crafted systems are rejected for arbitrary reasons.\nAll of these burn our time and energy, pushing young researchers away from the community. After all, research doesn’t have to happen in academia."
+  },
+  {
+    "objectID": "posts/system-researchers/index.html#our-measurement-is-wrong",
+    "href": "posts/system-researchers/index.html#our-measurement-is-wrong",
+    "title": "Where are we now, system researchers?",
+    "section": "Our measurement is wrong",
+    "text": "Our measurement is wrong\nAll of our research projects start with the two questions of what’s new and what’s hard, but unfortunately, these two questions have guided us toward irrelevancy. Many one-shot papers claim novelty and then disappear, preventing future research projects from making progress. They take credit for being the first to introduce an idea, even when the implementation doesn’t work or is completely wrong. Yet, all future researchers are required to compare their work against these papers.\nMost of the time, the code is terribly implemented or overly simplified, making fair comparisons impossible. But reviewers don’t care – they see the two papers as informationally equivalent, viewing the same idea from a 1000-foot perspective, and lazily question authors about what’s new and what’s hard.\nThe real difference between papers often lies in numerous small details that sound trivial but are actually essential for relevance. In most cases, figuring out these details takes much more time and demonstrates more novelty than coming up with the initial idea itself.\nThe reviewers – often just a few years older than PhD students, don’t know how to code, unable to delve into implementation details, and incapable of appreciating real system nuances – will likely reject the paper for lack of novelty."
+  },
+  {
+    "objectID": "posts/system-researchers/index.html#system-research-is-knowing",
+    "href": "posts/system-researchers/index.html#system-research-is-knowing",
+    "title": "Where are we now, system researchers?",
+    "section": "System research is knowing",
+    "text": "System research is knowing\n1\nDespite all previous arguments, I still believe there is value in systems research, and I still believe we can be relevant, but that’s for another post.\nSystem research is about knowing – understanding systems deeply and completely, contrasting with AI research that embraces uncertainty and probabilistic approaches.\nWe study the complex interactions of systems, and practice to know them better. We fight against the seemingly infinite complexity of systems, and uncover the underlying principles.\nKnowing requires a lot of practicing – means hard work, patience, and a lot of coding."
+  },
+  {
+    "objectID": "posts/system-researchers/index.html#footnotes",
+    "href": "posts/system-researchers/index.html#footnotes",
+    "title": "Where are we now, system researchers?",
+    "section": "Footnotes",
+    "text": "Footnotes\n\n\nhttps://en.wikipedia.org/wiki/Ignoramus_et_ignorabimus↩︎"
   },
   {
     "objectID": "posts/working-at-influxdata/index.html",
