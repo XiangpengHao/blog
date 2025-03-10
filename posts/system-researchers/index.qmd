@@ -77,6 +77,8 @@ The system research community does not need more novel solutions -- novel soluti
 Instead, we need more people willing to sit down and code, build real systems, and talk to real users.
 **Be a solid practitioner, don't be a feel-good researcher.**
 
+![](meme.jpg){width=50%}
+
 ## We are pushing young researchers away
 WE ARE TOO SLOW because we waste too much time on procedural overhead rather than actual scientific exploration.
 
@@ -121,7 +123,7 @@ Industry is extremely good at **solving** the immediate problems that are in fro
 
 
 ## System research is knowing
-![We must know, and we will know](9mtoh3.jpg)[^1]
+<!-- ![We must know, and we will know](9mtoh3.jpg)[^1] -->
 
 Despite all previous arguments, I still believe there is value in systems research, and I still believe we can be relevant, but that's for another post.
 
