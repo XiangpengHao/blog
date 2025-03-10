@@ -2,42 +2,42 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://blog.xiangpeng.systems/posts/sql-to-results/index.html</loc>
-    <lastmod>2025-03-10T03:35:40.003Z</lastmod>
+    <lastmod>2025-03-10T04:01:29.186Z</lastmod>
   </url>
   <url>
     <loc>https://blog.xiangpeng.systems/posts/parquet-to-arrow/index.html</loc>
-    <lastmod>2025-03-10T03:35:39.988Z</lastmod>
+    <lastmod>2025-03-10T04:01:29.172Z</lastmod>
   </url>
   <url>
     <loc>https://blog.xiangpeng.systems/posts/parquet-viewer/index.html</loc>
-    <lastmod>2025-03-10T03:35:39.990Z</lastmod>
+    <lastmod>2025-03-10T04:01:29.173Z</lastmod>
   </url>
   <url>
     <loc>https://blog.xiangpeng.systems/posts/string-view-datafusion/index.html</loc>
-    <lastmod>2025-03-10T03:35:40.005Z</lastmod>
+    <lastmod>2025-03-10T04:01:29.188Z</lastmod>
   </url>
   <url>
     <loc>https://blog.xiangpeng.systems/posts/good-advisor/index.html</loc>
-    <lastmod>2025-03-10T03:35:39.986Z</lastmod>
+    <lastmod>2025-03-10T04:01:29.170Z</lastmod>
   </url>
   <url>
     <loc>https://blog.xiangpeng.systems/index.html</loc>
-    <lastmod>2025-03-10T03:35:39.980Z</lastmod>
+    <lastmod>2025-03-10T04:01:29.164Z</lastmod>
   </url>
   <url>
     <loc>https://blog.xiangpeng.systems/posts/caching-datafusion/index.html</loc>
-    <lastmod>2025-03-10T03:35:39.984Z</lastmod>
+    <lastmod>2025-03-10T04:01:29.168Z</lastmod>
   </url>
   <url>
     <loc>https://blog.xiangpeng.systems/posts/system-researchers/index.html</loc>
-    <lastmod>2025-03-10T03:35:40.010Z</lastmod>
+    <lastmod>2025-03-10T04:01:29.192Z</lastmod>
   </url>
   <url>
     <loc>https://blog.xiangpeng.systems/posts/working-at-influxdata/index.html</loc>
-    <lastmod>2025-03-10T03:35:40.010Z</lastmod>
+    <lastmod>2025-03-10T04:01:29.193Z</lastmod>
   </url>
   <url>
     <loc>https://blog.xiangpeng.systems/posts/research-statement/index.html</loc>
-    <lastmod>2025-03-10T03:35:40.000Z</lastmod>
+    <lastmod>2025-03-10T04:01:29.184Z</lastmod>
   </url>
 </urlset>
