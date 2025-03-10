@@ -54,6 +54,7 @@
 <p>(Writing code does not make you a good researcher, but not writing code makes you a bad one.)</p>
 <p>The system research community does not need more novel solutions – novel solutions are essentially combinations of existing techniques. When we need to solve a problem, most of us would figure out a similar solution.</p>
 <p>Instead, we need more people willing to sit down and code, build real systems, and talk to real users. <strong>Be a solid practitioner, don’t be a feel-good researcher.</strong></p>
+<p><img src="https://blog.xiangpeng.systems/posts/system-researchers/meme.jpg" class="img-fluid" style="width:50.0%"></p>
 </section>
 <section id="we-are-pushing-young-researchers-away" class="level2">
 <h2 class="anchored" data-anchor-id="we-are-pushing-young-researchers-away">We are pushing young researchers away</h2>
@@ -85,7 +86,7 @@ Industry is extremely good at **solving** the immediate problems that are in fro
 </section>
 <section id="system-research-is-knowing" class="level2">
 <h2 class="anchored" data-anchor-id="system-research-is-knowing">System research is knowing</h2>
-<p><img src="https://blog.xiangpeng.systems/posts/system-researchers/9mtoh3.jpg" class="img-fluid" alt="We must know, and we will know"><sup>1</sup></p>
+<!-- ![We must know, and we will know](9mtoh3.jpg)[^1] -->
 <p>Despite all previous arguments, I still believe there is value in systems research, and I still believe we can be relevant, but that’s for another post.</p>
 <p>System research is about knowing – understanding systems deeply and completely, contrasting with AI research that embraces uncertainty and probabilistic approaches.</p>
 <p>We study the complex interactions of systems, and practice to know them better. We fight against the seemingly infinite complexity of systems, and uncover the underlying principles.</p>
@@ -94,13 +95,7 @@ Industry is extremely good at **solving** the immediate problems that are in fro
 
 </section>
 
-
-<div id="quarto-appendix" class="default"><section id="footnotes" class="footnotes footnotes-end-of-document"><h2 class="anchored quarto-appendix-heading">Footnotes</h2>
-
-<ol>
-<li id="fn1"><p>https://en.wikipedia.org/wiki/Ignoramus_et_ignorabimus↩︎</p></li>
-</ol>
-</section></div> ]]></description>
+ ]]></description>
   <guid>https://blog.xiangpeng.systems/posts/system-researchers/</guid>
   <pubDate>Sun, 09 Mar 2025 00:00:00 GMT</pubDate>
 </item>
