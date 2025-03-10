@@ -59,22 +59,21 @@ We like research problems for two simple reasons:
 
 2. **We don't know how to code.**
 
-We waste too much time babbling about knowledge we learn from papers.
-How to schedule a million machines, how to train a billion parameters, how to design infinitely scalable systems. 
+We waste too much time babbling about knowledge we learn from papers -- how to schedule a million machines, how to train a billion parameters, how to design infinitely scalable systems. 
 Just thinking about these problems makes us feel important as researchers, although most of us have never deployed a service in the cloud, never used the techniques we proposed, and never worked with the filesystems, kernels, compilers, networks, or databases we studied.
-We waste time on these theoretical discussions because we don't know how to code and are unwilling to learn.
-As Feynman said, "What I cannot create, I do not understand." Simply knowing how a system works from a high-level perspective doesn't mean we can build it.
+We waste time on these theoretical discussions because we don't know how to code and are unwilling to practice.
+As Feynman said, "What I cannot create, I do not understand." Simply knowing how a system works from 1000 feet doesn't mean we can build it.
 The nuances of real systems often explain why they're built in particular ways. Without diving into these details, we're merely scratching the surface.
 
 Here are my bold claims:
 
-- Your opinion on overall system research does not matter until you have a project with more than 10k lines of code.
+- **Your opinion doesn't matter until you write >50k lines of system code.**
 
-- **Your opinion on a specific topic does not matter until you write more than 50k lines of code on it.**
+- Your novel idea is 💩 if it's not implemented in a system with real users.
 
-- You start to have a taste for system research after writing 100k lines of code.
+(Writing code does not make you a good researcher, but not writing code makes you a bad one.)
 
-The system research community does not need more novel solutions -- novel solutions are essentially combinations of existing techniques. When we need to solve a problem, we will figure out the solution.
+The system research community does not need more novel solutions -- novel solutions are essentially combinations of existing techniques. When we need to solve a problem, most of us would figure out a similar solution.
 
 Instead, we need more people willing to sit down and code, build real systems, and talk to real users.
 **Be a solid practitioner, don't be a feel-good researcher.**
@@ -131,7 +130,7 @@ System research is about knowing -- understanding systems deeply and completely,
 
 We study the complex interactions of systems, and practice to know them better. We fight against the seemingly infinite complexity of systems, and uncover the underlying principles.
 
-**Knowing requires a lot of practicing -- means hard work, patience, and a lot of coding.**
+**Knowing requires a lot of practicing -- hard work, patience, and a lot of coding.**
 
 [^1]: https://en.wikipedia.org/wiki/Ignoramus_et_ignorabimus
 
