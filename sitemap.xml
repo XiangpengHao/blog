@@ -2,46 +2,46 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://blog.xiangpeng.systems/posts/sql-to-results/index.html</loc>
-    <lastmod>2025-03-13T04:17:52.651Z</lastmod>
+    <lastmod>2025-03-13T04:20:18.999Z</lastmod>
   </url>
   <url>
     <loc>https://blog.xiangpeng.systems/posts/parquet-to-arrow/index.html</loc>
-    <lastmod>2025-03-13T04:17:52.637Z</lastmod>
+    <lastmod>2025-03-13T04:20:18.985Z</lastmod>
   </url>
   <url>
     <loc>https://blog.xiangpeng.systems/posts/parquet-viewer/index.html</loc>
-    <lastmod>2025-03-13T04:17:52.638Z</lastmod>
+    <lastmod>2025-03-13T04:20:18.987Z</lastmod>
   </url>
   <url>
     <loc>https://blog.xiangpeng.systems/posts/system-researchers/index.html</loc>
-    <lastmod>2025-03-13T04:17:52.657Z</lastmod>
+    <lastmod>2025-03-13T04:20:19.005Z</lastmod>
   </url>
   <url>
     <loc>https://blog.xiangpeng.systems/posts/caching-datafusion/index.html</loc>
-    <lastmod>2025-03-13T04:17:52.629Z</lastmod>
+    <lastmod>2025-03-13T04:20:18.977Z</lastmod>
   </url>
   <url>
     <loc>https://blog.xiangpeng.systems/index.html</loc>
-    <lastmod>2025-03-13T04:17:52.625Z</lastmod>
+    <lastmod>2025-03-13T04:20:18.973Z</lastmod>
   </url>
   <url>
     <loc>https://blog.xiangpeng.systems/posts/good-advisor/index.html</loc>
-    <lastmod>2025-03-13T04:17:52.631Z</lastmod>
+    <lastmod>2025-03-13T04:20:18.979Z</lastmod>
   </url>
   <url>
     <loc>https://blog.xiangpeng.systems/posts/string-view-datafusion/index.html</loc>
-    <lastmod>2025-03-13T04:17:52.653Z</lastmod>
+    <lastmod>2025-03-13T04:20:19.001Z</lastmod>
   </url>
   <url>
     <loc>https://blog.xiangpeng.systems/posts/parquet-pushdown/index.html</loc>
-    <lastmod>2025-03-13T04:17:52.632Z</lastmod>
+    <lastmod>2025-03-13T04:20:18.980Z</lastmod>
   </url>
   <url>
     <loc>https://blog.xiangpeng.systems/posts/working-at-influxdata/index.html</loc>
-    <lastmod>2025-03-13T04:17:52.658Z</lastmod>
+    <lastmod>2025-03-13T04:20:19.006Z</lastmod>
   </url>
   <url>
     <loc>https://blog.xiangpeng.systems/posts/research-statement/index.html</loc>
-    <lastmod>2025-03-13T04:17:52.649Z</lastmod>
+    <lastmod>2025-03-13T04:20:18.997Z</lastmod>
   </url>
 </urlset>
