@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.6.42">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="dcterms.date" content="2025-03-12">
+<meta name="description" content="How to implement efficient filter pushdown in Parquet readers and why it’s challenging in practice.">
+
+<title>Efficient Filter Pushdown in Parquet – Xiangpeng’s blog</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../">
+<script src="../../site_libs/quarto-html/quarto.js"></script>
+<script src="../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../site_libs/quarto-html/quarto-syntax-highlighting-0de45b8b5f35a93596f1d788d60c4c11.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../site_libs/bootstrap/bootstrap-1046f148e97bb5e621867d9ec917c2ac.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "/"
+  ],
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<!-- Cloudflare Web Analytics -->
+<script defer="" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon="{&quot;token&quot;: &quot;eb43fd3c2c574a2590aae63c67009129&quot;}"></script><!-- End Cloudflare Web Analytics -->
+
+
+<link rel="stylesheet" href="../../styles.css">
+<meta property="og:title" content="Efficient Filter Pushdown in Parquet – Xiangpeng’s blog">
+<meta property="og:description" content="How to implement efficient filter pushdown in Parquet readers and why it’s challenging in practice.">
+<meta property="og:image" content="https://blog.xiangpeng.systems/posts/parquet-pushdown/pushdown-vs-no-pushdown.jpg">
+<meta property="og:site_name" content="Xiangpeng's blog">
+<meta name="twitter:title" content="Efficient Filter Pushdown in Parquet – Xiangpeng’s blog">
+<meta name="twitter:description" content="How to implement efficient filter pushdown in Parquet readers and why it’s challenging in practice.">
+<meta name="twitter:image" content="https://blog.xiangpeng.systems/posts/parquet-pushdown/pushdown-vs-no-pushdown.jpg">
+<meta name="twitter:card" content="summary_large_image">
+</head>
+
+<body class="nav-fixed">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top quarto-banner">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../../index.html">
+    <span class="navbar-title">Xiangpeng’s blog</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://xiangpeng.systems"> <i class="bi bi-person-circle" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/XiangpengHao"> <i class="bi bi-github" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://www.linkedin.com/in/hao-xiangpeng/"> <i class="bi bi-linkedin" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="../../index.xml"> <i class="bi bi-rss" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<header id="title-block-header" class="quarto-title-block default page-columns page-full">
+  <div class="quarto-title-banner page-columns page-full">
+    <div class="quarto-title column-body">
+      <h1 class="title">Efficient Filter Pushdown in Parquet</h1>
+                  <div>
+        <div class="description">
+          How to implement efficient filter pushdown in Parquet readers and why it’s challenging in practice.
+        </div>
+      </div>
+                </div>
+  </div>
+    
+  
+  <div class="quarto-title-meta">
+
+      
+      <div>
+      <div class="quarto-title-meta-heading">Published</div>
+      <div class="quarto-title-meta-contents">
+        <p class="date">March 12, 2025</p>
+      </div>
+    </div>
+    
+      <div>
+      <div class="quarto-title-meta-heading">Modified</div>
+      <div class="quarto-title-meta-contents">
+        <p class="date-modified">March 12, 2025</p>
+      </div>
+    </div>
+      
+    </div>
+    
+  
+  </header><div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#why-filter-pushdown-in-parquet" id="toc-why-filter-pushdown-in-parquet" class="nav-link active" data-scroll-target="#why-filter-pushdown-in-parquet">Why filter pushdown in Parquet?</a></li>
+  <li><a href="#why-slower" id="toc-why-slower" class="nav-link" data-scroll-target="#why-slower">Why slower?</a></li>
+  <li><a href="#attempt-cache-filter-columns" id="toc-attempt-cache-filter-columns" class="nav-link" data-scroll-target="#attempt-cache-filter-columns">Attempt: cache filter columns</a></li>
+  <li><a href="#real-solution" id="toc-real-solution" class="nav-link" data-scroll-target="#real-solution">Real solution</a>
+  <ul class="collapse">
+  <li><a href="#what-pages-are-cached" id="toc-what-pages-are-cached" class="nav-link" data-scroll-target="#what-pages-are-cached">What pages are cached?</a></li>
+  <li><a href="#then-why-cache-2-pagescolumn-instead-of-1" id="toc-then-why-cache-2-pagescolumn-instead-of-1" class="nav-link" data-scroll-target="#then-why-cache-2-pagescolumn-instead-of-1">Then why cache 2 pages/column instead of 1?</a></li>
+  </ul></li>
+  <li><a href="#how-does-it-perform" id="toc-how-does-it-perform" class="nav-link" data-scroll-target="#how-does-it-perform">How does it perform?</a></li>
+  <li><a href="#conclusion" id="toc-conclusion" class="nav-link" data-scroll-target="#conclusion">Conclusion</a></li>
+  <li><a href="#acknowledgement" id="toc-acknowledgement" class="nav-link" data-scroll-target="#acknowledgement">Acknowledgement</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content quarto-banner-title-block" id="quarto-document-content">
+
+
+
+
+
+<p>In the <a href="../../posts/parquet-to-arrow/">previous post</a>, we discussed how DataFusion prunes Parquet files to skip irrelevant <strong>files/row_groups</strong> (sometimes also <a href="https://parquet.apache.org/docs/file-format/pageindex/">pages</a>).</p>
+<p>This post discusses how Parquet readers skip irrelevant <strong>rows</strong> while scanning data.</p>
+<section id="why-filter-pushdown-in-parquet" class="level2">
+<h2 class="anchored" data-anchor-id="why-filter-pushdown-in-parquet">Why filter pushdown in Parquet?</h2>
+<p>Below is a query that reads sensor data with filters on <code>date_time</code> and <code>location</code>:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode sql code-with-copy"><code class="sourceCode sql"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">SELECT</span> val, location </span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">FROM</span> sensor_data </span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">WHERE</span> date_time <span class="op">&gt;</span> <span class="st">'2025-03-12'</span> <span class="kw">AND</span> location <span class="op">=</span> <span class="st">'office'</span>;</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="./pushdown-vs-no-pushdown.jpg" class="img-fluid figure-img"></p>
+<figcaption>Parquet reading pipeline, pruning skips irrelevant files/row_groups, filter pushdown skips irrelevant rows</figcaption>
+</figure>
+</div>
+<p>In our setup, sensor data is aggregated by date — each day has its own Parquet file. DataFusion prunes the unneeded Parquet files, i.e., 2025-03-10/11.parquet.</p>
+<p>Once the files to read are located, the <a href="https://github.com/apache/datafusion/issues/3463"><em>current default implementation</em></a> reads all the projected columns (<code>sensor_id</code>, <code>val</code>, and <code>location</code>) into Arrow RecordBatches, then applies the filters over <code>location</code> to get the final set of rows.</p>
+<p>A better approach is called <strong>filter pushdown</strong>, which builds a boolean mask over the predicate columns (<code>location</code>) and applies the mask to the other columns (<code>sensor_id</code>, <code>val</code>), so that only the rows passing the filter are read.</p>
+<p>While simple in theory, practical implementations often make performance worse.</p>
+</section>
+<section id="why-slower" class="level2">
+<h2 class="anchored" data-anchor-id="why-slower">Why slower?</h2>
+<p>Let’s dig into details of <a href="https://github.com/apache/arrow-rs/blob/d5339f31a60a4bd8a4256e7120fe32603249d88e/parquet/src/arrow/async_reader/mod.rs#L618-L712">how filter pushdown is implemented</a> in the current Rust implementation of Parquet readers.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="./baseline-impl.jpg" class="img-fluid figure-img"></p>
+<figcaption>Implementation of filter pushdown in Rust Parquet readers</figcaption>
+</figure>
+</div>
+<p>The filter pushdown has two phases:</p>
+<ol type="1">
+<li><p>Build the filter mask (steps 1-3)</p></li>
+<li><p>Apply the filter mask to the other columns (steps 4-7)</p></li>
+</ol>
+<p>Within each phase, it takes three steps from Parquet to Arrow:</p>
+<ol type="1">
+<li><p>Decompress the Parquet pages using generic decompression algorithms like LZ4, Zstd, etc. (steps 1, 4, 6)</p></li>
+<li><p>Decode the page content into Arrow format (steps 2, 5, 7)</p></li>
+<li><p>Evaluate the filter over Arrow data (step 3)</p></li>
+</ol>
+<p>In the figure above, we can see that <code>location</code> is <strong>decompressed and decoded twice</strong>, first when building the filter mask (steps 1, 2), and second when building the output (steps 4, 5).</p>
+<p>The table below shows the corresponding CPU time on the <a href="https://github.com/apache/datafusion/blob/main/benchmarks/queries/clickbench/queries.sql#L23">ClickBench query 22</a>:</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Decompress</th>
+<th>Decode</th>
+<th>Apply filter</th>
+<th>Others</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>206 ms</td>
+<td>117 ms</td>
+<td>22 ms</td>
+<td>48 ms</td>
+</tr>
+</tbody>
+</table>
+<p>Clearly, decompress/decode operations dominate the time spent. With filter pushdown, we need to decompress/decode three times; but without filter pushdown, we only need to do this twice. This explains why filter pushdown is slower.</p>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Note
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Highly selective filters may skip the entire page; but as long as we read one row from the page, we need to decompress/decode the entire page.</p>
+</div>
+</div>
+</section>
+<section id="attempt-cache-filter-columns" class="level2">
+<h2 class="anchored" data-anchor-id="attempt-cache-filter-columns">Attempt: cache filter columns</h2>
+<p>Intuitively, caching the filter columns and reusing them later could help.</p>
+<p>But caching consumes prohibitively high memory:</p>
+<ol type="1">
+<li><p>We need to cache Arrow arrays, which are on average <a href="https://github.com/XiangpengHao/liquid-cache/blob/main/dev/doc/liquid-cache-vldb.pdf">4x larger than Parquet data</a>.</p></li>
+<li><p>We need to cache the <strong>entire column in memory</strong>, because in Phase 1 we build filters over the entire column, and only use it in Phase 2.</p></li>
+<li><p>The memory usage is proportional to the number of filter columns, which can be unboundedly high.</p></li>
+</ol>
+<p>Worse, caching filter columns means we need to read partially from Parquet and partially from cache, which is complex to implement and requires a radical change to the current implementation.</p>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Note
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Feel the complexity: consider building a cache that properly handles nested columns, multiple filters, and filters with multiple columns.</p>
+</div>
+</div>
+</section>
+<section id="real-solution" class="level2">
+<h2 class="anchored" data-anchor-id="real-solution">Real solution</h2>
+<p>We need a solution that:</p>
+<ol type="1">
+<li><p>Is simple to implement, i.e., doesn’t require thousands of lines of code.</p></li>
+<li><p>Incurs minimal memory overhead.</p></li>
+</ol>
+<p>This section describes my <a href="https://github.com/apache/arrow-rs/pull/6921#issuecomment-2718792433">&lt;700 LOC PR (with lots of comments and tests)</a> that <strong>reduces total ClickBench time by 15%, with up to 2x lower latency for some queries, no obvious regression on other queries, and caches at most 2 pages (~2MB) per column in memory</strong>.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="./new-pipeline.jpg" class="img-fluid figure-img"></p>
+<figcaption>New decoding pipeline, the green box is the only page being cached</figcaption>
+</figure>
+</div>
+<p>The new pipeline interleaves the previous two phases into a single pass, so that:</p>
+<ol type="1">
+<li><p>The page being decompressed is immediately used to build filter masks and output columns.</p></li>
+<li><p>We cache the decompressed page for minimal time; after one pass (steps 1-6), the cache memory is released for the next pass.</p></li>
+</ol>
+<p>This allows the cache to only hold 1 page at a time, and to immediately discard the previous page after it’s used, significantly reducing the memory requirement for caching.</p>
+<section id="what-pages-are-cached" class="level3">
+<h3 class="anchored" data-anchor-id="what-pages-are-cached">What pages are cached?</h3>
+<p>You may have noticed that only <code>location</code> is cached, not <code>val</code>, because <code>val</code> is only used for output. More generally, only columns that appear both in the filter and output are cached, and each such column is cached for 1 page.</p>
+<p>More examples:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode sql code-with-copy"><code class="sourceCode sql"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">SELECT</span> val </span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">FROM</span> sensor_data </span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">WHERE</span> date_time <span class="op">&gt;</span> <span class="st">'2025-03-12'</span> <span class="kw">AND</span> location <span class="op">=</span> <span class="st">'office'</span>;</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>In this case, we don’t cache any columns, because <code>val</code> is not used for filtering.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode sql code-with-copy"><code class="sourceCode sql"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">SELECT</span> <span class="fu">COUNT</span>(<span class="op">*</span>) </span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">FROM</span> sensor_data </span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="kw">WHERE</span> date_time <span class="op">&gt;</span> <span class="st">'2025-03-12'</span> <span class="kw">AND</span> location <span class="op">=</span> <span class="st">'office'</span>;</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>In this case, we also don’t cache any columns, because the output projection is empty after query plan optimization.</p>
+</section>
+<section id="then-why-cache-2-pagescolumn-instead-of-1" class="level3">
+<h3 class="anchored" data-anchor-id="then-why-cache-2-pagescolumn-instead-of-1">Then why cache 2 pages/column instead of 1?</h3>
+<p>This is another real-world nuance regarding how Parquet layouts the pages.</p>
+<p>Parquet by default encodes data using <a href="https://parquet.apache.org/docs/file-format/data-pages/encodings/">dictionary encoding</a>, which writes a dictionary page as the first page of a column chunk, followed by the keys referencing the dictionary.</p>
+<p>You can see this in action using <a href="https://parquet-viewer.xiangpeng.systems">parquet-viewer</a>:</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="./parquet-viewer.jpg" class="img-fluid figure-img"></p>
+<figcaption><a href="https://parquet-viewer.xiangpeng.systems">Parquet viewer</a> shows the page layout of a column chunk</figcaption>
+</figure>
+</div>
+<p>This means that to decode a page of data, we actually need to reference two pages: the dictionary page and the data page.</p>
+<p>This is why we cache 2 pages per column: one dictionary page and one data page. The data page slot will move forward as we read the data; but the dictionary page slot always references the first page.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="./cached-pages.jpg" class="img-fluid figure-img"></p>
+<figcaption>Cached two pages, one for dictionary (pinned), one for data (moves as we read the data)</figcaption>
+</figure>
+</div>
+</section>
+</section>
+<section id="how-does-it-perform" class="level2">
+<h2 class="anchored" data-anchor-id="how-does-it-perform">How does it perform?</h2>
+<p>Here are my results on my AMD 9900X machine. The total time is reduced by 15%, with Q23 being 2.24x faster. Queries that get slower are likely due to noise.</p>
+<pre><code>┏━━━━━━━━━━━━━━┳━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━┓
+┃ Query        ┃ no-pushdown ┃ new-pushdown ┃        Change ┃
+┡━━━━━━━━━━━━━━╇━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━┩
+│ QQuery 0     │      0.47ms │       0.43ms │ +1.10x faster │
+│ QQuery 1     │     51.10ms │      50.10ms │     no change │
+│ QQuery 2     │     68.23ms │      64.49ms │ +1.06x faster │
+│ QQuery 3     │     90.68ms │      86.73ms │     no change │
+│ QQuery 4     │    458.93ms │     458.59ms │     no change │
+│ QQuery 5     │    522.06ms │     478.50ms │ +1.09x faster │
+│ QQuery 6     │     49.84ms │      49.94ms │     no change │
+│ QQuery 7     │     55.09ms │      55.77ms │     no change │
+│ QQuery 8     │    565.26ms │     556.95ms │     no change │
+│ QQuery 9     │    575.83ms │     575.05ms │     no change │
+│ QQuery 10    │    164.56ms │     178.23ms │  1.08x slower │
+│ QQuery 11    │    177.20ms │     191.32ms │  1.08x slower │
+│ QQuery 12    │    591.05ms │     569.92ms │     no change │
+│ QQuery 13    │    861.06ms │     848.59ms │     no change │
+│ QQuery 14    │    596.20ms │     580.73ms │     no change │
+│ QQuery 15    │    554.96ms │     548.77ms │     no change │
+│ QQuery 16    │   1175.08ms │    1146.07ms │     no change │
+│ QQuery 17    │   1150.45ms │    1121.49ms │     no change │
+│ QQuery 18    │   2634.75ms │    2494.07ms │ +1.06x faster │
+│ QQuery 19    │     90.15ms │      89.24ms │     no change │
+│ QQuery 20    │    620.15ms │     591.67ms │     no change │
+│ QQuery 21    │    782.38ms │     703.15ms │ +1.11x faster │
+│ QQuery 22    │   1927.94ms │    1404.35ms │ +1.37x faster │
+│ QQuery 23    │   8104.11ms │    3610.76ms │ +2.24x faster │
+│ QQuery 24    │    360.79ms │     330.55ms │ +1.09x faster │
+│ QQuery 25    │    290.61ms │     252.54ms │ +1.15x faster │
+│ QQuery 26    │    395.18ms │     362.72ms │ +1.09x faster │
+│ QQuery 27    │    891.76ms │     959.39ms │  1.08x slower │
+│ QQuery 28    │   4059.54ms │    4137.37ms │     no change │
+│ QQuery 29    │    235.88ms │     228.99ms │     no change │
+│ QQuery 30    │    564.22ms │     584.65ms │     no change │
+│ QQuery 31    │    741.20ms │     757.87ms │     no change │
+│ QQuery 32    │   2652.48ms │    2574.19ms │     no change │
+│ QQuery 33    │   2373.71ms │    2327.10ms │     no change │
+│ QQuery 34    │   2391.00ms │    2342.15ms │     no change │
+│ QQuery 35    │    700.79ms │     694.51ms │     no change │
+│ QQuery 36    │    151.51ms │     152.93ms │     no change │
+│ QQuery 37    │    108.18ms │      86.03ms │ +1.26x faster │
+│ QQuery 38    │    114.64ms │     106.22ms │ +1.08x faster │
+│ QQuery 39    │    260.80ms │     239.13ms │ +1.09x faster │
+│ QQuery 40    │     60.74ms │      73.29ms │  1.21x slower │
+│ QQuery 41    │     58.75ms │      67.85ms │  1.15x slower │
+│ QQuery 42    │     65.49ms │      68.11ms │     no change │
+└──────────────┴─────────────┴──────────────┴───────────────┘
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━┓
+┃ Benchmark Summary           ┃            ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━┩
+│ Total Time (no-pushdown)    │ 38344.79ms │
+│ Total Time (new-pushdown)   │ 32800.50ms │
+│ Average Time (no-pushdown)  │   891.74ms │
+│ Average Time (new-pushdown) │   762.80ms │
+│ Queries Faster              │         13 │
+│ Queries Slower              │          5 │
+│ Queries with No Change      │         25 │
+└─────────────────────────────┴────────────┘</code></pre>
+</section>
+<section id="conclusion" class="level2">
+<h2 class="anchored" data-anchor-id="conclusion">Conclusion</h2>
+<p>Despite being simple in theory, filter pushdown in Parquet is non-trivial to implement. It requires understanding both the Parquet format and reader implementation details. The challenge lies in efficiently navigating through the dynamics of decoding, filter evaluation, and memory management.</p>
+</section>
+<section id="acknowledgement" class="level2">
+<h2 class="anchored" data-anchor-id="acknowledgement">Acknowledgement</h2>
+<p>This work (the PR, the blog post, <a href="https://parquet-viewer.xiangpeng.systems">parquet-viewer</a>, and <a href="https://github.com/XiangpengHao/liquid-cache">LiquidCache</a>) was made possible by <a href="https://xiangpeng.systems/fund/">funding</a> support from <a href="https://influxdata.com">InfluxData</a> and taxpayers of the state of Wisconsin and the federal government.</p>
+<p>Your support for science is greatly appreciated!</p>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const onCopySuccess = function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  }
+  const getTextToCopy = function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+    text: getTextToCopy
+  });
+  clipboard.on('success', onCopySuccess);
+  if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+    const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+      text: getTextToCopy,
+      container: window.document.getElementById('quarto-embedded-source-code-modal')
+    });
+    clipboardModal.on('success', onCopySuccess);
+  }
+    var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+    var mailtoRegex = new RegExp(/^mailto:/);
+      var filterRegex = new RegExp("https:\/\/blog\.xiangpeng\.systems");
+    var isInternal = (href) => {
+        return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+    }
+    // Inspect non-navigation links and adorn them if external
+ 	var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+    for (var i=0; i<links.length; i++) {
+      const link = links[i];
+      if (!isInternal(link.href)) {
+        // undo the damage that might have been done by quarto-nav.js in the case of
+        // links that we want to consider external
+        if (link.dataset.originalHref !== undefined) {
+          link.href = link.dataset.originalHref;
+        }
+      }
+    }
+  function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+    const config = {
+      allowHTML: true,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start',
+    };
+    if (contentFn) {
+      config.content = contentFn;
+    }
+    if (onTriggerFn) {
+      config.onTrigger = onTriggerFn;
+    }
+    if (onUntriggerFn) {
+      config.onUntrigger = onUntriggerFn;
+    }
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      if (note) {
+        return note.innerHTML;
+      } else {
+        return "";
+      }
+    });
+  }
+  const xrefs = window.document.querySelectorAll('a.quarto-xref');
+  const processXRef = (id, note) => {
+    // Strip column container classes
+    const stripColumnClz = (el) => {
+      el.classList.remove("page-full", "page-columns");
+      if (el.children) {
+        for (const child of el.children) {
+          stripColumnClz(child);
+        }
+      }
+    }
+    stripColumnClz(note)
+    if (id === null || id.startsWith('sec-')) {
+      // Special case sections, only their first couple elements
+      const container = document.createElement("div");
+      if (note.children && note.children.length > 2) {
+        container.appendChild(note.children[0].cloneNode(true));
+        for (let i = 1; i < note.children.length; i++) {
+          const child = note.children[i];
+          if (child.tagName === "P" && child.innerText === "") {
+            continue;
+          } else {
+            container.appendChild(child.cloneNode(true));
+            break;
+          }
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(container);
+        }
+        return container.innerHTML
+      } else {
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        return note.innerHTML;
+      }
+    } else {
+      // Remove any anchor links if they are present
+      const anchorLink = note.querySelector('a.anchorjs-link');
+      if (anchorLink) {
+        anchorLink.remove();
+      }
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(note);
+      }
+      if (note.classList.contains("callout")) {
+        return note.outerHTML;
+      } else {
+        return note.innerHTML;
+      }
+    }
+  }
+  for (var i=0; i<xrefs.length; i++) {
+    const xref = xrefs[i];
+    tippyHover(xref, undefined, function(instance) {
+      instance.disable();
+      let url = xref.getAttribute('href');
+      let hash = undefined; 
+      if (url.startsWith('#')) {
+        hash = url;
+      } else {
+        try { hash = new URL(url).hash; } catch {}
+      }
+      if (hash) {
+        const id = hash.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note !== null) {
+          try {
+            const html = processXRef(id, note.cloneNode(true));
+            instance.setContent(html);
+          } finally {
+            instance.enable();
+            instance.show();
+          }
+        } else {
+          // See if we can fetch this
+          fetch(url.split('#')[0])
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.getElementById(id);
+            if (note !== null) {
+              const html = processXRef(id, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      } else {
+        // See if we can fetch a full url (with no hash to target)
+        // This is a special case and we should probably do some content thinning / targeting
+        fetch(url)
+        .then(res => res.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const htmlDoc = parser.parseFromString(html, "text/html");
+          const note = htmlDoc.querySelector('main.content');
+          if (note !== null) {
+            // This should only happen for chapter cross references
+            // (since there is no id in the URL)
+            // remove the first header
+            if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+              note.children[0].remove();
+            }
+            const html = processXRef(null, note);
+            instance.setContent(html);
+          } 
+        }).finally(() => {
+          instance.enable();
+          instance.show();
+        });
+      }
+    }, function(instance) {
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            div.style.left = 0;
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+        // Handle positioning of the toggle
+    window.addEventListener(
+      "resize",
+      throttle(() => {
+        elRect = undefined;
+        if (selectedAnnoteEl) {
+          selectCodeLines(selectedAnnoteEl);
+        }
+      }, 10)
+    );
+    function throttle(fn, ms) {
+    let throttle = false;
+    let timer;
+      return (...args) => {
+        if(!throttle) { // first call gets through
+            fn.apply(this, args);
+            throttle = true;
+        } else { // all the others get throttled
+            if(timer) clearTimeout(timer); // cancel #2
+            timer = setTimeout(() => {
+              fn.apply(this, args);
+              timer = throttle = false;
+            }, ms);
+        }
+      };
+    }
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>
