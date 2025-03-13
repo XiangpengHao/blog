@@ -6,6 +6,9 @@ categories: []
 description: "How to implement efficient filter pushdown in Parquet readers and why it's challenging in practice."
 toc: true
 draft: false 
+comments:
+  giscus: 
+    repo: XiangpengHao/blog
 format:
   html: 
     highlight-style: tango 
