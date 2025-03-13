@@ -20,6 +20,24 @@
 
 
 
+<div class="callout callout-style-simple callout-warning no-icon callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon no-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Acknowledgement
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>This work (the PR, this blog post, <a href="https://parquet-viewer.xiangpeng.systems">parquet-viewer</a>, and <a href="https://github.com/XiangpengHao/liquid-cache">LiquidCache</a>) was made possible by <a href="https://xiangpeng.systems/fund/">funding</a> support from:</p>
+<ol type="1">
+<li><p><a href="https://influxdata.com">InfluxData</a></p></li>
+<li><p>Taxpayers of the state of Wisconsin and the federal government.</p></li>
+</ol>
+<p>Your support for science is greatly appreciated!</p>
+</div>
+</div>
 <p>In the <a href="../../posts/parquet-to-arrow/">previous post</a>, we discussed how DataFusion prunes Parquet files to skip irrelevant <strong>files/row_groups</strong> (sometimes also <a href="https://parquet.apache.org/docs/file-format/pageindex/">pages</a>).</p>
 <p>This post discusses how Parquet readers skip irrelevant <strong>rows</strong> while scanning data.</p>
 <section id="why-filter-pushdown-in-parquet" class="level2">
@@ -51,21 +69,22 @@ font-style: inherit;">'office'</span>;</span></code></pre></div>
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
 <p><img src="https://blog.xiangpeng.systems/posts/parquet-pushdown/pushdown-vs-no-pushdown.jpg" class="img-fluid figure-img"></p>
-<figcaption>Parquet reading pipeline, pruning skips irrelevant files/row_groups, filter pushdown skips irrelevant rows</figcaption>
+<figcaption>Parquet pruning skips irrelevant files/row_groups, while filter pushdown skips irrelevant rows. Without filter pushdown, all rows from location, val, and date_time columns are decoded before <code>location='office'</code> is evaluated. Filter pushdown is especially useful when the filter is selective, i.e., removes many rows.</figcaption>
 </figure>
 </div>
 <p>In our setup, sensor data is aggregated by date — each day has its own Parquet file. DataFusion prunes the unneeded Parquet files, i.e., 2025-03-10/11.parquet.</p>
 <p>Once the files to read are located, the <a href="https://github.com/apache/datafusion/issues/3463"><em>current default implementation</em></a> reads all the projected columns (<code>sensor_id</code>, <code>val</code>, and <code>location</code>) into Arrow RecordBatches, then applies the filters over <code>location</code> to get the final set of rows.</p>
-<p>A better approach is called <strong>filter pushdown</strong>, which builds a boolean mask over the predicate columns (<code>location</code>) and applies the mask to the other columns (<code>sensor_id</code>, <code>val</code>), so that only the rows passing the filter are read.</p>
+<p>A better approach is <strong>filter pushdown</strong>, which evaluates filter conditions first and only decodes data that passes these conditions. In practice, this works by first processing only the filter columns (like <code>location</code>), building a boolean mask of rows that satisfy our conditions, then using this mask to selectively decode only the relevant rows from other columns (<code>sensor_id</code>, <code>val</code>). This eliminates the waste of decoding rows that will be filtered out.</p>
 <p>While simple in theory, practical implementations often make performance worse.</p>
 </section>
 <section id="why-slower" class="level2">
 <h2 class="anchored" data-anchor-id="why-slower">Why slower?</h2>
+<p>At a high level, the Parquet reader first builds a filter mask – essentially a boolean array indicating which rows meet the filter criteria – and then uses this mask to selectively decode only the needed rows from the remaining columns in the projection.</p>
 <p>Let’s dig into details of <a href="https://github.com/apache/arrow-rs/blob/d5339f31a60a4bd8a4256e7120fe32603249d88e/parquet/src/arrow/async_reader/mod.rs#L618-L712">how filter pushdown is implemented</a> in the current Rust implementation of Parquet readers.</p>
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
 <p><img src="https://blog.xiangpeng.systems/posts/parquet-pushdown/baseline-impl.jpg" class="img-fluid figure-img"></p>
-<figcaption>Implementation of filter pushdown in Rust Parquet readers</figcaption>
+<figcaption>Implementation of filter pushdown in Rust Parquet readers – the first phase builds the filter mask, the second phase applies the filter mask to the other columns</figcaption>
 </figure>
 </div>
 <p>The filter pushdown has two phases:</p>
@@ -79,7 +98,7 @@ font-style: inherit;">'office'</span>;</span></code></pre></div>
 <li><p>Decode the page content into Arrow format (steps 2, 5, 7)</p></li>
 <li><p>Evaluate the filter over Arrow data (step 3)</p></li>
 </ol>
-<p>In the figure above, we can see that <code>location</code> is <strong>decompressed and decoded twice</strong>, first when building the filter mask (steps 1, 2), and second when building the output (steps 4, 5).</p>
+<p>In the figure above, we can see that <code>location</code> is <strong>decompressed and decoded twice</strong>, first when building the filter mask (steps 1, 2), and second when building the output (steps 4, 5). This happens for all columns that appear both in the filter and output.</p>
 <p>The table below shows the corresponding CPU time on the <a href="https://github.com/apache/datafusion/blob/main/benchmarks/queries/clickbench/queries.sql#L23">ClickBench query 22</a>:</p>
 <table class="caption-top table">
 <thead>
@@ -149,7 +168,7 @@ Note
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
 <p><img src="https://blog.xiangpeng.systems/posts/parquet-pushdown/new-pipeline.jpg" class="img-fluid figure-img"></p>
-<figcaption>New decoding pipeline, the green box is the only page being cached</figcaption>
+<figcaption>New decoding pipeline, building filter mask and output columns are interleaved in a single pass, allowing us to cache minimal pages for minimal amount of time</figcaption>
 </figure>
 </div>
 <p>The new pipeline interleaves the previous two phases into a single pass, so that:</p>
@@ -160,7 +179,7 @@ Note
 <p>This allows the cache to only hold 1 page at a time, and to immediately discard the previous page after it’s used, significantly reducing the memory requirement for caching.</p>
 <section id="what-pages-are-cached" class="level3">
 <h3 class="anchored" data-anchor-id="what-pages-are-cached">What pages are cached?</h3>
-<p>You may have noticed that only <code>location</code> is cached, not <code>val</code>, because <code>val</code> is only used for output. More generally, only columns that appear both in the filter and output are cached, and each such column is cached for 1 page.</p>
+<p>You may have noticed that only <code>location</code> is cached, not <code>val</code>, because <code>val</code> is only used for output. More generally, only columns that appear both in the filter and output are cached, and at most 1 page is cached for each such column.</p>
 <p>More examples:</p>
 <div class="sourceCode" id="cb2" style="background: #f1f3f5;"><pre class="sourceCode sql code-with-copy"><code class="sourceCode sql"><span id="cb2-1"><span class="kw" style="color: #003B4F;
 background-color: null;
@@ -238,7 +257,7 @@ font-style: inherit;">'office'</span>;</span></code></pre></div>
 </section>
 <section id="how-does-it-perform" class="level2">
 <h2 class="anchored" data-anchor-id="how-does-it-perform">How does it perform?</h2>
-<p>Here are my results on my AMD 9900X machine. The total time is reduced by 15%, with Q23 being 2.24x faster. Queries that get slower are likely due to noise.</p>
+<p>Here are my results on <a href="https://github.com/apache/datafusion/tree/main/benchmarks#clickbench">ClickBench</a> on my AMD 9900X machine. The total time is reduced by 15%, with Q23 being 2.24x faster, and queries that get slower are likely due to noise.</p>
 <pre><code>┏━━━━━━━━━━━━━━┳━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━┓
 ┃ Query        ┃ no-pushdown ┃ new-pushdown ┃        Change ┃
 ┡━━━━━━━━━━━━━━╇━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━┩
@@ -301,11 +320,6 @@ font-style: inherit;">'office'</span>;</span></code></pre></div>
 <section id="conclusion" class="level2">
 <h2 class="anchored" data-anchor-id="conclusion">Conclusion</h2>
 <p>Despite being simple in theory, filter pushdown in Parquet is non-trivial to implement. It requires understanding both the Parquet format and reader implementation details. The challenge lies in efficiently navigating through the dynamics of decoding, filter evaluation, and memory management.</p>
-</section>
-<section id="acknowledgement" class="level2">
-<h2 class="anchored" data-anchor-id="acknowledgement">Acknowledgement</h2>
-<p>This work (the PR, the blog post, <a href="https://parquet-viewer.xiangpeng.systems">parquet-viewer</a>, and <a href="https://github.com/XiangpengHao/liquid-cache">LiquidCache</a>) was made possible by <a href="https://xiangpeng.systems/fund/">funding</a> support from <a href="https://influxdata.com">InfluxData</a> and taxpayers of the state of Wisconsin and the federal government.</p>
-<p>Your support for science is greatly appreciated!</p>
 
 
 </section>
