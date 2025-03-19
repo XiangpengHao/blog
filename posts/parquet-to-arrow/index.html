@@ -182,9 +182,9 @@ ul.task-list li input[type="checkbox"] {
 
 <p>Note: special thanks to <a href="https://www.influxdata.com">InfluxData</a> for <a href="https://xiangpeng.systems/fund/">funding</a> this blog post.</p>
 <hr>
-<p>Parquet has become the industry standard for storing columnar data, and reading Parquet efficiently is crucial for query performance.</p>
-<p>To optimize this, DataFusion implements advanced Parquet support for effective data pruning and decoding.</p>
-<p>However, achieving high performance adds complexity, and this is no exception. This post provides an overview of the techniques used in DataFusion to selectively read Parquet files.</p>
+<p>Apache Parquet has become the industry standard for storing columnar data, and reading Parquet efficiently – especially from remote storage – is crucial for query performance.</p>
+<p>Apache DataFusion implements advanced Parquet pruning techniques to effectively read only the data that matters for a given query.</p>
+<p>Achieving high performance adds complexity. This post provides an overview of the techniques used in DataFusion to selectively read Parquet files.</p>
 <section id="the-pipeline" class="level3">
 <h3 class="anchored" data-anchor-id="the-pipeline">The pipeline</h3>
 <p>The diagram below illustrates the Parquet reading pipeline in DataFusion, highlighting how data flows through various pruning stages before being converted to Arrow format:</p>
