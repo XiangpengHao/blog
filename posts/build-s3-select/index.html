@@ -1,0 +1,1190 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.6.42">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="dcterms.date" content="2025-03-23">
+<meta name="description" content="DataFusion is ALL YOU NEED">
+
+<title>Build your own S3-Select in 400 lines of Rust – Xiangpeng’s blog</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../">
+<script src="../../site_libs/quarto-html/quarto.js"></script>
+<script src="../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../site_libs/quarto-html/quarto-syntax-highlighting-0de45b8b5f35a93596f1d788d60c4c11.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../site_libs/bootstrap/bootstrap-1046f148e97bb5e621867d9ec917c2ac.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "/"
+  ],
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<!-- Cloudflare Web Analytics -->
+<script defer="" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon="{&quot;token&quot;: &quot;eb43fd3c2c574a2590aae63c67009129&quot;}"></script><!-- End Cloudflare Web Analytics -->
+
+
+<link rel="stylesheet" href="../../styles.css">
+<meta property="og:title" content="Build your own S3-Select in 400 lines of Rust – Xiangpeng’s blog">
+<meta property="og:description" content="DataFusion is ALL YOU NEED">
+<meta property="og:image" content="https://blog.xiangpeng.systems/posts/build-s3-select/s3-select.jpg">
+<meta property="og:site_name" content="Xiangpeng's blog">
+<meta name="twitter:title" content="Build your own S3-Select in 400 lines of Rust – Xiangpeng’s blog">
+<meta name="twitter:description" content="DataFusion is ALL YOU NEED">
+<meta name="twitter:image" content="https://blog.xiangpeng.systems/posts/build-s3-select/s3-select.jpg">
+<meta name="twitter:card" content="summary_large_image">
+</head>
+
+<body class="nav-fixed">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top quarto-banner">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../../index.html">
+    <span class="navbar-title">Xiangpeng’s blog</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://xiangpeng.systems"> <i class="bi bi-person-circle" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/XiangpengHao"> <i class="bi bi-github" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://www.linkedin.com/in/hao-xiangpeng/"> <i class="bi bi-linkedin" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="../../index.xml"> <i class="bi bi-rss" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<header id="title-block-header" class="quarto-title-block default page-columns page-full">
+  <div class="quarto-title-banner page-columns page-full">
+    <div class="quarto-title column-body">
+      <h1 class="title">Build your own S3-Select in 400 lines of Rust</h1>
+                  <div>
+        <div class="description">
+          DataFusion is ALL YOU NEED
+        </div>
+      </div>
+                </div>
+  </div>
+    
+  
+  <div class="quarto-title-meta">
+
+      
+      <div>
+      <div class="quarto-title-meta-heading">Published</div>
+      <div class="quarto-title-meta-contents">
+        <p class="date">March 23, 2025</p>
+      </div>
+    </div>
+    
+      
+    </div>
+    
+  
+  </header><div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#tldr" id="toc-tldr" class="nav-link active" data-scroll-target="#tldr">TL;DR</a></li>
+  <li><a href="#architecture" id="toc-architecture" class="nav-link" data-scroll-target="#architecture">Architecture</a>
+  <ul class="collapse">
+  <li><a href="#compute" id="toc-compute" class="nav-link" data-scroll-target="#compute">Compute</a></li>
+  <li><a href="#storage" id="toc-storage" class="nav-link" data-scroll-target="#storage">Storage</a></li>
+  <li><a href="#communication" id="toc-communication" class="nav-link" data-scroll-target="#communication">Communication</a></li>
+  </ul></li>
+  <li><a href="#life-of-a-query" id="toc-life-of-a-query" class="nav-link" data-scroll-target="#life-of-a-query">Life of a query</a></li>
+  <li><a href="#implementing-the-storage-server" id="toc-implementing-the-storage-server" class="nav-link" data-scroll-target="#implementing-the-storage-server">Implementing the Storage Server</a>
+  <ul class="collapse">
+  <li><a href="#schema-resolution" id="toc-schema-resolution" class="nav-link" data-scroll-target="#schema-resolution">1. Schema Resolution</a></li>
+  <li><a href="#query-planning" id="toc-query-planning" class="nav-link" data-scroll-target="#query-planning">2. Query Planning</a></li>
+  <li><a href="#data-streaming" id="toc-data-streaming" class="nav-link" data-scroll-target="#data-streaming">3. Data Streaming</a></li>
+  </ul></li>
+  <li><a href="#implementing-the-compute-node" id="toc-implementing-the-compute-node" class="nav-link" data-scroll-target="#implementing-the-compute-node">Implementing the Compute Node</a>
+  <ul class="collapse">
+  <li><a href="#implementing-flighttable" id="toc-implementing-flighttable" class="nav-link" data-scroll-target="#implementing-flighttable">Implementing FlightTable</a></li>
+  <li><a href="#implementing-flightexec" id="toc-implementing-flightexec" class="nav-link" data-scroll-target="#implementing-flightexec">Implementing FlightExec</a></li>
+  </ul></li>
+  <li><a href="#putting-it-all-together" id="toc-putting-it-all-together" class="nav-link" data-scroll-target="#putting-it-all-together">Putting It All Together</a>
+  <ul class="collapse">
+  <li><a href="#server-binary" id="toc-server-binary" class="nav-link" data-scroll-target="#server-binary">Server Binary</a></li>
+  <li><a href="#client-binary" id="toc-client-binary" class="nav-link" data-scroll-target="#client-binary">Client Binary</a></li>
+  <li><a href="#running-the-system" id="toc-running-the-system" class="nav-link" data-scroll-target="#running-the-system">Running the System</a></li>
+  </ul></li>
+  <li><a href="#whats-next-liquidcache" id="toc-whats-next-liquidcache" class="nav-link" data-scroll-target="#whats-next-liquidcache">What’s Next: LiquidCache</a></li>
+  <li><a href="#conclusion" id="toc-conclusion" class="nav-link" data-scroll-target="#conclusion">Conclusion</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content quarto-banner-title-block page-columns page-full" id="quarto-document-content">
+
+
+
+
+
+<div class="callout callout-style-simple callout-warning no-icon callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon no-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Acknowledgement
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>This blog post was made possible by <a href="https://xiangpeng.systems/fund/">funding</a> support from:</p>
+<ol type="1">
+<li><p><a href="https://influxdata.com">InfluxData</a></p></li>
+<li><p>Taxpayers of the state of Wisconsin and the federal government.</p></li>
+</ol>
+<p>Your support for science is greatly appreciated!</p>
+</div>
+</div>
+<section id="tldr" class="level2 page-columns page-full">
+<h2 class="anchored" data-anchor-id="tldr">TL;DR</h2>
+<p><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/selecting-content-from-objects.html">S3-Select</a> can filter S3 data before sending it back to you, significantly saving network bandwidth and time. Unfortunately, AWS killed this feature in 2024.</p>
+<p>Good news: you can build your own S3-Select with <strong>all open-source tools and open standards</strong>! This blog post shows you how to do it in <strong>400 lines of Rust</strong><a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a> using the <a href="https://www.influxdata.com/glossary/fdap-stack/">FDAP stack</a><a href="#fn2" class="footnote-ref" id="fnref2" role="doc-noteref"><sup>2</sup></a>.</p>
+<div class="no-row-height column-margin column-container"><div id="fn1"><p><sup>1</sup>&nbsp;Without blank lines and comments.</p></div><div id="fn2"><p><sup>2</sup>&nbsp;FDAP: Apache Arrow <strong>F</strong>light, Apache <strong>D</strong>ataFusion, Apache <strong>A</strong>rrow, Apache <strong>P</strong>arquet</p></div></div><p>Complete code is available in <a href="https://github.com/XiangpengHao/build-your-own-s3-select">this repository</a>.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="s3-select.jpg" class="img-fluid figure-img"></p>
+<figcaption>Comparing S3 (left) with S3-Select (right). S3-Select evaluates the filter before returning the data to you, saving network bandwidth.</figcaption>
+</figure>
+</div>
+</section>
+<section id="architecture" class="level2 page-columns page-full">
+<h2 class="anchored" data-anchor-id="architecture">Architecture</h2>
+<p>As we can’t change S3, we assume that the data is stored in our own storage system (often as a cache to S3).</p>
+<p>Our architecture consists of three main components: a storage server, a compute client, and the Arrow Flight protocol connecting them.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="arch.jpg" class="img-fluid figure-img"></p>
+<figcaption>The compute server is a full-fledged DataFusion server that evaluates user queries. The storage server contains Parquet files and also embeds a DataFusion instance for filter evaluation. The compute and storage communicate with each other via Arrow Flight.</figcaption>
+</figure>
+</div>
+<section id="compute" class="level3">
+<h3 class="anchored" data-anchor-id="compute">Compute</h3>
+<p>The compute (client) is a full-fledged DataFusion node that <strong>automatically</strong> pushes down filter expressions to the storage server. Unlike S3-Select which requires manual SQL filter crafting, our system automatically decides what can be evaluated at the storage layer, while handling complex operations (joins, aggregations) in the compute node.</p>
+</section>
+<section id="storage" class="level3 page-columns page-full">
+<h3 class="anchored" data-anchor-id="storage">Storage</h3>
+<p>The storage (server) stores Parquet<a href="#fn3" class="footnote-ref" id="fnref3" role="doc-noteref"><sup>3</sup></a> files and evaluates the filters pushed down from the compute node. We leverage DataFusion’s <a href="https://datafusion.apache.org/blog/2024/11/18/datafusion-fastest-single-node-parquet-clickbench/">highly optimized</a> query engine for filter evaluation, which includes <a href="../../posts/parquet-pushdown/index.html">efficient Parquet reading with filter pushdown</a>, parallel filter evaluation across multiple threads, and streaming filtered results back to the compute node.</p>
+<div class="no-row-height column-margin column-container"><div id="fn3"><p><sup>3</sup>&nbsp;Parquet is the industry standard columnar storage format. CSV/JSON/etc. are also easily supported, but you should really consider using a real format like Parquet.</p></div></div></section>
+<section id="communication" class="level3">
+<h3 class="anchored" data-anchor-id="communication">Communication</h3>
+<p>Communication between compute and storage happens via the Arrow Flight protocol – a high-performance, open-standard protocol for efficient data exchange. Unlike S3-Select which transmits data in CSV format, we keep data in columnar format throughout the entire pipeline. This means the compute node can directly operate on the data without heavy deserialization, and any system that speaks Arrow Flight can read from our storage.</p>
+</section>
+</section>
+<section id="life-of-a-query" class="level2">
+<h2 class="anchored" data-anchor-id="life-of-a-query">Life of a query</h2>
+<p>Let’s walk through how a query flows through our system:</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="life-of-a-query.jpg" class="img-fluid figure-img" style="width:60.0%"></p>
+<figcaption>The life of a query. The compute node pushes down the filter expression to the storage node. The storage node evaluates the filter and sends the data back to the compute node. The compute node evaluates the rest of the query and sends the result back to the user.</figcaption>
+</figure>
+</div>
+<ol type="1">
+<li><p><strong>Schema Resolution</strong>: When a user submits a query, the compute node first resolves the table schema from the storage node via Arrow Flight.</p></li>
+<li><p><strong>Query Planning</strong>: The compute node generates a query plan and decides which parts should be evaluated locally versus pushed down to the storage node.</p></li>
+<li><p><strong>Filter Pushdown</strong>: The compute node sends filter predicates to the storage node for evaluation close to the data.</p></li>
+<li><p><strong>Filter Evaluation</strong>: The storage node evaluates these filters and streams only the matching data back to the compute node.</p></li>
+<li><p><strong>Final Processing</strong>: The compute node handles the computation-heavy parts (aggregations, joins, etc.) and returns the final result to the user.</p></li>
+</ol>
+<p>Note that only filters are pushed down to the storage node, computation-heavy operations happen at the compute layer. This prevents overloading the storage node’s processing capabilities while reducing network traffic.</p>
+</section>
+<section id="implementing-the-storage-server" class="level2 page-columns page-full">
+<h2 class="anchored" data-anchor-id="implementing-the-storage-server">Implementing the Storage Server</h2>
+<p>Now that we understand the architecture, let’s build the storage server. Surprisingly, we can implement it in less than 100 lines of code thanks to DataFusion!</p>
+<p>Our storage server is defined as:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode rust code-with-copy"><code class="sourceCode rust"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">struct</span> StorageServer <span class="op">{</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    execution_plans<span class="op">:</span> Mutex<span class="op">&lt;</span>HashMap<span class="op">&lt;</span><span class="dt">u64</span><span class="op">,</span> Arc<span class="op">&lt;</span><span class="kw">dyn</span> ExecutionPlan<span class="op">&gt;&gt;&gt;,</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    next_id<span class="op">:</span> <span class="pp">atomic::</span>AtomicU64<span class="op">,</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    ctx<span class="op">:</span> SessionContext<span class="op">,</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Let’s break down what each field does:</p>
+<ul>
+<li><code>execution_plans</code>: Maps query IDs to their execution plans</li>
+<li><code>next_id</code>: Generates unique query IDs<a href="#fn4" class="footnote-ref" id="fnref4" role="doc-noteref"><sup>4</sup></a></li>
+<li><code>ctx</code>: The DataFusion session context (we use a single context for all queries for simplicity)</li>
+</ul>
+<div class="no-row-height column-margin column-container"><div id="fn4"><p><sup>4</sup>&nbsp;In production, you should use a proper unique ID generator like <a href="https://docs.rs/uuid/latest/uuid/index.html">uuid</a>.</p></div></div><p>The <code>StorageServer</code> implements the <code>FlightSqlService</code> trait with three key methods:</p>
+<div class="sourceCode" id="annotated-cell-2"><pre class="sourceCode rust code-annotation-code code-with-copy"><code class="sourceCode rust"><span id="annotated-cell-2-1"><a href="#annotated-cell-2-1" aria-hidden="true" tabindex="-1"></a><span class="at">#[</span><span class="pp">tonic::</span>async_trait<span class="at">]</span></span>
+<span id="annotated-cell-2-2"><a href="#annotated-cell-2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">impl</span> FlightSqlService <span class="cf">for</span> StorageServer <span class="op">{</span></span>
+<span id="annotated-cell-2-3"><a href="#annotated-cell-2-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">type</span> FlightService <span class="op">=</span> StorageServer<span class="op">;</span></span>
+<span id="annotated-cell-2-4"><a href="#annotated-cell-2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="annotated-cell-2-5"><a href="#annotated-cell-2-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">async</span> <span class="kw">fn</span> get_flight_info_schemas(</span>
+<span id="annotated-cell-2-6"><a href="#annotated-cell-2-6" aria-hidden="true" tabindex="-1"></a>        <span class="op">&amp;</span><span class="kw">self</span><span class="op">,</span></span>
+<span id="annotated-cell-2-7"><a href="#annotated-cell-2-7" aria-hidden="true" tabindex="-1"></a>        query<span class="op">:</span> CommandGetDbSchemas<span class="op">,</span></span>
+<span id="annotated-cell-2-8"><a href="#annotated-cell-2-8" aria-hidden="true" tabindex="-1"></a>        _request<span class="op">:</span> Request<span class="op">&lt;</span>FlightDescriptor<span class="op">&gt;,</span></span>
+<span id="annotated-cell-2-9"><a href="#annotated-cell-2-9" aria-hidden="true" tabindex="-1"></a>    ) <span class="op">-&gt;</span> <span class="dt">Result</span><span class="op">&lt;</span>Response<span class="op">&lt;</span>FlightInfo<span class="op">&gt;,</span> Status<span class="op">&gt;</span> <span class="op">{</span></span>
+<span id="annotated-cell-2-10"><a href="#annotated-cell-2-10" aria-hidden="true" tabindex="-1"></a>        <span class="pp">todo!</span>()</span>
+<span id="annotated-cell-2-11"><a href="#annotated-cell-2-11" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="annotated-cell-2-12"><a href="#annotated-cell-2-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="annotated-cell-2-13"><a href="#annotated-cell-2-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="annotated-cell-2-14"><a href="#annotated-cell-2-14" aria-hidden="true" tabindex="-1"></a>    <span class="kw">async</span> <span class="kw">fn</span> get_flight_info_statement(</span>
+<span id="annotated-cell-2-15"><a href="#annotated-cell-2-15" aria-hidden="true" tabindex="-1"></a>        <span class="op">&amp;</span><span class="kw">self</span><span class="op">,</span></span>
+<span id="annotated-cell-2-16"><a href="#annotated-cell-2-16" aria-hidden="true" tabindex="-1"></a>        cmd<span class="op">:</span> CommandStatementQuery<span class="op">,</span></span>
+<span id="annotated-cell-2-17"><a href="#annotated-cell-2-17" aria-hidden="true" tabindex="-1"></a>        _request<span class="op">:</span> Request<span class="op">&lt;</span>FlightDescriptor<span class="op">&gt;,</span></span>
+<span id="annotated-cell-2-18"><a href="#annotated-cell-2-18" aria-hidden="true" tabindex="-1"></a>    ) <span class="op">-&gt;</span> <span class="dt">Result</span><span class="op">&lt;</span>Response<span class="op">&lt;</span>FlightInfo<span class="op">&gt;,</span> Status<span class="op">&gt;</span> <span class="op">{</span></span>
+<span id="annotated-cell-2-19"><a href="#annotated-cell-2-19" aria-hidden="true" tabindex="-1"></a>        <span class="pp">todo!</span>()</span>
+<span id="annotated-cell-2-20"><a href="#annotated-cell-2-20" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="annotated-cell-2-21"><a href="#annotated-cell-2-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="annotated-cell-2-22"><a href="#annotated-cell-2-22" aria-hidden="true" tabindex="-1"></a>    <span class="kw">async</span> <span class="kw">fn</span> do_get_fallback(</span>
+<span id="annotated-cell-2-23"><a href="#annotated-cell-2-23" aria-hidden="true" tabindex="-1"></a>        <span class="op">&amp;</span><span class="kw">self</span><span class="op">,</span></span>
+<span id="annotated-cell-2-24"><a href="#annotated-cell-2-24" aria-hidden="true" tabindex="-1"></a>        _request<span class="op">:</span> Request<span class="op">&lt;</span>Ticket<span class="op">&gt;,</span></span>
+<span id="annotated-cell-2-25"><a href="#annotated-cell-2-25" aria-hidden="true" tabindex="-1"></a>        message<span class="op">:</span> <span class="bu">Any</span><span class="op">,</span></span>
+<span id="annotated-cell-2-26"><a href="#annotated-cell-2-26" aria-hidden="true" tabindex="-1"></a>    ) <span class="op">-&gt;</span> <span class="dt">Result</span><span class="op">&lt;</span>Response<span class="op">&lt;&lt;</span><span class="dt">Self</span> <span class="kw">as</span> FlightService<span class="op">&gt;</span><span class="pp">::</span>DoGetStream<span class="op">&gt;,</span> Status<span class="op">&gt;</span> <span class="op">{</span></span>
+<span id="annotated-cell-2-27"><a href="#annotated-cell-2-27" aria-hidden="true" tabindex="-1"></a>        <span class="pp">todo!</span>()</span>
+<span id="annotated-cell-2-28"><a href="#annotated-cell-2-28" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="annotated-cell-2-29"><a href="#annotated-cell-2-29" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Let’s implement each method one by one.</p>
+<section id="schema-resolution" class="level3">
+<h3 class="anchored" data-anchor-id="schema-resolution">1. Schema Resolution</h3>
+<p>First, we need to implement <code>get_flight_info_schemas</code> to handle schema retrieval:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode rust code-with-copy"><code class="sourceCode rust"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">async</span> <span class="kw">fn</span> get_flight_info_schemas(</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="op">&amp;</span><span class="kw">self</span><span class="op">,</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    query<span class="op">:</span> CommandGetDbSchemas<span class="op">,</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    _request<span class="op">:</span> Request<span class="op">&lt;</span>FlightDescriptor<span class="op">&gt;,</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>) <span class="op">-&gt;</span> <span class="dt">Result</span><span class="op">&lt;</span>Response<span class="op">&lt;</span>FlightInfo<span class="op">&gt;,</span> Status<span class="op">&gt;</span> <span class="op">{</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">let</span> table_url <span class="op">=</span> query<span class="op">.</span>catalog<span class="op">.</span>unwrap()<span class="op">;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">let</span> table_name <span class="op">=</span> query<span class="op">.</span>db_schema_filter_pattern<span class="op">.</span>unwrap()<span class="op">;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    _ <span class="op">=</span> <span class="kw">self</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>        <span class="op">.</span>ctx</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>        <span class="op">.</span>register_parquet(<span class="op">&amp;</span>table_name<span class="op">,</span> table_url<span class="op">,</span> <span class="bu">Default</span><span class="pp">::</span><span class="kw">default</span>())</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>        <span class="op">.</span><span class="kw">await</span><span class="op">;</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    <span class="kw">let</span> schema <span class="op">=</span> <span class="kw">self</span><span class="op">.</span>ctx<span class="op">.</span>table_provider(<span class="op">&amp;</span>table_name)<span class="op">.</span><span class="kw">await</span><span class="op">.</span>unwrap()<span class="op">.</span>schema()<span class="op">;</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>    <span class="kw">let</span> info <span class="op">=</span> <span class="pp">FlightInfo::</span>new()<span class="op">.</span>try_with_schema(<span class="op">&amp;</span>schema)<span class="op">.</span>unwrap()<span class="op">;</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>    <span class="cn">Ok</span>(<span class="pp">Response::</span>new(info))</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>This method:</p>
+<ol type="1">
+<li>Registers the Parquet file with DataFusion</li>
+<li>Gets the schema from the registered table</li>
+<li>Returns the schema as a FlightInfo response</li>
+</ol>
+</section>
+<section id="query-planning" class="level3">
+<h3 class="anchored" data-anchor-id="query-planning">2. Query Planning</h3>
+<p>Next, we implement <code>get_flight_info_statement</code> to handle query planning:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode rust code-with-copy"><code class="sourceCode rust"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">async</span> <span class="kw">fn</span> get_flight_info_statement(</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="op">&amp;</span><span class="kw">self</span><span class="op">,</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    cmd<span class="op">:</span> CommandStatementQuery<span class="op">,</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    _request<span class="op">:</span> Request<span class="op">&lt;</span>FlightDescriptor<span class="op">&gt;,</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>) <span class="op">-&gt;</span> <span class="dt">Result</span><span class="op">&lt;</span>Response<span class="op">&lt;</span>FlightInfo<span class="op">&gt;,</span> Status<span class="op">&gt;</span> <span class="op">{</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">let</span> query <span class="op">=</span> cmd<span class="op">.</span>query<span class="op">.</span>as_str()<span class="op">;</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">let</span> (state<span class="op">,</span> logical_plan) <span class="op">=</span> <span class="kw">self</span><span class="op">.</span>ctx<span class="op">.</span>sql(query)<span class="op">.</span><span class="kw">await</span><span class="op">.</span>unwrap()<span class="op">.</span>into_parts()<span class="op">;</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">let</span> plan <span class="op">=</span> state<span class="op">.</span>optimize(<span class="op">&amp;</span>logical_plan)<span class="op">.</span>unwrap()<span class="op">;</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">let</span> physical_plan <span class="op">=</span> state<span class="op">.</span>create_physical_plan(<span class="op">&amp;</span>plan)<span class="op">.</span><span class="kw">await</span><span class="op">.</span>unwrap()<span class="op">;</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">let</span> partition_count <span class="op">=</span> physical_plan<span class="op">.</span>output_partitioning()<span class="op">.</span>partition_count()<span class="op">;</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>    <span class="kw">let</span> schema <span class="op">=</span> physical_plan<span class="op">.</span>schema()<span class="op">;</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>    <span class="kw">let</span> id <span class="op">=</span> <span class="kw">self</span><span class="op">.</span>next_id<span class="op">.</span>fetch_add(<span class="dv">1</span><span class="op">,</span> <span class="pp">atomic::Ordering::</span>Relaxed)<span class="op">;</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>    <span class="kw">self</span><span class="op">.</span>execution_plans</span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>        <span class="op">.</span>lock()</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>        <span class="op">.</span>unwrap()</span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>        <span class="op">.</span>insert(id<span class="op">,</span> physical_plan)<span class="op">;</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>    <span class="kw">let</span> <span class="kw">mut</span> info <span class="op">=</span> <span class="pp">FlightInfo::</span>new()<span class="op">.</span>try_with_schema(<span class="op">&amp;</span>schema)<span class="op">.</span>unwrap()<span class="op">;</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> partition <span class="kw">in</span> <span class="dv">0</span><span class="op">..</span>partition_count <span class="op">{</span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>        <span class="kw">let</span> fetch <span class="op">=</span> FetchResults <span class="op">{</span></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>            handle<span class="op">:</span> id<span class="op">,</span></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>            partition<span class="op">:</span> partition <span class="kw">as</span> <span class="dt">u32</span><span class="op">,</span></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>        <span class="op">};</span></span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>        <span class="kw">let</span> buf <span class="op">=</span> fetch<span class="op">.</span>as_any()<span class="op">.</span>encode_to_vec()<span class="op">.</span>into()<span class="op">;</span></span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a>        <span class="kw">let</span> ticket <span class="op">=</span> Ticket <span class="op">{</span> ticket<span class="op">:</span> buf <span class="op">};</span></span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>        <span class="kw">let</span> endpoint <span class="op">=</span> <span class="pp">FlightEndpoint::</span>new()<span class="op">.</span>with_ticket(ticket<span class="op">.</span>clone())<span class="op">;</span></span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>        info <span class="op">=</span> info<span class="op">.</span>with_endpoint(endpoint)<span class="op">;</span></span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a>    <span class="cn">Ok</span>(<span class="pp">Response::</span>new(info))</span>
+<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>This method:</p>
+<ol type="1">
+<li>Parses the SQL into a logical plan</li>
+<li>Optimizes the logical plan and converts it to a physical plan</li>
+<li>Returns partition info and query ID to the compute node</li>
+</ol>
+</section>
+<section id="data-streaming" class="level3 page-columns page-full">
+<h3 class="anchored" data-anchor-id="data-streaming">3. Data Streaming</h3>
+<p>Finally, we implement <code>do_get_fallback</code> to handle data streaming:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode rust code-with-copy"><code class="sourceCode rust"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">async</span> <span class="kw">fn</span> do_get_fallback(</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    <span class="op">&amp;</span><span class="kw">self</span><span class="op">,</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    _request<span class="op">:</span> Request<span class="op">&lt;</span>Ticket<span class="op">&gt;,</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    message<span class="op">:</span> <span class="bu">Any</span><span class="op">,</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>) <span class="op">-&gt;</span> <span class="dt">Result</span><span class="op">&lt;</span>Response<span class="op">&lt;&lt;</span><span class="dt">Self</span> <span class="kw">as</span> FlightService<span class="op">&gt;</span><span class="pp">::</span>DoGetStream<span class="op">&gt;,</span> Status<span class="op">&gt;</span> <span class="op">{</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">let</span> fetch_results<span class="op">:</span> FetchResults <span class="op">=</span> message<span class="op">.</span>unpack()<span class="op">.</span>unwrap()<span class="op">.</span>unwrap()<span class="op">;</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">let</span> plan_lock <span class="op">=</span> <span class="kw">self</span><span class="op">.</span>execution_plans<span class="op">.</span>lock()<span class="op">.</span>unwrap()<span class="op">;</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">let</span> physical_plan <span class="op">=</span> plan_lock<span class="op">.</span>get(<span class="op">&amp;</span>fetch_results<span class="op">.</span>handle)<span class="op">.</span>unwrap()<span class="op">.</span>clone()<span class="op">;</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">let</span> stream <span class="op">=</span> physical_plan</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>        <span class="op">.</span>execute(fetch_results<span class="op">.</span>partition <span class="kw">as</span> <span class="dt">usize</span><span class="op">,</span> <span class="kw">self</span><span class="op">.</span>ctx<span class="op">.</span>task_ctx())</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>        <span class="op">.</span>unwrap()</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>        <span class="op">.</span>map_err(<span class="op">|</span>e<span class="op">|</span> <span class="pp">arrow_flight::error::FlightError::</span>ExternalError(<span class="dt">Box</span><span class="pp">::</span>new(e)))<span class="op">;</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>    <span class="kw">let</span> encoder <span class="op">=</span> <span class="pp">FlightDataEncoderBuilder::</span>new()<span class="op">.</span>build(stream)<span class="op">;</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>    <span class="kw">let</span> response_stream <span class="op">=</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>        encoder<span class="op">.</span>map(<span class="op">|</span>result<span class="op">|</span> result<span class="op">.</span>map_err(<span class="op">|</span>e<span class="op">|</span> <span class="pp">Status::</span>internal(e<span class="op">.</span>to_string())))<span class="op">;</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>    <span class="cn">Ok</span>(<span class="pp">Response::</span>new(<span class="dt">Box</span><span class="pp">::</span>pin(response_stream)))</span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>This method:</p>
+<ol type="1">
+<li>Retrieves the physical plan for that query</li>
+<li>Executes the plan on the specified partition</li>
+<li>Returns the stream to the compute node</li>
+</ol>
+<p>That’s it for the storage server! Just these three methods are enough to implement the core functionality<a href="#fn5" class="footnote-ref" id="fnref5" role="doc-noteref"><sup>5</sup></a>.</p>
+<div class="no-row-height column-margin column-container"><div id="fn5"><p><sup>5</sup>&nbsp;Of course, a production server needs way more: error handling, logging, authentication, etc. But these concerns are orthogonal to our core implementation.</p></div></div></section>
+</section>
+<section id="implementing-the-compute-node" class="level2 page-columns page-full">
+<h2 class="anchored" data-anchor-id="implementing-the-compute-node">Implementing the Compute Node</h2>
+<p>The compute node has more work to do, as it needs to:</p>
+<ol type="1">
+<li>Communicate with the storage server to get data</li>
+<li>Decide which parts of the query to send to storage</li>
+<li>Process the filtered data to produce the final result</li>
+</ol>
+<p>We’ll implement this through two main components:</p>
+<ol type="1">
+<li><code>FlightTable</code>: Decides what gets pushed down to storage</li>
+<li><code>FlightExec</code>: Handles the data streaming from storage</li>
+</ol>
+<p>Here’s how they fit together in the query plan:</p>
+<div class="quarto-figure quarto-figure-center page-columns page-full">
+<figure class="figure page-columns page-full">
+<p><img src="query-plan.jpg" class="img-fluid figure-img"></p>
+<figcaption>An example query plan showing how FlightTable and FlightExec connect. The ParquetExec and FilterExec<a href="#fn6" class="footnote-ref" id="fnref6" role="doc-noteref"><sup>6</sup></a> are executed on the storage server, while the rest of the plan runs on the compute node. The two plans are connected via the FlightExec node.</figcaption>
+<div class="no-row-height column-margin column-container"><div id="fn6"><p><sup>6</sup>&nbsp;Strictly speaking, when <a href="../../posts/parquet-pushdown/index.html">filter pushdown</a> is enabled, the FilterExec is merged into ParquetExec in the storage server.</p></div></div></figure>
+</div>
+<section id="implementing-flighttable" class="level3 page-columns page-full">
+<h3 class="anchored" data-anchor-id="implementing-flighttable">Implementing FlightTable</h3>
+<p>Let’s start with <code>FlightTable</code>, which implements DataFusion’s <code>TableProvider</code> trait:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode rust code-with-copy"><code class="sourceCode rust"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">pub</span> <span class="kw">struct</span> FlightTable <span class="op">{</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    channel<span class="op">:</span> Channel<span class="op">,</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    server<span class="op">:</span> <span class="dt">String</span><span class="op">,</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    table_name<span class="op">:</span> TableReference<span class="op">,</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    output_schema<span class="op">:</span> SchemaRef<span class="op">,</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="at">#[</span>async_trait<span class="at">]</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a><span class="kw">impl</span> TableProvider <span class="cf">for</span> FlightTable <span class="op">{</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">async</span> <span class="kw">fn</span> scan(</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>        <span class="op">&amp;</span><span class="kw">self</span><span class="op">,</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>        _state<span class="op">:</span> <span class="op">&amp;</span><span class="kw">dyn</span> Session<span class="op">,</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>        projection<span class="op">:</span> <span class="dt">Option</span><span class="op">&lt;&amp;</span><span class="dt">Vec</span><span class="op">&lt;</span><span class="dt">usize</span><span class="op">&gt;&gt;,</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>        filters<span class="op">:</span> <span class="op">&amp;</span>[Expr]<span class="op">,</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>        limit<span class="op">:</span> <span class="dt">Option</span><span class="op">&lt;</span><span class="dt">usize</span><span class="op">&gt;,</span></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>    ) <span class="op">-&gt;</span> <span class="dt">Result</span><span class="op">&lt;</span>Arc<span class="op">&lt;</span><span class="kw">dyn</span> ExecutionPlan<span class="op">&gt;&gt;</span> <span class="op">{</span></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>        <span class="pp">todo!</span>()</span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a>    <span class="kw">fn</span> supports_filters_pushdown(</span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>        <span class="op">&amp;</span><span class="kw">self</span><span class="op">,</span></span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a>        filters<span class="op">:</span> <span class="op">&amp;</span>[<span class="op">&amp;</span>Expr]<span class="op">,</span></span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a>    ) <span class="op">-&gt;</span> <span class="dt">Result</span><span class="op">&lt;</span><span class="dt">Vec</span><span class="op">&lt;</span>TableProviderFilterPushDown<span class="op">&gt;&gt;</span> <span class="op">{</span></span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a>       <span class="pp">todo!</span>() </span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... other trait methods</span></span>
+<span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The <code>FlightTable</code> has two important methods:</p>
+<ol type="1">
+<li><code>scan</code>: Creates a <code>FlightExec</code> node that pulls data from storage</li>
+<li><code>supports_filters_pushdown</code>: Tells DataFusion which filters can be pushed down</li>
+</ol>
+<p>Let’s implement the <code>scan</code> method first:</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="unparse.jpg" class="img-fluid figure-img" style="width:60.0%"></p>
+<figcaption>FlightTable unparses filters, projections, and limits back to SQL and sends them to the storage server.</figcaption>
+</figure>
+</div>
+<div class="sourceCode" id="cb6"><pre class="sourceCode rust code-with-copy"><code class="sourceCode rust"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">async</span> <span class="kw">fn</span> scan(</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    <span class="op">&amp;</span><span class="kw">self</span><span class="op">,</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    _state<span class="op">:</span> <span class="op">&amp;</span><span class="kw">dyn</span> Session<span class="op">,</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    projection<span class="op">:</span> <span class="dt">Option</span><span class="op">&lt;&amp;</span><span class="dt">Vec</span><span class="op">&lt;</span><span class="dt">usize</span><span class="op">&gt;&gt;,</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>    filters<span class="op">:</span> <span class="op">&amp;</span>[Expr]<span class="op">,</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>    limit<span class="op">:</span> <span class="dt">Option</span><span class="op">&lt;</span><span class="dt">usize</span><span class="op">&gt;,</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>) <span class="op">-&gt;</span> <span class="dt">Result</span><span class="op">&lt;</span>Arc<span class="op">&lt;</span><span class="kw">dyn</span> ExecutionPlan<span class="op">&gt;&gt;</span> <span class="op">{</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">let</span> unparsed_sql <span class="op">=</span> <span class="op">{</span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>        <span class="co">// we don't care about actual source for the purpose of unparsing the sql.</span></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>        <span class="kw">let</span> empty_table_provider <span class="op">=</span> <span class="pp">empty::EmptyTable::</span>new(<span class="kw">self</span><span class="op">.</span>schema()<span class="op">.</span>clone())<span class="op">;</span></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>        <span class="kw">let</span> table_source <span class="op">=</span> <span class="pp">Arc::</span>new(<span class="pp">DefaultTableSource::</span>new(<span class="pp">Arc::</span>new(empty_table_provider)))<span class="op">;</span></span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>        <span class="kw">let</span> logical_plan <span class="op">=</span> TableScan <span class="op">{</span></span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>            table_name<span class="op">:</span> <span class="kw">self</span><span class="op">.</span>table_name<span class="op">.</span>clone()<span class="op">,</span></span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>            source<span class="op">:</span> table_source<span class="op">,</span></span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>            projection<span class="op">:</span> projection<span class="op">.</span>map(<span class="op">|</span>p<span class="op">|</span> p<span class="op">.</span>to_vec())<span class="op">,</span></span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>            filters<span class="op">:</span> filters<span class="op">.</span>to_vec()<span class="op">,</span></span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a>            fetch<span class="op">:</span> limit<span class="op">,</span></span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a>            projected_schema<span class="op">:</span> <span class="pp">Arc::</span>new(<span class="kw">self</span><span class="op">.</span>schema()<span class="op">.</span>as_ref()<span class="op">.</span>clone()<span class="op">.</span>to_dfschema()<span class="op">.</span>unwrap())<span class="op">,</span></span>
+<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a>        <span class="op">};</span></span>
+<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a>        <span class="kw">let</span> unparser <span class="op">=</span> <span class="pp">Unparser::</span>new(<span class="op">&amp;</span>PostgreSqlDialect <span class="op">{}</span>)<span class="op">;</span></span>
+<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a>        <span class="kw">let</span> unparsed_sql <span class="op">=</span> unparser</span>
+<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a>            <span class="op">.</span>plan_to_sql(<span class="op">&amp;</span><span class="pp">LogicalPlan::</span>TableScan(logical_plan))</span>
+<span id="cb6-24"><a href="#cb6-24" aria-hidden="true" tabindex="-1"></a>            <span class="op">.</span>unwrap()<span class="op">;</span></span>
+<span id="cb6-25"><a href="#cb6-25" aria-hidden="true" tabindex="-1"></a>        unparsed_sql<span class="op">.</span>to_string()</span>
+<span id="cb6-26"><a href="#cb6-26" aria-hidden="true" tabindex="-1"></a>    <span class="op">};</span></span>
+<span id="cb6-27"><a href="#cb6-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-28"><a href="#cb6-28" aria-hidden="true" tabindex="-1"></a>    <span class="pp">println!</span>(<span class="st">"SQL send to cache: </span><span class="sc">\n</span><span class="st">{}"</span><span class="op">,</span> unparsed_sql)<span class="op">;</span></span>
+<span id="cb6-29"><a href="#cb6-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-30"><a href="#cb6-30" aria-hidden="true" tabindex="-1"></a>    <span class="kw">let</span> <span class="kw">mut</span> client <span class="op">=</span> <span class="pp">FlightSqlServiceClient::</span>new(<span class="kw">self</span><span class="op">.</span>channel<span class="op">.</span>clone())<span class="op">;</span></span>
+<span id="cb6-31"><a href="#cb6-31" aria-hidden="true" tabindex="-1"></a>    <span class="kw">let</span> info <span class="op">=</span> client<span class="op">.</span>execute(unparsed_sql<span class="op">,</span> <span class="cn">None</span>)<span class="op">.</span><span class="kw">await</span><span class="op">.</span>unwrap()<span class="op">;</span></span>
+<span id="cb6-32"><a href="#cb6-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-33"><a href="#cb6-33" aria-hidden="true" tabindex="-1"></a>    <span class="cn">Ok</span>(<span class="pp">Arc::</span>new(<span class="pp">FlightExec::</span>try_new(</span>
+<span id="cb6-34"><a href="#cb6-34" aria-hidden="true" tabindex="-1"></a>        <span class="kw">self</span><span class="op">.</span>schema<span class="op">.</span>clone()<span class="op">,</span></span>
+<span id="cb6-35"><a href="#cb6-35" aria-hidden="true" tabindex="-1"></a>        info<span class="op">,</span></span>
+<span id="cb6-36"><a href="#cb6-36" aria-hidden="true" tabindex="-1"></a>        projection<span class="op">,</span></span>
+<span id="cb6-37"><a href="#cb6-37" aria-hidden="true" tabindex="-1"></a>        <span class="op">&amp;</span><span class="kw">self</span><span class="op">.</span>server<span class="op">,</span></span>
+<span id="cb6-38"><a href="#cb6-38" aria-hidden="true" tabindex="-1"></a>    )<span class="op">?</span>))</span>
+<span id="cb6-39"><a href="#cb6-39" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The magic happens in the unparsing step. We leverage DataFusion’s query planner to:</p>
+<ol type="1">
+<li>Create a logical plan containing the filters, projections, and limits</li>
+<li>Unparse this plan back to SQL using DataFusion’s unparser<a href="#fn7" class="footnote-ref" id="fnref7" role="doc-noteref"><sup>7</sup></a></li>
+<li>Send this SQL to the storage server for evaluation</li>
+<li>Create a FlightExec node that will stream data from storage</li>
+</ol>
+<div class="no-row-height column-margin column-container"><div id="fn7"><p><sup>7</sup>&nbsp;We can also send DataFusion’s physical plan (like <a href="https://github.com/apache/datafusion-ballista">Ballista</a>), or even <a href="https://substrait.io/">Substrait</a> to the storage server.</p></div></div><p>Next, let’s implement the filter pushdown support:</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode rust code-with-copy"><code class="sourceCode rust"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="kw">fn</span> supports_filters_pushdown(</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    <span class="op">&amp;</span><span class="kw">self</span><span class="op">,</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    filters<span class="op">:</span> <span class="op">&amp;</span>[<span class="op">&amp;</span>Expr]<span class="op">,</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>) <span class="op">-&gt;</span> <span class="dt">Result</span><span class="op">&lt;</span><span class="dt">Vec</span><span class="op">&lt;</span>TableProviderFilterPushDown<span class="op">&gt;&gt;</span> <span class="op">{</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">let</span> filter_push_down<span class="op">:</span> <span class="dt">Vec</span><span class="op">&lt;</span>TableProviderFilterPushDown<span class="op">&gt;</span> <span class="op">=</span> filters</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>        <span class="op">.</span>iter()</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>        <span class="op">.</span>map(</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>            <span class="op">|</span>f<span class="op">|</span> <span class="cf">match</span> <span class="pp">Unparser::</span>new(<span class="op">&amp;</span>PostgreSqlDialect <span class="op">{}</span>)<span class="op">.</span>expr_to_sql(f) <span class="op">{</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>                <span class="cn">Ok</span>(_) <span class="op">=&gt;</span> <span class="pp">TableProviderFilterPushDown::</span>Exact<span class="op">,</span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>                <span class="cn">Err</span>(_) <span class="op">=&gt;</span> <span class="pp">TableProviderFilterPushDown::</span>Unsupported<span class="op">,</span></span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>            <span class="op">},</span></span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>        )</span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>        <span class="op">.</span>collect()<span class="op">;</span></span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a>    <span class="cn">Ok</span>(filter_push_down)</span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Our rule is simple but effective: if a filter can be unparsed to SQL, we push it down to storage.</p>
+</section>
+<section id="implementing-flightexec" class="level3">
+<h3 class="anchored" data-anchor-id="implementing-flightexec">Implementing FlightExec</h3>
+<p>Now let’s implement <code>FlightExec</code>, which is responsible for streaming data from storage:</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode rust code-with-copy"><code class="sourceCode rust"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="kw">pub</span> <span class="kw">struct</span> FlightExec <span class="op">{</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>    server<span class="op">:</span> <span class="dt">String</span><span class="op">,</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    partitions<span class="op">:</span> Arc<span class="op">&lt;</span>[FlightPartition]<span class="op">&gt;,</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>    plan_properties<span class="op">:</span> PlanProperties<span class="op">,</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a><span class="kw">impl</span> ExecutionPlan <span class="cf">for</span> FlightExec <span class="op">{</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">fn</span> execute(</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>        <span class="op">&amp;</span><span class="kw">self</span><span class="op">,</span></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>        partition<span class="op">:</span> <span class="dt">usize</span><span class="op">,</span></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>        _context<span class="op">:</span> Arc<span class="op">&lt;</span>TaskContext<span class="op">&gt;,</span></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>    ) <span class="op">-&gt;</span> <span class="dt">Result</span><span class="op">&lt;</span>SendableRecordBatchStream<span class="op">&gt;</span> <span class="op">{</span></span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>        <span class="kw">let</span> future_stream <span class="op">=</span> flight_stream(<span class="kw">self</span><span class="op">.</span>partitions[partition]<span class="op">.</span>clone()<span class="op">,</span> <span class="kw">self</span><span class="op">.</span>schema())<span class="op">;</span></span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>        <span class="cn">Ok</span>(<span class="dt">Box</span><span class="pp">::</span>pin(FlightStream <span class="op">{</span></span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>            state<span class="op">:</span> <span class="pp">FlightStreamState::</span>Init<span class="op">,</span></span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>            future_stream<span class="op">:</span> <span class="cn">Some</span>(<span class="dt">Box</span><span class="pp">::</span>pin(future_stream))<span class="op">,</span></span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a>            schema<span class="op">:</span> <span class="kw">self</span><span class="op">.</span>schema()<span class="op">,</span></span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span>))</span>
+<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... other trait methods</span></span>
+<span id="cb8-22"><a href="#cb8-22" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p><code>FlightExec</code> is mainly a wrapper around <code>FlightStream</code>, which handles the async streaming of data from storage:</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode rust code-with-copy"><code class="sourceCode rust"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="kw">struct</span> FlightStream <span class="op">{</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>    state<span class="op">:</span> FlightStreamState<span class="op">,</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>    future_stream<span class="op">:</span> <span class="dt">Option</span><span class="op">&lt;</span>BoxFuture<span class="op">&lt;</span><span class="ot">'static</span><span class="op">,</span> <span class="dt">Result</span><span class="op">&lt;</span>SendableRecordBatchStream<span class="op">&gt;&gt;&gt;,</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>    schema<span class="op">:</span> SchemaRef<span class="op">,</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a><span class="kw">impl</span> Stream <span class="cf">for</span> FlightStream <span class="op">{</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">type</span> Item <span class="op">=</span> <span class="dt">Result</span><span class="op">&lt;</span>RecordBatch<span class="op">&gt;;</span></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">fn</span> poll_next(<span class="kw">mut</span> <span class="kw">self</span><span class="op">:</span> Pin<span class="op">&lt;&amp;</span><span class="kw">mut</span> <span class="dt">Self</span><span class="op">&gt;,</span> cx<span class="op">:</span> <span class="op">&amp;</span><span class="kw">mut</span> Context<span class="op">&lt;</span><span class="ot">'_</span><span class="op">&gt;</span>) <span class="op">-&gt;</span> Poll<span class="op">&lt;</span><span class="dt">Option</span><span class="op">&lt;</span><span class="dt">Self</span><span class="pp">::</span>Item<span class="op">&gt;&gt;</span> <span class="op">{</span></span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>        <span class="kw">let</span> result<span class="op">:</span> Poll<span class="op">&lt;</span><span class="dt">Option</span><span class="op">&lt;</span><span class="dt">Result</span><span class="op">&lt;</span>RecordBatch<span class="op">&gt;&gt;&gt;</span> <span class="op">=</span> <span class="cf">loop</span> <span class="op">{</span></span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>            <span class="cf">match</span> <span class="op">&amp;</span><span class="kw">mut</span> <span class="kw">self</span><span class="op">.</span>state <span class="op">{</span></span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>                <span class="pp">FlightStreamState::</span>Init <span class="op">=&gt;</span> <span class="op">{</span></span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>                    <span class="kw">self</span><span class="op">.</span>state <span class="op">=</span> <span class="pp">FlightStreamState::</span>GetStream(<span class="kw">self</span><span class="op">.</span>future_stream<span class="op">.</span>take()<span class="op">.</span>unwrap())<span class="op">;</span></span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a>                    <span class="cf">continue</span><span class="op">;</span></span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>                <span class="op">}</span></span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a>                <span class="pp">FlightStreamState::</span>GetStream(fut) <span class="op">=&gt;</span> <span class="op">{</span></span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a>                    <span class="kw">let</span> stream <span class="op">=</span> <span class="pp">ready!</span>(fut<span class="op">.</span>as_mut()<span class="op">.</span>poll(cx))<span class="op">.</span>unwrap()<span class="op">;</span></span>
+<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a>                    <span class="kw">self</span><span class="op">.</span>state <span class="op">=</span> <span class="pp">FlightStreamState::</span>Processing(stream)<span class="op">;</span></span>
+<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a>                    <span class="cf">continue</span><span class="op">;</span></span>
+<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a>                <span class="op">}</span></span>
+<span id="cb9-22"><a href="#cb9-22" aria-hidden="true" tabindex="-1"></a>                <span class="pp">FlightStreamState::</span>Processing(stream) <span class="op">=&gt;</span> <span class="op">{</span></span>
+<span id="cb9-23"><a href="#cb9-23" aria-hidden="true" tabindex="-1"></a>                    <span class="kw">let</span> result <span class="op">=</span> stream<span class="op">.</span>as_mut()<span class="op">.</span>poll_next(cx)<span class="op">;</span></span>
+<span id="cb9-24"><a href="#cb9-24" aria-hidden="true" tabindex="-1"></a>                    <span class="cf">break</span> result<span class="op">;</span></span>
+<span id="cb9-25"><a href="#cb9-25" aria-hidden="true" tabindex="-1"></a>                <span class="op">}</span></span>
+<span id="cb9-26"><a href="#cb9-26" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb9-27"><a href="#cb9-27" aria-hidden="true" tabindex="-1"></a>        <span class="op">};</span></span>
+<span id="cb9-28"><a href="#cb9-28" aria-hidden="true" tabindex="-1"></a>        <span class="cf">match</span> result <span class="op">{</span></span>
+<span id="cb9-29"><a href="#cb9-29" aria-hidden="true" tabindex="-1"></a>            <span class="pp">Poll::</span>Ready(<span class="cn">Some</span>(<span class="cn">Ok</span>(batch))) <span class="op">=&gt;</span> <span class="pp">Poll::</span>Ready(<span class="cn">Some</span>(<span class="cn">Ok</span>(batch)))<span class="op">,</span></span>
+<span id="cb9-30"><a href="#cb9-30" aria-hidden="true" tabindex="-1"></a>            <span class="pp">Poll::</span>Ready(<span class="cn">None</span>) <span class="op">=&gt;</span> <span class="pp">Poll::</span>Ready(<span class="cn">None</span>)<span class="op">,</span></span>
+<span id="cb9-31"><a href="#cb9-31" aria-hidden="true" tabindex="-1"></a>            <span class="pp">Poll::</span>Ready(<span class="cn">Some</span>(<span class="cn">Err</span>(e))) <span class="op">=&gt;</span> <span class="op">{</span></span>
+<span id="cb9-32"><a href="#cb9-32" aria-hidden="true" tabindex="-1"></a>                <span class="pp">panic!</span>(<span class="st">"Error reading flight stream: {}"</span><span class="op">,</span> e)<span class="op">;</span></span>
+<span id="cb9-33"><a href="#cb9-33" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb9-34"><a href="#cb9-34" aria-hidden="true" tabindex="-1"></a>            _ <span class="op">=&gt;</span> <span class="pp">Poll::</span>Pending<span class="op">,</span></span>
+<span id="cb9-35"><a href="#cb9-35" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb9-36"><a href="#cb9-36" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb9-37"><a href="#cb9-37" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The implementation is a bit complex due to Rust’s lack of native async iterators, requiring us to implement a state machine manually. However, the core concept is straightforward – it pulls data from storage and returns it as a stream.</p>
+</section>
+</section>
+<section id="putting-it-all-together" class="level2">
+<h2 class="anchored" data-anchor-id="putting-it-all-together">Putting It All Together</h2>
+<p>Now let’s assemble our components into a working system!</p>
+<section id="server-binary" class="level3">
+<h3 class="anchored" data-anchor-id="server-binary">Server Binary</h3>
+<p>The server binary is simple – it just starts a Flight service with our StorageServer:</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode rust code-with-copy"><code class="sourceCode rust"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="at">#[</span><span class="pp">tokio::</span>main<span class="at">]</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="kw">async</span> <span class="kw">fn</span> main() <span class="op">-&gt;</span> <span class="dt">Result</span><span class="op">&lt;</span>()<span class="op">,</span> <span class="dt">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="pp">std::error::</span><span class="bu">Error</span><span class="op">&gt;&gt;</span> <span class="op">{</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">let</span> addr <span class="op">=</span> <span class="st">"127.0.0.1:50051"</span><span class="op">.</span>parse()<span class="op">?;</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>    <span class="pp">Server::</span>builder()</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>        <span class="op">.</span>add_service(<span class="pp">FlightServiceServer::</span>new(<span class="pp">StorageServer::</span><span class="kw">default</span>()))</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>        <span class="op">.</span>serve(addr)</span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>        <span class="op">.</span><span class="kw">await</span><span class="op">?;</span></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>    <span class="cn">Ok</span>(())</span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+<section id="client-binary" class="level3">
+<h3 class="anchored" data-anchor-id="client-binary">Client Binary</h3>
+<p>The client binary configures DataFusion, registers our FlightTable, and runs the query:</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode rust code-with-copy"><code class="sourceCode rust"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="at">#[</span><span class="pp">tokio::</span>main<span class="at">]</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="kw">async</span> <span class="kw">fn</span> main() <span class="op">-&gt;</span> <span class="dt">Result</span><span class="op">&lt;</span>()<span class="op">,</span> <span class="dt">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="pp">std::error::</span><span class="bu">Error</span><span class="op">&gt;&gt;</span> <span class="op">{</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">let</span> <span class="kw">mut</span> session_config <span class="op">=</span> <span class="pp">SessionConfig::</span>from_env()<span class="op">?;</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>    session_config</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>        <span class="op">.</span>options_mut()</span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>        <span class="op">.</span>execution</span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>        <span class="op">.</span>parquet</span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>        <span class="op">.</span>pushdown_filters <span class="op">=</span> <span class="cn">true</span><span class="op">;</span></span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">let</span> ctx <span class="op">=</span> <span class="pp">Arc::</span>new(<span class="pp">SessionContext::</span>new_with_config(session_config))<span class="op">;</span></span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>    <span class="kw">let</span> cache_server <span class="op">=</span> <span class="st">"http://localhost:50051"</span><span class="op">;</span></span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a>    <span class="kw">let</span> table_name <span class="op">=</span> <span class="st">"aws-edge-locations"</span><span class="op">;</span></span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a>    <span class="kw">let</span> table_url <span class="op">=</span> <span class="st">"./aws-edge-locations.parquet"</span><span class="op">;</span></span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a>    <span class="kw">let</span> sql <span class="op">=</span> <span class="pp">format!</span>(</span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a>        <span class="st">"SELECT DISTINCT </span><span class="sc">\"</span><span class="st">city</span><span class="sc">\"</span><span class="st"> FROM </span><span class="sc">\"</span><span class="st">{table_name}</span><span class="sc">\"</span><span class="st"> WHERE </span><span class="sc">\"</span><span class="st">country</span><span class="sc">\"</span><span class="st"> = 'United States'"</span></span>
+<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a>    )<span class="op">;</span></span>
+<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a>    <span class="kw">let</span> table <span class="op">=</span> <span class="pp">FlightTable::</span>create(cache_server<span class="op">,</span> table_name<span class="op">,</span> table_url)<span class="op">.</span><span class="kw">await</span><span class="op">;</span></span>
+<span id="cb11-19"><a href="#cb11-19" aria-hidden="true" tabindex="-1"></a>    ctx<span class="op">.</span>register_table(table_name<span class="op">,</span> <span class="pp">Arc::</span>new(table))<span class="op">?;</span></span>
+<span id="cb11-20"><a href="#cb11-20" aria-hidden="true" tabindex="-1"></a>    ctx<span class="op">.</span>sql(<span class="op">&amp;</span>sql)<span class="op">.</span><span class="kw">await</span><span class="op">?.</span>show()<span class="op">.</span><span class="kw">await</span><span class="op">?;</span></span>
+<span id="cb11-21"><a href="#cb11-21" aria-hidden="true" tabindex="-1"></a>    <span class="cn">Ok</span>(())</span>
+<span id="cb11-22"><a href="#cb11-22" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+<section id="running-the-system" class="level3">
+<h3 class="anchored" data-anchor-id="running-the-system">Running the System</h3>
+<p>To run our S3-Select alternative:</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="ex">cargo</span> run <span class="at">--bin</span> server</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="ex">cargo</span> run <span class="at">--bin</span> client</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>You should see output like:</p>
+<pre><code>```bash
+SQL to run: 
+-------
+SELECT DISTINCT "city" FROM "aws-edge-locations" WHERE "country" = 'United States'
+-------
+
+SQL to pushdown: 
+-------
+SELECT "aws-edge-locations"."city" FROM "aws-edge-locations" WHERE ("aws-edge-locations"."country" = 'United States')
+-------
+
++----------------+
+| city           |
++----------------+
+| Boston         |
+| Chicago        |
+| Portland       |
+| New York       |
+| Newark         |
+| Detroit        |
+...</code></pre>
+<p>Notice that only the filter (<code>WHERE "country" = 'United States'</code>) was pushed down to storage, while the aggregation (<code>DISTINCT</code>) was evaluated by the compute node. This is exactly what we wanted!</p>
+</section>
+</section>
+<section id="whats-next-liquidcache" class="level2">
+<h2 class="anchored" data-anchor-id="whats-next-liquidcache">What’s Next: LiquidCache</h2>
+<p>Congratulations! You’ve built a working S3-Select alternative in just 400 lines of Rust. However, this blog post only scratches the surface of what’s possible with this architecture.</p>
+<p>To take this concept further, I’m excited to announce <a href="https://github.com/XiangpengHao/liquid-cache">LiquidCache</a> – a modern, open-source, push-down enabled storage system built on the same principles. LiquidCache extends what we’ve built here (to 15k loc) with advanced features like:</p>
+<ul>
+<li>Advanced caching strategies</li>
+<li>Advanced filter evaluation techniques</li>
+<li>Enhanced reliability and error handling</li>
+<li>Performance optimizations</li>
+</ul>
+<p>Check out our <a href="https://github.com/XiangpengHao/liquid-cache/blob/main/dev/doc/liquid-cache-vldb.pdf">research paper</a> for technical details and consider contributing to the project!</p>
+</section>
+<section id="conclusion" class="level2 page-columns page-full">
+<h2 class="anchored" data-anchor-id="conclusion">Conclusion</h2>
+<p>Building a functional S3-Select alternative is surprisingly simple once you leverage the right building blocks. The FDAP stack (Flight, DataFusion, Arrow, Parquet) provides powerful primitives that handle most of the heavy lifting for us.</p>
+<p>The real challenge – and fun – lies in understanding what these components do and how to thread them together effectively. As demonstrated by the imports alone, we’re standing on the shoulders of giants:</p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode rust code-with-copy"><code class="sourceCode rust"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> <span class="pp">arrow::</span><span class="op">{</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>    <span class="pp">array::</span>RecordBatch<span class="op">,</span></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>    <span class="pp">datatypes::</span><span class="op">{</span>SchemaRef<span class="op">,</span> ToByteSlice<span class="op">},</span></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a><span class="op">};</span></span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> <span class="pp">arrow_flight::</span><span class="op">{</span></span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>    FlightClient<span class="op">,</span> FlightEndpoint<span class="op">,</span> FlightInfo<span class="op">,</span> Ticket<span class="op">,</span></span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>    <span class="pp">flight_service_client::</span>FlightServiceClient<span class="op">,</span></span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>    <span class="pp">sql::</span><span class="op">{</span>CommandGetDbSchemas<span class="op">,</span> <span class="pp">client::</span>FlightSqlServiceClient<span class="op">},</span></span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a><span class="op">};</span></span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> <span class="pp">datafusion::</span><span class="op">{</span></span>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a>    <span class="pp">catalog::</span><span class="op">{</span>Session<span class="op">,</span> TableProvider<span class="op">},</span></span>
+<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a>    <span class="pp">common::</span><span class="op">{</span>ToDFSchema<span class="op">,</span> project_schema<span class="op">},</span></span>
+<span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a>    <span class="pp">datasource::</span><span class="op">{</span>DefaultTableSource<span class="op">,</span> TableType<span class="op">,</span> empty<span class="op">},</span></span>
+<span id="cb14-14"><a href="#cb14-14" aria-hidden="true" tabindex="-1"></a>    <span class="pp">error::</span><span class="op">{</span>DataFusionError<span class="op">,</span> <span class="dt">Result</span><span class="op">},</span></span>
+<span id="cb14-15"><a href="#cb14-15" aria-hidden="true" tabindex="-1"></a>    <span class="pp">execution::</span><span class="op">{</span>RecordBatchStream<span class="op">,</span> SendableRecordBatchStream<span class="op">,</span> TaskContext<span class="op">},</span></span>
+<span id="cb14-16"><a href="#cb14-16" aria-hidden="true" tabindex="-1"></a>    <span class="pp">logical_expr::</span><span class="op">{</span>LogicalPlan<span class="op">,</span> TableProviderFilterPushDown<span class="op">,</span> TableScan<span class="op">},</span></span>
+<span id="cb14-17"><a href="#cb14-17" aria-hidden="true" tabindex="-1"></a>    <span class="pp">physical_expr::</span>EquivalenceProperties<span class="op">,</span></span>
+<span id="cb14-18"><a href="#cb14-18" aria-hidden="true" tabindex="-1"></a>    <span class="pp">physical_plan::</span><span class="op">{</span></span>
+<span id="cb14-19"><a href="#cb14-19" aria-hidden="true" tabindex="-1"></a>        DisplayAs<span class="op">,</span> DisplayFormatType<span class="op">,</span> ExecutionPlan<span class="op">,</span> PlanProperties<span class="op">,</span></span>
+<span id="cb14-20"><a href="#cb14-20" aria-hidden="true" tabindex="-1"></a>        <span class="pp">execution_plan::</span><span class="op">{</span>Boundedness<span class="op">,</span> EmissionType<span class="op">},</span></span>
+<span id="cb14-21"><a href="#cb14-21" aria-hidden="true" tabindex="-1"></a>        <span class="pp">stream::</span>RecordBatchStreamAdapter<span class="op">,</span></span>
+<span id="cb14-22"><a href="#cb14-22" aria-hidden="true" tabindex="-1"></a>    <span class="op">},</span></span>
+<span id="cb14-23"><a href="#cb14-23" aria-hidden="true" tabindex="-1"></a>    <span class="pp">prelude::</span><span class="op">*,</span></span>
+<span id="cb14-24"><a href="#cb14-24" aria-hidden="true" tabindex="-1"></a>    <span class="pp">sql::</span><span class="op">{</span></span>
+<span id="cb14-25"><a href="#cb14-25" aria-hidden="true" tabindex="-1"></a>        TableReference<span class="op">,</span></span>
+<span id="cb14-26"><a href="#cb14-26" aria-hidden="true" tabindex="-1"></a>        <span class="pp">unparser::</span><span class="op">{</span>Unparser<span class="op">,</span> <span class="pp">dialect::</span>PostgreSqlDialect<span class="op">},</span></span>
+<span id="cb14-27"><a href="#cb14-27" aria-hidden="true" tabindex="-1"></a>    <span class="op">},</span></span>
+<span id="cb14-28"><a href="#cb14-28" aria-hidden="true" tabindex="-1"></a><span class="op">};</span></span>
+<span id="cb14-29"><a href="#cb14-29" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> <span class="pp">futures::</span><span class="op">{</span>Stream<span class="op">,</span> TryStreamExt<span class="op">,</span> <span class="pp">future::</span>BoxFuture<span class="op">};</span></span>
+<span id="cb14-30"><a href="#cb14-30" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> <span class="pp">std::task::</span><span class="op">{</span>Context<span class="op">,</span> Poll<span class="op">,</span> ready<span class="op">};</span></span>
+<span id="cb14-31"><a href="#cb14-31" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> <span class="pp">std::</span><span class="op">{</span><span class="pp">any::</span><span class="bu">Any</span><span class="op">,</span> <span class="pp">pin::</span>Pin<span class="op">,</span> <span class="pp">sync::</span>Arc<span class="op">};</span></span>
+<span id="cb14-32"><a href="#cb14-32" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> <span class="pp">tonic::</span><span class="op">{</span>async_trait<span class="op">,</span> <span class="pp">transport::</span>Channel<span class="op">};</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The power of open-source tools and open standards isn’t just a fallback — it’s a superior approach that liberates us from vendor lock-in and service discontinuations. We’ve demonstrated that not only can we rebuild essential services like S3-Select after their commercial versions are discontinued, but we can create more powerful<a href="#fn8" class="footnote-ref" id="fnref8" role="doc-noteref"><sup>8</sup></a>, customizable, and cost-effective alternatives.</p>
+
+
+<div class="no-row-height column-margin column-container"><div id="fn8"><p><sup>8</sup>&nbsp;Azure also has filter pushdown, but they <a href="https://learn.microsoft.com/en-us/azure/storage/blobs/data-lake-storage-query-acceleration-how-to?tabs=azure-powershell">don’t support Parquet files</a>.</p></div></div></section>
+
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const onCopySuccess = function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  }
+  const getTextToCopy = function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+    text: getTextToCopy
+  });
+  clipboard.on('success', onCopySuccess);
+  if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+    const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+      text: getTextToCopy,
+      container: window.document.getElementById('quarto-embedded-source-code-modal')
+    });
+    clipboardModal.on('success', onCopySuccess);
+  }
+    var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+    var mailtoRegex = new RegExp(/^mailto:/);
+      var filterRegex = new RegExp("https:\/\/blog\.xiangpeng\.systems");
+    var isInternal = (href) => {
+        return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+    }
+    // Inspect non-navigation links and adorn them if external
+ 	var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+    for (var i=0; i<links.length; i++) {
+      const link = links[i];
+      if (!isInternal(link.href)) {
+        // undo the damage that might have been done by quarto-nav.js in the case of
+        // links that we want to consider external
+        if (link.dataset.originalHref !== undefined) {
+          link.href = link.dataset.originalHref;
+        }
+      }
+    }
+  function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+    const config = {
+      allowHTML: true,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start',
+    };
+    if (contentFn) {
+      config.content = contentFn;
+    }
+    if (onTriggerFn) {
+      config.onTrigger = onTriggerFn;
+    }
+    if (onUntriggerFn) {
+      config.onUntrigger = onUntriggerFn;
+    }
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      if (note) {
+        return note.innerHTML;
+      } else {
+        return "";
+      }
+    });
+  }
+  const xrefs = window.document.querySelectorAll('a.quarto-xref');
+  const processXRef = (id, note) => {
+    // Strip column container classes
+    const stripColumnClz = (el) => {
+      el.classList.remove("page-full", "page-columns");
+      if (el.children) {
+        for (const child of el.children) {
+          stripColumnClz(child);
+        }
+      }
+    }
+    stripColumnClz(note)
+    if (id === null || id.startsWith('sec-')) {
+      // Special case sections, only their first couple elements
+      const container = document.createElement("div");
+      if (note.children && note.children.length > 2) {
+        container.appendChild(note.children[0].cloneNode(true));
+        for (let i = 1; i < note.children.length; i++) {
+          const child = note.children[i];
+          if (child.tagName === "P" && child.innerText === "") {
+            continue;
+          } else {
+            container.appendChild(child.cloneNode(true));
+            break;
+          }
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(container);
+        }
+        return container.innerHTML
+      } else {
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        return note.innerHTML;
+      }
+    } else {
+      // Remove any anchor links if they are present
+      const anchorLink = note.querySelector('a.anchorjs-link');
+      if (anchorLink) {
+        anchorLink.remove();
+      }
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(note);
+      }
+      if (note.classList.contains("callout")) {
+        return note.outerHTML;
+      } else {
+        return note.innerHTML;
+      }
+    }
+  }
+  for (var i=0; i<xrefs.length; i++) {
+    const xref = xrefs[i];
+    tippyHover(xref, undefined, function(instance) {
+      instance.disable();
+      let url = xref.getAttribute('href');
+      let hash = undefined; 
+      if (url.startsWith('#')) {
+        hash = url;
+      } else {
+        try { hash = new URL(url).hash; } catch {}
+      }
+      if (hash) {
+        const id = hash.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note !== null) {
+          try {
+            const html = processXRef(id, note.cloneNode(true));
+            instance.setContent(html);
+          } finally {
+            instance.enable();
+            instance.show();
+          }
+        } else {
+          // See if we can fetch this
+          fetch(url.split('#')[0])
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.getElementById(id);
+            if (note !== null) {
+              const html = processXRef(id, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      } else {
+        // See if we can fetch a full url (with no hash to target)
+        // This is a special case and we should probably do some content thinning / targeting
+        fetch(url)
+        .then(res => res.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const htmlDoc = parser.parseFromString(html, "text/html");
+          const note = htmlDoc.querySelector('main.content');
+          if (note !== null) {
+            // This should only happen for chapter cross references
+            // (since there is no id in the URL)
+            // remove the first header
+            if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+              note.children[0].remove();
+            }
+            const html = processXRef(null, note);
+            instance.setContent(html);
+          } 
+        }).finally(() => {
+          instance.enable();
+          instance.show();
+        });
+      }
+    }, function(instance) {
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            div.style.left = 0;
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+        // Handle positioning of the toggle
+    window.addEventListener(
+      "resize",
+      throttle(() => {
+        elRect = undefined;
+        if (selectedAnnoteEl) {
+          selectCodeLines(selectedAnnoteEl);
+        }
+      }, 10)
+    );
+    function throttle(fn, ms) {
+    let throttle = false;
+    let timer;
+      return (...args) => {
+        if(!throttle) { // first call gets through
+            fn.apply(this, args);
+            throttle = true;
+        } else { // all the others get throttled
+            if(timer) clearTimeout(timer); // cancel #2
+            timer = setTimeout(() => {
+              fn.apply(this, args);
+              timer = throttle = false;
+            }, ms);
+        }
+      };
+    }
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+<script src="https://giscus.app/client.js" data-repo="XiangpengHao/blog" data-repo-id="R_kgDOLz4gpg" data-category="General" data-category-id="DIC_kwDOLz4gps4CjzbT" data-mapping="title" data-reactions-enabled="1" data-emit-metadata="0" data-input-position="top" data-theme="light" data-lang="en" crossorigin="anonymous" async="">
+</script>
+<input type="hidden" id="giscus-base-theme" value="light">
+<input type="hidden" id="giscus-alt-theme" value="dark">
+</div> <!-- /content -->
+
+
+
+
+</body></html>

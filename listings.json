@@ -2,6 +2,7 @@
   {
     "listing": "/index.html",
     "items": [
+      "/posts/build-s3-select/index.html",
       "/posts/parquet-pushdown/index.html",
       "/posts/system-researchers/index.html",
       "/posts/parquet-viewer/index.html",
