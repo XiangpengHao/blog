@@ -2,50 +2,50 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://blog.xiangpeng.systems/posts/build-s3-select/index.html</loc>
-    <lastmod>2025-03-23T20:28:24.108Z</lastmod>
+    <lastmod>2025-03-23T20:28:43.291Z</lastmod>
   </url>
   <url>
     <loc>https://blog.xiangpeng.systems/posts/research-statement/index.html</loc>
-    <lastmod>2025-03-23T20:28:24.134Z</lastmod>
+    <lastmod>2025-03-23T20:28:43.317Z</lastmod>
   </url>
   <url>
     <loc>https://blog.xiangpeng.systems/posts/working-at-influxdata/index.html</loc>
-    <lastmod>2025-03-23T20:28:24.143Z</lastmod>
+    <lastmod>2025-03-23T20:28:43.326Z</lastmod>
   </url>
   <url>
     <loc>https://blog.xiangpeng.systems/posts/parquet-pushdown/index.html</loc>
-    <lastmod>2025-03-23T20:28:24.118Z</lastmod>
+    <lastmod>2025-03-23T20:28:43.300Z</lastmod>
   </url>
   <url>
     <loc>https://blog.xiangpeng.systems/posts/string-view-datafusion/index.html</loc>
-    <lastmod>2025-03-23T20:28:24.138Z</lastmod>
+    <lastmod>2025-03-23T20:28:43.321Z</lastmod>
   </url>
   <url>
     <loc>https://blog.xiangpeng.systems/posts/good-advisor/index.html</loc>
-    <lastmod>2025-03-23T20:28:24.116Z</lastmod>
+    <lastmod>2025-03-23T20:28:43.299Z</lastmod>
   </url>
   <url>
     <loc>https://blog.xiangpeng.systems/index.html</loc>
-    <lastmod>2025-03-23T20:28:24.108Z</lastmod>
+    <lastmod>2025-03-23T20:28:43.290Z</lastmod>
   </url>
   <url>
     <loc>https://blog.xiangpeng.systems/posts/caching-datafusion/index.html</loc>
-    <lastmod>2025-03-23T20:28:24.115Z</lastmod>
+    <lastmod>2025-03-23T20:28:43.297Z</lastmod>
   </url>
   <url>
     <loc>https://blog.xiangpeng.systems/posts/system-researchers/index.html</loc>
-    <lastmod>2025-03-23T20:28:24.143Z</lastmod>
+    <lastmod>2025-03-23T20:28:43.325Z</lastmod>
   </url>
   <url>
     <loc>https://blog.xiangpeng.systems/posts/parquet-viewer/index.html</loc>
-    <lastmod>2025-03-23T20:28:24.124Z</lastmod>
+    <lastmod>2025-03-23T20:28:43.307Z</lastmod>
   </url>
   <url>
     <loc>https://blog.xiangpeng.systems/posts/parquet-to-arrow/index.html</loc>
-    <lastmod>2025-03-23T20:28:24.123Z</lastmod>
+    <lastmod>2025-03-23T20:28:43.305Z</lastmod>
   </url>
   <url>
     <loc>https://blog.xiangpeng.systems/posts/sql-to-results/index.html</loc>
-    <lastmod>2025-03-23T20:28:24.137Z</lastmod>
+    <lastmod>2025-03-23T20:28:43.319Z</lastmod>
   </url>
 </urlset>
