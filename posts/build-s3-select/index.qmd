@@ -572,4 +572,4 @@ use tonic::{async_trait, transport::Channel};
 The power of open-source tools and open standards isn't just a fallback — it's a superior approach that liberates us from vendor lock-in and service discontinuations. 
 We've demonstrated that not only can we rebuild essential services like S3-Select after their commercial versions are discontinued, but we can create more powerful[^11], customizable, and cost-effective alternatives. 
 
-[^11]: Azure still has filter pushdown, but they [don't support Parquet files](https://learn.microsoft.com/en-us/azure/storage/blobs/data-lake-storage-query-acceleration-how-to?tabs=azure-powershell). 
+[^11]: Azure also has filter pushdown, but they [don't support Parquet files](https://learn.microsoft.com/en-us/azure/storage/blobs/data-lake-storage-query-acceleration-how-to?tabs=azure-powershell). 
