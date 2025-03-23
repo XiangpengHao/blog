@@ -4,6 +4,9 @@ date: "2025-03-23"
 categories: []
 description: "DataFusion is ALL YOU NEED"
 toc: true
+comments:
+  giscus: 
+    repo: XiangpengHao/blog
 format:
   html: 
     highlight-style: tango 
@@ -26,61 +29,62 @@ Your support for science is greatly appreciated!
 
 ## TL;DR
 
-[S3-Select](https://docs.aws.amazon.com/AmazonS3/latest/userguide/selecting-content-from-objects.html) allows you to filter S3 data before it is returned to you.
-This way, you save network bandwidth and time by not downloading the entire file.
+[S3-Select](https://docs.aws.amazon.com/AmazonS3/latest/userguide/selecting-content-from-objects.html) can filter S3 data before sending it back to you,
+significantly saving network bandwidth and time. Unfortunately, AWS killed this feature in 2024.
 
-However, AWS killed the feature in 2024.
-But you can build your own S3-Select with **all open-source tools and open standards**. 
+Good news: you can build your own S3-Select with **all open-source tools and open standards**! This blog post shows you how to do it in **400 lines of Rust**[^1] using the [FDAP stack](https://www.influxdata.com/glossary/fdap-stack/)[^2].
 
-This blog post guides you to build your own S3-Select in **400 lines of Rust**[^1] with [FDAP stack](https://www.influxdata.com/glossary/fdap-stack/).
-Code is available [here](https://github.com/XiangpengHao/build-your-own-s3-select).
+Complete code is available in [this repository](https://github.com/XiangpengHao/build-your-own-s3-select).
 
-::: {.column-margin}
-FDAP: Apache Arrow **F**light, Apache **D**ataFusion, Apache **A**rrow, Apache **P**arquet
-:::
+[^1]: Without blank lines and comments.
+
+[^2]: FDAP: Apache Arrow **F**light, Apache **D**ataFusion, Apache **A**rrow, Apache **P**arquet
 
 ![Comparing S3 (left) with S3-Select (right). S3-Select evaluates the filter before returning the data to you, saving network bandwidth.](s3-select.jpg)
 
 ## Architecture
 
+As we can't change S3, we assume that the data is stored in our own storage system (often as a cache to S3).
+
+Our architecture consists of three main components: a storage server, a compute client, and the Arrow Flight protocol connecting them.
+
 ![The compute server is a full-fledged DataFusion server that evaluates user queries. The storage server contains Parquet files and also embeds a DataFusion instance for filter evaluation. The compute and storage communicate with each other via Arrow Flight.](arch.jpg)
 
-Figure above shows the overall architecture, with a storage server, a compute client, and the Arrow Flight protocol in the middle.
 
 ### Compute
-The compute (client) is a full-fledged DataFusion node that is responsible for evaluating user queries.
-Unlike S3-Select, which requires the user to manually craft the filter expression in SQL, our compute node will **automatically** push down the filter expression down to the storage server. 
-
+The compute (client) is a full-fledged DataFusion node that **automatically** pushes down filter expressions to the storage server. Unlike S3-Select which requires manual SQL filter crafting, our system automatically decides what can be evaluated at the storage layer, while handling complex operations (joins, aggregations) in the compute node.
 
 ### Storage
-The storage (server) is responsible for storing Parquet files and evaluating filters.
-Again, we use DataFusion to handle efficient filter evaluation, this includes: [efficiently reading Parquet data](../parquet-pushdown/index.qmd), evaluating filters with multi threads, and sending the data back to the compute node in a streaming fashion.
+The storage (server) stores Parquet[^8] files and evaluates the filters pushed down from the compute node. We leverage DataFusion's [highly optimized](https://datafusion.apache.org/blog/2024/11/18/datafusion-fastest-single-node-parquet-clickbench/) query engine for filter evaluation, which includes [efficient Parquet reading with filter pushdown](../parquet-pushdown/index.qmd), parallel filter evaluation across multiple threads, and streaming filtered results back to the compute node.
 
-<!-- DataFusion is one of the [top-performers](https://datafusion.apache.org/blog/2024/11/18/datafusion-fastest-single-node-parquet-clickbench/) in reading Parquet files. -->
+[^8]: Parquet is the industry standard columnar storage format. CSV/JSON/etc. are also easily supported, but you should really consider using a real format like Parquet.
 
 ### Communication
-The compute and storage communicate with each other via Arrow Flight protocol, a high-performance, open-standard protocol for efficient data exchange.
-Our communication is based on open standards, so that any system that speaks Arrow Flight can read data from our storage.
-Unlike S3-Select which transmits data in CSV format, the data over network remains columnar, so that the compute node can directly operate on it without heavy deserialization.
+Communication between compute and storage happens via the Arrow Flight protocol -- a high-performance, open-standard protocol for efficient data exchange. Unlike S3-Select which transmits data in CSV format, we keep data in columnar format throughout the entire pipeline. 
+This means the compute node can directly operate on the data without heavy deserialization, and any system that speaks Arrow Flight can read from our storage.
 
 ## Life of a query 
-![The life of a query. The compute node pushes down the filter expression to the storage node. The storage node evaluates the filter and sends the data back to the compute node. The compute node evaluates the rest of the query and sends the result back to the user.](life-of-a-query.jpg){width=50%}
+Let's walk through how a query flows through our system:
 
-Figure above shows the life of a query:
+![The life of a query. The compute node pushes down the filter expression to the storage node. The storage node evaluates the filter and sends the data back to the compute node. The compute node evaluates the rest of the query and sends the result back to the user.](life-of-a-query.jpg){width=60%}
 
-- On receiving a query from users, the compute node first resolves the table schema from the storage node via Arrow Flight.
-- Then, the compute generates a query plan and decides which parts of the query should be evaluated locally, and which parts should be pushed down to the storage node.
-- Then the compute node sends the query that needs to be evaluated on the storage node.
-- The storage node evaluates the filter and sends the data back to the compute node.
-- The compute node evaluates the rest of the query (often the computation heavy part, like aggregations and joins) and sends the result back to the user.
+1. **Schema Resolution**: When a user submits a query, the compute node first resolves the table schema from the storage node via Arrow Flight.
 
-The goal is that only filters are pushed down to the storage node, while the computation heavy parts are evaluated on the compute node.
-This avoids overloading the processing power of the storage node.
+2. **Query Planning**: The compute node generates a query plan and decides which parts should be evaluated locally versus pushed down to the storage node.
 
-## Implement Storage Server
-Now we have all the theoretical background, let's implement the server.
+3. **Filter Pushdown**: The compute node sends filter predicates to the storage node for evaluation close to the data.
 
-The storage server is defined as follows:
+4. **Filter Evaluation**: The storage node evaluates these filters and streams only the matching data back to the compute node.
+
+5. **Final Processing**: The compute node handles the computation-heavy parts (aggregations, joins, etc.) and returns the final result to the user.
+
+Note that only filters are pushed down to the storage node, computation-heavy operations happen at the compute layer. This prevents overloading the storage node's processing capabilities while reducing network traffic.
+
+## Implementing the Storage Server
+Now that we understand the architecture, let's build the storage server. Surprisingly, we can implement it in less than 100 lines of code thanks to DataFusion!
+
+Our storage server is defined as:
+
 ```rust
 struct StorageServer {
     execution_plans: Mutex<HashMap<u64, Arc<dyn ExecutionPlan>>>,
@@ -89,16 +93,15 @@ struct StorageServer {
 }
 ```
 
-- The `execution_plans` is a map from query id to the execution plan.
-- The `next_id` is a counter for generating unique query ids, production servers should use a more robust mechanism like [uuid](https://docs.rs/uuid/latest/uuid/index.html).
-- The `ctx` is the DataFusion session context. For simplicity, we use a single context for all queries. 
+Let's break down what each field does:
 
-The `StorageServer` implements the `FlightSqlService` trait, which is the core trait for being a Flight SQL server.
-In particular, it has three important methods:
+- `execution_plans`: Maps query IDs to their execution plans
+- `next_id`: Generates unique query IDs[^9]
+- `ctx`: The DataFusion session context (we use a single context for all queries for simplicity)
 
-- `get_flight_info_schemas` returns the schema of the table (step 1-2).
-- `get_flight_info_statement` returns the exact execution plan for each thread (step 3-4).
-- `do_get_fallback` is the method that actually gets the data from the storage (step 5-6).
+The `StorageServer` implements the `FlightSqlService` trait with three key methods:
+
+[^9]: In production, you should use a proper unique ID generator like [uuid](https://docs.rs/uuid/latest/uuid/index.html).
 
 ```rust
 #[tonic::async_trait]
@@ -131,10 +134,11 @@ impl FlightSqlService for StorageServer {
     }
 }
 ```
-### Implement get schema 
 
-The `get_flight_info_schemas` method passes in a `CommandGetDbSchemas` object, which stores the table name and url.
-We first register the table in the DataFusion context, and then return the schema back to the compute node.
+Let's implement each method one by one.
+
+### 1. Schema Resolution
+First, we need to implement `get_flight_info_schemas` to handle schema retrieval:
 
 ```rust
 async fn get_flight_info_schemas(
@@ -154,14 +158,14 @@ async fn get_flight_info_schemas(
 }
 ```
 
-### Implement plan generation
+This method:
 
-The `get_flight_info_statement` method passes in a `CommandStatementQuery` object, which stores the query string:
+1. Registers the Parquet file with DataFusion
+2. Gets the schema from the registered table
+3. Returns the schema as a FlightInfo response
 
-- We first parse the SQL into a logical plan, and then optimize it into a physical plan.
-- Then we save the physical plan by its id, so that the future pull requests can use this id to get the plan. 
-- The physical plan is partitioned so we need to tell the compute to pull each of the partition correspondingly. 
-- Finally, we return the partition info and the query id back to the compute node.
+### 2. Query Planning
+Next, we implement `get_flight_info_statement` to handle query planning:
 
 ```rust
 async fn get_flight_info_statement(
@@ -195,12 +199,14 @@ async fn get_flight_info_statement(
 }
 ```
 
-### Implement streaming data 
+This method:
 
-The `do_get_fallback` method is the core method that actually gets the data from the storage, it passes in the query id and partition id, and returns a stream of data.
+1. Parses the SQL into a logical plan
+2. Optimizes the logical plan and converts it to a physical plan
+3. Returns partition info and query ID to the compute node
 
-- It first gets the physical plan from the `execution_plans` map.
-- Then it executes the physical plan on the given partition, and returns the result as a stream.
+### 3. Data Streaming
+Finally, we implement `do_get_fallback` to handle data streaming:
 
 ```rust
 async fn do_get_fallback(
@@ -222,33 +228,36 @@ async fn do_get_fallback(
 }
 ```
 
-Surprisingly, that is the all we need to implement the storage server[^2], less than 100 lines of code!
+This method:
 
+1. Retrieves the physical plan for that query
+2. Executes the plan on the specified partition
+3. Returns the stream to the compute node
 
-## Implement Compute node 
+That's it for the storage server! Just these three methods are enough to implement the core functionality[^4].
 
-The client has a little more work to do:
+[^4]: Of course, a production server needs way more: error handling, logging, authentication, etc. But these concerns are orthogonal to our core implementation.
 
-1. It has to communicate the storage server to get the data (`FlightExec`).
+## Implementing the Compute Node
+The compute node has more work to do, as it needs to:
 
-2. It has to work with the rest of the query plan to produce the final result (`FlightExec`).
+1. Communicate with the storage server to get data
+2. Decide which parts of the query to send to storage
+3. Process the filtered data to produce the final result
 
-3. It has to decide which parts of the query should be sent to the storage server (`FlightTable`).
+We'll implement this through two main components:
 
-Here's a diagram showing the relationship between the `FlightTable` and the `FlightExec`:
-The `FlightExec` is a [`ExecutionPlan`](https://docs.rs/datafusion/latest/datafusion/physical_plan/trait.ExecutionPlan.html) node created by `FlightTable`, which is a [`TableProvider` in DataFusion](https://docs.rs/datafusion/latest/datafusion/catalog/trait.TableProvider.html).
+1. `FlightTable`: Decides what gets pushed down to storage
+2. `FlightExec`: Handles the data streaming from storage
 
-![An example query plan of our system. The `ParquetExec` and the `FilterExec` [^3] are executed on the storage server, while the rest of the plan is executed on the compute node. The two query plans are connected via the `FlightExec` node, which is created by `FlightTable`](query-plan.jpg)
+Here's how they fit together in the query plan:
 
+![An example query plan showing how FlightTable and FlightExec connect. The ParquetExec and FilterExec[^3] are executed on the storage server, while the rest of the plan runs on the compute node. The two plans are connected via the FlightExec node.](query-plan.jpg)
 
-[^3]: Strictly speaking, the `FilterExec` is merged into the `ParquetExec` in the storage server when [filter pushdown](../parquet-pushdown/index.qmd) is enabled.
+[^3]: Strictly speaking, when [filter pushdown](../parquet-pushdown/index.qmd) is enabled, the FilterExec is merged into ParquetExec in the storage server.
 
-### Implement `FlightTable`
-
-`FlightTable` implements `TableProvider`, which has two notable methods:
-
-- `scan` is the method that creates the `FlightExec` node. In this method, we need to send the pushdown filters to remote storage server, and create a `FlightExec` node that can pull data from the storage server.
-- `supports_filters_pushdown` is the method that decides what filters can be pushed down to the storage server. 
+### Implementing FlightTable
+Let's start with `FlightTable`, which implements DataFusion's `TableProvider` trait:
 
 ```rust
 pub struct FlightTable {
@@ -281,16 +290,14 @@ impl TableProvider for FlightTable {
 }
 ```
 
-Figure below shows the important steps in the `scan` method:
+The `FlightTable` has two important methods:
 
-1. Unparses the filters/projections/limit expressions back to SQL and sends it to the storage server for evaluation.
-2. Creates the `FlightExec` node that can pull data from the storage server.
+1. `scan`: Creates a `FlightExec` node that pulls data from storage
+2. `supports_filters_pushdown`: Tells DataFusion which filters can be pushed down
 
-![FlightTable unparses the filters/projections/limit back to SQL and sends it to the storage server for evaluation.](unparse.jpg){width=60%}
+Let's implement the `scan` method first:
 
-Here we leverage the fact that DataFusion query planner is able to rewrite and pushdown the filters/projections/limit expressions down to data scanning nodes.
-We then uses DataFusion's `unparser` to convert these expressions back to SQL. 
-While this sounds quite complex, DataFusion already does the heavy lifting for us.
+![FlightTable unparses filters, projections, and limits back to SQL and sends them to the storage server.](unparse.jpg){width=60%}
 
 ```rust
 async fn scan(
@@ -334,8 +341,17 @@ async fn scan(
 }
 ```
 
-In order for the query plan to pushdown the filters, we need to tell DataFusion whether the filters can be pushed down to the storage server.
-Our rule is quite simple: if the filter can be unparsed to SQL, we say it can be pushed down.
+The magic happens in the unparsing step. We leverage DataFusion's query planner to:
+
+1. Create a logical plan containing the filters, projections, and limits
+2. Unparse this plan back to SQL using DataFusion's unparser[^10]
+3. Send this SQL to the storage server for evaluation
+4. Create a FlightExec node that will stream data from storage
+
+[^10]: We can also send DataFusion's physical plan (like [Ballista](https://github.com/apache/datafusion-ballista)), or even [Substrait](https://substrait.io/) to the storage server.
+
+Next, let's implement the filter pushdown support:
+
 ```rust
 fn supports_filters_pushdown(
 	&self,
@@ -354,10 +370,11 @@ fn supports_filters_pushdown(
 }
 ```
 
-### Implement `FlightExec`
-`FlightExec` is a [`ExecutionPlan`](https://docs.rs/datafusion/latest/datafusion/physical_plan/trait.ExecutionPlan.html) node that can pull data from the storage server.
+Our rule is simple but effective: if a filter can be unparsed to SQL, we push it down to storage.
 
-It in fact is a wrapper around the `FlightStream` that will generate async stream of data.
+### Implementing FlightExec
+Now let's implement `FlightExec`, which is responsible for streaming data from storage:
+
 ```rust
 pub struct FlightExec {
     server: String,
@@ -383,8 +400,7 @@ impl ExecutionPlan for FlightExec {
 }
 ```
 
-`FlightStream` is straightforward, it just uses the `arrow-flight`'s primitives to pull data from the storage server and returns it as a stream.
-The exact implementation is quite ugly now, as Rust [doesn't support async iterators yet](https://github.com/rust-lang/rust/issues/79024), which means we need to manually implement the stream state machine.
+`FlightExec` is mainly a wrapper around `FlightStream`, which handles the async streaming of data from storage:
 
 ```rust
 struct FlightStream {
@@ -426,14 +442,14 @@ impl Stream for FlightStream {
 }
 ```
 
-That's it! We have implemented the necessary components for the client to work with the storage server.
+The implementation is a bit complex due to Rust's lack of native async iterators, requiring us to implement a state machine manually. However, the core concept is straightforward -- it pulls data from storage and returns it as a stream.
 
+## Putting It All Together
+Now let's assemble our components into a working system!
 
-## Putting it all together
-Now we have the server and client, let's put it all together into two binaries.
+### Server Binary
+The server binary is simple -- it just starts a Flight service with our StorageServer:
 
-### Server
-The server is quite simple, it just needs to start a `FlightService` server and register the address of the storage server.
 ```rust
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -446,8 +462,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-### Client
-The client is also straightforward, it enables filter pushdown, registers the table, and run the query.
+### Client Binary
+The client binary configures DataFusion, registers our FlightTable, and runs the query:
+
 ```rust
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -472,14 +489,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 ```
-### Run
+
+### Running the System
+To run our S3-Select alternative:
 
 ```bash
 cargo run --bin server
 cargo run --bin client
 ```
 
-On the client side, you should see the following output:
+You should see output like:
 
 ```	
 SQL send to cache: 
@@ -496,28 +515,24 @@ SELECT "aws-edge-locations"."city" FROM "aws-edge-locations" WHERE ("aws-edge-lo
 ...
 ```
 
-Note that only the filter is pushed down, and the aggregation is evaluated on the client side.
+Notice that only the filter (`WHERE "country" = 'United States'`) was pushed down to storage, while the aggregation (`DISTINCT`) was evaluated by the compute node. This is exactly what we wanted!
 
-Congratulations! You have just built your own S3-Select in just 400 lines of Rust!
+## What's Next: LiquidCache
+Congratulations! You've built a working S3-Select alternative in just 400 lines of Rust. However, this blog post only scratches the surface of what's possible with this architecture.
 
+To take this concept further, I'm excited to announce [LiquidCache](https://github.com/XiangpengHao/liquid-cache)--a modern, open-source, push-down enabled storage system built on the same principles. LiquidCache extends what we've built here with advanced features like:
 
-## What's next: LiquidCache
-Thank you for reading this far! Hopefully by now you have a solid understanding of how to build a push-down enabled storage server.
+- Advanced caching strategies
+- Advanced filter evaluation techniques
+- Enhanced reliability and error handling
+- Performance optimizations
 
-As you may have notices, this blog post really only scratches the surface of what is possible, we still have a long way to go to build a practical production-ready S3-Select alternative.
-
-Therefore, I am excited to announce the project [LiquidCache](https://github.com/XiangpengHao/liquid-cache), a modern, open-source, open-standards, push-down enabled storage system.
-LiquidCache builds on the same foundation as this blog post, but adds many more features (checkout our [paper](https://github.com/XiangpengHao/liquid-cache/blob/main/dev/doc/liquid-cache-vldb.pdf) for more details).
-
-This blog post is the open invitation to you to join me in building LiquidCache!
-Feel free to try it out and give any feedback you have!
-
+Check out our [research paper](https://github.com/XiangpengHao/liquid-cache/blob/main/dev/doc/liquid-cache-vldb.pdf) for technical details and consider contributing to the project!
 
 ## Conclusion
-Hope you agree that building a S3-Select is quite simple once we find the right building blocks.
+Building a functional S3-Select alternative is surprisingly simple once you leverage the right building blocks. The FDAP stack (Flight, DataFusion, Arrow, Parquet) provides powerful primitives that handle most of the heavy lifting for us.
 
-However, the challenging and fun part is to find out what this block does that, and to thread all the pieces together to make it work.
-As the last piece of the code snippet, here's the include list of the `client.rs` file, we have 30+ lines of code just to import what FDAP stack has to offer!
+The real challenge -- and fun -- lies in understanding what these components do and how to thread them together effectively. As demonstrated by the imports alone, we're standing on the shoulders of giants:
 
 ```rust
 use arrow::{
@@ -554,9 +569,7 @@ use std::{any::Any, pin::Pin, sync::Arc};
 use tonic::{async_trait, transport::Channel};
 ```
 
+The power of open-source tools and open standards isn't just a fallback — it's a superior approach that liberates us from vendor lock-in and service discontinuations. 
+We've demonstrated that not only can we rebuild essential services like S3-Select after their commercial versions are discontinued, but we can create more powerful[^11], customizable, and cost-effective alternatives. 
 
-
-[^1]: Without blank lines and comments.
-[^2]: Of course, a production server needs way more than that: error handling, logging, authentication, etc. But they are orthogonal to what we are doing here.
-
-
+[^11]: Azure still has filter pushdown, but they [don't support Parquet files](https://learn.microsoft.com/en-us/azure/storage/blobs/data-lake-storage-query-acceleration-how-to?tabs=azure-powershell). 
