@@ -35,6 +35,7 @@ significantly saving network bandwidth and time. Unfortunately, AWS killed this 
 Good news: you can build your own S3-Select with **all open-source tools and open standards**! This blog post shows you how to do it in **400 lines of Rust**[^1] using the [FDAP stack](https://www.influxdata.com/glossary/fdap-stack/)[^2].
 
 Complete code is available in [this repository](https://github.com/XiangpengHao/build-your-own-s3-select).
+
 Looking for a more complete solution? Check out [**LiquidCache**](https://github.com/XiangpengHao/liquid-cache), a open-source/open-standard, push-down enabled storage system built on the same principles.
 
 [^1]: Without blank lines and comments.
