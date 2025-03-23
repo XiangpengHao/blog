@@ -11,7 +11,7 @@
     "href": "posts/build-s3-select/index.html#tldr",
     "title": "Build your own S3-Select in 400 lines of Rust",
     "section": "TL;DR",
-    "text": "TL;DR\nS3-Select can filter S3 data before sending it back to you, significantly saving network bandwidth and time. Unfortunately, AWS killed this feature in 2024.\nGood news: you can build your own S3-Select with all open-source tools and open standards! This blog post shows you how to do it in 400 lines of Rust1 using the FDAP stack2.\n1 Without blank lines and comments.2 FDAP: Apache Arrow Flight, Apache DataFusion, Apache Arrow, Apache ParquetComplete code is available in this repository.\n\n\n\nComparing S3 (left) with S3-Select (right). S3-Select evaluates the filter before returning the data to you, saving network bandwidth."
+    "text": "TL;DR\nS3-Select can filter S3 data before sending it back to you, significantly saving network bandwidth and time. Unfortunately, AWS killed this feature in 2024.\nGood news: you can build your own S3-Select with all open-source tools and open standards! This blog post shows you how to do it in 400 lines of Rust1 using the FDAP stack2.\n1 Without blank lines and comments.2 FDAP: Apache Arrow Flight, Apache DataFusion, Apache Arrow, Apache ParquetComplete code is available in this repository. Looking for a more complete solution? Check out LiquidCache, a open-source/open-standard, push-down enabled storage system built on the same principles.\n\n\n\nComparing S3 (left) with S3-Select (right). S3-Select evaluates the filter before returning the data to you, saving network bandwidth."
   },
   {
     "objectID": "posts/build-s3-select/index.html#architecture",
