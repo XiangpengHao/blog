@@ -501,17 +501,26 @@ cargo run --bin client
 You should see output like:
 
 ```	
-SQL send to cache: 
+```bash
+SQL to run: 
+-------
+SELECT DISTINCT "city" FROM "aws-edge-locations" WHERE "country" = 'United States'
+-------
+
+SQL to pushdown: 
+-------
 SELECT "aws-edge-locations"."city" FROM "aws-edge-locations" WHERE ("aws-edge-locations"."country" = 'United States')
+-------
+
 +----------------+
 | city           |
 +----------------+
+| Boston         |
+| Chicago        |
+| Portland       |
 | New York       |
 | Newark         |
-| Miami          |
-| Philadelphia   |
-| Denver         |
-| Houston        |
+| Detroit        |
 ...
 ```
 
@@ -520,7 +529,7 @@ Notice that only the filter (`WHERE "country" = 'United States'`) was pushed dow
 ## What's Next: LiquidCache
 Congratulations! You've built a working S3-Select alternative in just 400 lines of Rust. However, this blog post only scratches the surface of what's possible with this architecture.
 
-To take this concept further, I'm excited to announce [LiquidCache](https://github.com/XiangpengHao/liquid-cache)--a modern, open-source, push-down enabled storage system built on the same principles. LiquidCache extends what we've built here with advanced features like:
+To take this concept further, I'm excited to announce [LiquidCache](https://github.com/XiangpengHao/liquid-cache) -- a modern, open-source, push-down enabled storage system built on the same principles. LiquidCache extends what we've built here (to 15k loc) with advanced features like:
 
 - Advanced caching strategies
 - Advanced filter evaluation techniques
