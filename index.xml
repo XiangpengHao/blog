@@ -71,7 +71,7 @@ Acknowledgement
 <div class="no-row-height column-margin column-container"><div id="fn3"><p><sup>3</sup>&nbsp;Parquet is the industry standard columnar storage format. CSV/JSON/etc. are also easily supported, but you should really consider using a real format like Parquet.</p></div></div></section>
 <section id="communication" class="level3">
 <h3 class="anchored" data-anchor-id="communication">Communication</h3>
-<p>Communication between compute and storage happens via the Arrow Flight protocol – a high-performance, open-standard protocol for efficient data exchange. Unlike S3-Select which transmits data in CSV format, we keep data in columnar format throughout the entire pipeline. This means the compute node can directly operate on the data without heavy deserialization, and any system that speaks Arrow Flight can read from our storage.</p>
+<p>Communication between compute and storage happens via the Arrow Flight protocol – a high-performance, open-standard protocol for efficient data exchange. Unlike S3-Select which transmits data in CSV/JSON format, we keep data in columnar format throughout the entire pipeline. This means the compute node can directly operate on the data without heavy deserialization, and any system that speaks Arrow Flight can read from our storage.</p>
 </section>
 </section>
 <section id="life-of-a-query" class="level2">
@@ -1535,14 +1535,14 @@ font-style: inherit;">?</span>))</span>
 <span id="cb6-39"><span class="op" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">}</span></span></code></pre></div>
-<p>The magic happens in the unparsing step. We leverage DataFusion’s query planner to:</p>
-<ol type="1">
+<p>The magic happens in the unparsing step<sup>7</sup>. We leverage DataFusion’s query planner to:</p>
+<div class="no-row-height column-margin column-container"><div id="fn7"><p><sup>7</sup>&nbsp;We can also send DataFusion’s physical plan (like <a href="https://github.com/apache/datafusion-ballista">Ballista</a>), or even <a href="https://substrait.io/">Substrait</a> to the storage server.</p></div></div><ol type="1">
 <li>Create a logical plan containing the filters, projections, and limits</li>
-<li>Unparse this plan back to SQL using DataFusion’s unparser<sup>7</sup></li>
+<li>Unparse this plan back to SQL using DataFusion’s unparser</li>
 <li>Send this SQL to the storage server for evaluation</li>
 <li>Create a FlightExec node that will stream data from storage</li>
 </ol>
-<div class="no-row-height column-margin column-container"><div id="fn7"><p><sup>7</sup>&nbsp;We can also send DataFusion’s physical plan (like <a href="https://github.com/apache/datafusion-ballista">Ballista</a>), or even <a href="https://substrait.io/">Substrait</a> to the storage server.</p></div></div><p>Next, let’s implement the filter pushdown support:</p>
+<p>Next, let’s implement the filter pushdown support:</p>
 <div class="sourceCode" id="cb7" style="background: #f1f3f5;"><pre class="sourceCode rust code-with-copy"><code class="sourceCode rust"><span id="cb7-1"><span class="kw" style="color: #003B4F;
 background-color: null;
 font-weight: bold;
