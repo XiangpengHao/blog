@@ -63,7 +63,7 @@ The storage (server) stores Parquet[^8] files and evaluates the filters pushed d
 [^8]: Parquet is the industry standard columnar storage format. CSV/JSON/etc. are also easily supported, but you should really consider using a real format like Parquet.
 
 ### Communication
-Communication between compute and storage happens via the Arrow Flight protocol -- a high-performance, open-standard protocol for efficient data exchange. Unlike S3-Select which transmits data in CSV format, we keep data in columnar format throughout the entire pipeline. 
+Communication between compute and storage happens via the Arrow Flight protocol -- a high-performance, open-standard protocol for efficient data exchange. Unlike S3-Select which transmits data in CSV/JSON format, we keep data in columnar format throughout the entire pipeline. 
 This means the compute node can directly operate on the data without heavy deserialization, and any system that speaks Arrow Flight can read from our storage.
 
 ## Life of a query 
@@ -344,10 +344,10 @@ async fn scan(
 }
 ```
 
-The magic happens in the unparsing step. We leverage DataFusion's query planner to:
+The magic happens in the unparsing step[^10]. We leverage DataFusion's query planner to:
 
 1. Create a logical plan containing the filters, projections, and limits
-2. Unparse this plan back to SQL using DataFusion's unparser[^10]
+2. Unparse this plan back to SQL using DataFusion's unparser
 3. Send this SQL to the storage server for evaluation
 4. Create a FlightExec node that will stream data from storage
 
