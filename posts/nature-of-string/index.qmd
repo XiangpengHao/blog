@@ -1,0 +1,56 @@
+---
+title: "On the Nature of Strings"
+date: "2025-08-13"
+date-modified: "2025-08-13"
+description: "Strings are the most important data type in analytics, and we need to take them seriously."
+categories: []
+toc: true
+---
+
+::: {.callout-warning appearance="simple" icon=false}
+
+## Acknowledgments
+
+This work was supported by [funding](https://xiangpeng.systems/fund/) from:
+
+1.  [InfluxData](https://influxdata.com), [Bauplan](https://www.bauplanlabs.com), and [SpiralDB](https://spiraldb.com).
+
+2.  The taxpayers of the State of Wisconsin and the federal government.
+
+Your support for science is greatly appreciated!
+:::
+
+Strings are the most common data type we encounter in analytics.
+When we built [LiquidCache](https://github.com/XiangpengHao/liquid-cache) -- a distributed pushdown cache for [DataFusion](https://github.com/apache/datafusion) -- we discovered that the way strings are stored and processed has an outsized impact on performance and memory.
+This post distills key points from my "On the Nature of Strings" talk at [DC Systems](https://dcsystems.wtf) (slides [here](./on-the-nature-of-strings.pdf); recording coming soon) and explains how we rethink string storage to make LiquidCache fast and lean.
+
+## TL;DR
+
+- We analyzed the [PublicBI dataset](https://github.com/cwida/public_bi_benchmark) (46 tables, 710 queries, 386 GB of data) and found that strings are the most important data type in the dataset: **61 % of bytes are strings**, and around **40 % of projected columns are string columns**.  
+
+- There are four types of strings, categorized by distinct ratio and average length:
+![](./string-type.jpg){width=70%}
+
+- Dictionary encoding is crucial for storing string data:
+![](./dictionary-encoding.jpg){width=70%}
+
+- Different trade-offs for representing variable-length strings:
+![](./string-storage.jpg)
+ 
+- Inlined prefixes are critical for efficient comparisons:
+![](./string-prefix.jpg){width=70%}
+
+- Null handling is essential:
+![](./null-handling.jpg){width=80%}
+
+- Compression is important:
+![](./compression.jpg)
+
+
+
+## Conclusion
+
+- Strings are the most important data type in analytics, and we need to take them seriously.
+- Strings have many subtypes and should be treated differently.
+- If you're not sure, try [LiquidCache](https://github.com/XiangpengHao/liquid-cache) -- it has a state-of-the-art string-handling pipeline and delivers best-in-class string performance with easy integration.
+
