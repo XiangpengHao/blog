@@ -2,6 +2,7 @@
   {
     "listing": "/index.html",
     "items": [
+      "/posts/nature-of-string/index.html",
       "/posts/build-s3-select/index.html",
       "/posts/parquet-pushdown/index.html",
       "/posts/system-researchers/index.html",

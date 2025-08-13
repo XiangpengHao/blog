@@ -9,8 +9,63 @@
 <link>https://blog.xiangpeng.systems/</link>
 <atom:link href="https://blog.xiangpeng.systems/index.xml" rel="self" type="application/rss+xml"/>
 <description></description>
-<generator>quarto-1.6.42</generator>
-<lastBuildDate>Sun, 23 Mar 2025 00:00:00 GMT</lastBuildDate>
+<generator>quarto-1.7.33</generator>
+<lastBuildDate>Wed, 13 Aug 2025 00:00:00 GMT</lastBuildDate>
+<item>
+  <title>On the Nature of Strings</title>
+  <link>https://blog.xiangpeng.systems/posts/nature-of-string/</link>
+  <description><![CDATA[ 
+
+
+
+
+
+<div class="callout callout-style-simple callout-warning no-icon callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon no-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Acknowledgments
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>This work was supported by <a href="https://xiangpeng.systems/fund/">funding</a> from:</p>
+<ol type="1">
+<li><p><a href="https://influxdata.com">InfluxData</a>, <a href="https://www.bauplanlabs.com">Bauplan</a>, and <a href="https://spiraldb.com">SpiralDB</a>.</p></li>
+<li><p>The taxpayers of the State of Wisconsin and the federal government.</p></li>
+</ol>
+<p>Your support for science is greatly appreciated!</p>
+</div>
+</div>
+<p>Strings are the most common data type we encounter in analytics. When we built <a href="https://github.com/XiangpengHao/liquid-cache">LiquidCache</a> – a distributed pushdown cache for <a href="https://github.com/apache/datafusion">DataFusion</a> – we discovered that the way strings are stored and processed has an outsized impact on performance and memory. This post distills key points from my “On the Nature of Strings” talk at <a href="https://dcsystems.wtf">DC Systems</a> (slides <a href="./on-the-nature-of-strings.pdf">here</a>; recording coming soon) and explains how we rethink string storage to make LiquidCache fast and lean.</p>
+<section id="tldr" class="level2">
+<h2 class="anchored" data-anchor-id="tldr">TL;DR</h2>
+<ul>
+<li><p>We analyzed the <a href="https://github.com/cwida/public_bi_benchmark">PublicBI dataset</a> (46 tables, 710 queries, 386 GB of data) and found that strings are the most important data type in the dataset: <strong>61 % of bytes are strings</strong>, and around <strong>40 % of projected columns are string columns</strong>.</p></li>
+<li><p>There are four types of strings, categorized by distinct ratio and average length: <img src="https://blog.xiangpeng.systems/posts/nature-of-string/string-type.jpg" class="img-fluid" style="width:70.0%"></p></li>
+<li><p>Dictionary encoding is crucial for storing string data: <img src="https://blog.xiangpeng.systems/posts/nature-of-string/dictionary-encoding.jpg" class="img-fluid" style="width:70.0%"></p></li>
+<li><p>Different trade-offs for representing variable-length strings: <img src="https://blog.xiangpeng.systems/posts/nature-of-string/string-storage.jpg" class="img-fluid"></p></li>
+<li><p>Inlined prefixes are critical for efficient comparisons: <img src="https://blog.xiangpeng.systems/posts/nature-of-string/string-prefix.jpg" class="img-fluid" style="width:70.0%"></p></li>
+<li><p>Null handling is essential: <img src="https://blog.xiangpeng.systems/posts/nature-of-string/null-handling.jpg" class="img-fluid" style="width:80.0%"></p></li>
+<li><p>Compression is important: <img src="https://blog.xiangpeng.systems/posts/nature-of-string/compression.jpg" class="img-fluid"></p></li>
+</ul>
+</section>
+<section id="conclusion" class="level2">
+<h2 class="anchored" data-anchor-id="conclusion">Conclusion</h2>
+<ul>
+<li>Strings are the most important data type in analytics, and we need to take them seriously.</li>
+<li>Strings have many subtypes and should be treated differently.</li>
+<li>If you’re not sure, try <a href="https://github.com/XiangpengHao/liquid-cache">LiquidCache</a> – it has a state-of-the-art string-handling pipeline and delivers best-in-class string performance with easy integration.</li>
+</ul>
+
+
+</section>
+
+ ]]></description>
+  <guid>https://blog.xiangpeng.systems/posts/nature-of-string/</guid>
+  <pubDate>Wed, 13 Aug 2025 00:00:00 GMT</pubDate>
+</item>
 <item>
   <title>Build your own S3-Select in 400 lines of Rust</title>
   <link>https://blog.xiangpeng.systems/posts/build-s3-select/</link>

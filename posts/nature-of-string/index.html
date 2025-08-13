@@ -6,11 +6,10 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
-<meta name="author" content="Xiangpeng Hao">
-<meta name="dcterms.date" content="2024-11-12">
-<meta name="description" content="No JS, no server, just Rust">
+<meta name="dcterms.date" content="2025-08-13">
+<meta name="description" content="Strings are the most important data type in analytics, and we need to take them seriously.">
 
-<title>Online Parquet Viewer with Rust – Xiangpeng’s blog</title>
+<title>On the Nature of Strings – Xiangpeng’s blog</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -39,13 +38,10 @@ ul.task-list li input[type="checkbox"] {
 <script src="../../site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="../../site_libs/quarto-html/anchor.min.js"></script>
 <link href="../../site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="../../site_libs/quarto-html/quarto-syntax-highlighting-425560e6e27c88e19529b7c03591d40d.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="../../site_libs/quarto-html/quarto-syntax-highlighting-ea385d0e468b0dd5ea5bf0780b1290d9.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="../../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../../site_libs/bootstrap/bootstrap-513c6d844cb9973a7471634b897feaa8.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
-<script src="../../site_libs/quarto-contrib/glightbox/glightbox.min.js"></script>
-<link href="../../site_libs/quarto-contrib/glightbox/glightbox.min.css" rel="stylesheet">
-<link href="../../site_libs/quarto-contrib/glightbox/lightbox.css" rel="stylesheet">
+<link href="../../site_libs/bootstrap/bootstrap-4df3b0c4fafa0f66eafcead0ee6cff11.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -75,13 +71,13 @@ ul.task-list li input[type="checkbox"] {
 
 
 <link rel="stylesheet" href="../../styles.css">
-<meta property="og:title" content="Online Parquet Viewer with Rust – Xiangpeng’s blog">
-<meta property="og:description" content="No JS, no server, just Rust">
-<meta property="og:image" content="https://blog.xiangpeng.systems/posts/parquet-viewer/screenshot4.jpg">
+<meta property="og:title" content="On the Nature of Strings – Xiangpeng’s blog">
+<meta property="og:description" content="Strings are the most important data type in analytics, and we need to take them seriously.">
+<meta property="og:image" content="https://blog.xiangpeng.systems/posts/nature-of-string/string-type.jpg">
 <meta property="og:site_name" content="Xiangpeng's blog">
-<meta name="twitter:title" content="Online Parquet Viewer with Rust – Xiangpeng’s blog">
-<meta name="twitter:description" content="No JS, no server, just Rust">
-<meta name="twitter:image" content="https://blog.xiangpeng.systems/posts/parquet-viewer/screenshot4.jpg">
+<meta name="twitter:title" content="On the Nature of Strings – Xiangpeng’s blog">
+<meta name="twitter:description" content="Strings are the most important data type in analytics, and we need to take them seriously.">
+<meta name="twitter:image" content="https://blog.xiangpeng.systems/posts/nature-of-string/string-type.jpg">
 <meta name="twitter:card" content="summary_large_image">
 </head>
 
@@ -133,10 +129,10 @@ ul.task-list li input[type="checkbox"] {
 <header id="title-block-header" class="quarto-title-block default page-columns page-full">
   <div class="quarto-title-banner page-columns page-full">
     <div class="quarto-title column-body">
-      <h1 class="title">Online Parquet Viewer with Rust</h1>
+      <h1 class="title">On the Nature of Strings</h1>
                   <div>
         <div class="description">
-          No JS, no server, just Rust
+          Strings are the most important data type in analytics, and we need to take them seriously.
         </div>
       </div>
                 </div>
@@ -145,20 +141,20 @@ ul.task-list li input[type="checkbox"] {
   
   <div class="quarto-title-meta">
 
-      <div>
-      <div class="quarto-title-meta-heading">Author</div>
-      <div class="quarto-title-meta-contents">
-               <p>Xiangpeng Hao </p>
-            </div>
-    </div>
       
       <div>
       <div class="quarto-title-meta-heading">Published</div>
       <div class="quarto-title-meta-contents">
-        <p class="date">November 12, 2024</p>
+        <p class="date">August 13, 2025</p>
       </div>
     </div>
     
+      <div>
+      <div class="quarto-title-meta-heading">Modified</div>
+      <div class="quarto-title-meta-contents">
+        <p class="date-modified">August 13, 2025</p>
+      </div>
+    </div>
       
     </div>
     
@@ -171,10 +167,8 @@ ul.task-list li input[type="checkbox"] {
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#quick-look" id="toc-quick-look" class="nav-link active" data-scroll-target="#quick-look">Quick look</a></li>
-  <li><a href="#how-it-works" id="toc-how-it-works" class="nav-link" data-scroll-target="#how-it-works">How it works</a></li>
-  <li><a href="#why-do-i-need-this" id="toc-why-do-i-need-this" class="nav-link" data-scroll-target="#why-do-i-need-this">Why do I need this?</a></li>
-  <li><a href="#rust-for-frontend" id="toc-rust-for-frontend" class="nav-link" data-scroll-target="#rust-for-frontend">Rust for frontend?</a></li>
+  <li><a href="#tldr" id="toc-tldr" class="nav-link active" data-scroll-target="#tldr">TL;DR</a></li>
+  <li><a href="#conclusion" id="toc-conclusion" class="nav-link" data-scroll-target="#conclusion">Conclusion</a></li>
   </ul>
 </nav>
     </div>
@@ -185,49 +179,46 @@ ul.task-list li input[type="checkbox"] {
 
 
 
-<section id="quick-look" class="level2">
-<h2 class="anchored" data-anchor-id="quick-look">Quick look</h2>
-<p>Online here: <a href="https://parquet-viewer.xiangpeng.systems">https://parquet-viewer.xiangpeng.systems</a></p>
-<p>Source code: <a href="https://github.com/XiangpengHao/parquet-viewer">parquet-viewer</a></p>
-<p><a href="screenshot4.jpg" class="lightbox" data-gallery="quarto-lightbox-gallery-1"><img src="screenshot4.jpg" class="img-fluid" style="width:40.0%"></a></p>
-<p><strong>Run SQL queries</strong> <img src="screenshot1.jpg" class="img-fluid" data-group="my-gallery"></p>
-<p><strong>Visualize query plans</strong> <img src="screenshot2.jpg" class="img-fluid" data-group="my-gallery"></p>
-<p><strong>Examine metadata</strong> <img src="screenshot3.jpg" class="img-fluid" data-group="my-gallery"></p>
-</section>
-<section id="how-it-works" class="level2">
-<h2 class="anchored" data-anchor-id="how-it-works">How it works</h2>
-<p>It compiles Parquet/Arrow/DataFusion to webassembly which runs in the browser.</p>
-<p>Specifically, it uses <a href="https://trunkrs.dev"><code>trunk</code></a> to pack wasm files, <a href="https://leptos.dev"><code>leptos</code></a> to build reactive UI components, and <a href="https://tailwindcss.com"><code>Tailwind CSS</code></a> for styling.</p>
-<p>And most importantly, LLM wrote most of the code.</p>
-</section>
-<section id="why-do-i-need-this" class="level2">
-<h2 class="anchored" data-anchor-id="why-do-i-need-this">Why do I need this?</h2>
-<p>Parquet files are not human-readable, you can’t just open them like CSV or JSON files.</p>
-<p>Of course, there are many CLI tools that allow you to inspect file content – if you enjoy deciphering cryptic CLI args.</p>
-<p>There are also Java/C#/Windows applications that provide GUI options – if you’re nostalgia for the 90s.</p>
-<p>But with this tool, everything happens inside your favorite browser, written in your favorite language, using your favorite tech stack.</p>
-<p>Simply drag and drop the file, and all the important information is in front of you.</p>
-</section>
-<section id="rust-for-frontend" class="level2">
-<h2 class="anchored" data-anchor-id="rust-for-frontend">Rust for frontend?</h2>
-<section id="the-good" class="level4">
-<h4 class="anchored" data-anchor-id="the-good">The good</h4>
+<div class="callout callout-style-simple callout-warning no-icon callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon no-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Acknowledgments
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>This work was supported by <a href="https://xiangpeng.systems/fund/">funding</a> from:</p>
+<ol type="1">
+<li><p><a href="https://influxdata.com">InfluxData</a>, <a href="https://www.bauplanlabs.com">Bauplan</a>, and <a href="https://spiraldb.com">SpiralDB</a>.</p></li>
+<li><p>The taxpayers of the State of Wisconsin and the federal government.</p></li>
+</ol>
+<p>Your support for science is greatly appreciated!</p>
+</div>
+</div>
+<p>Strings are the most common data type we encounter in analytics. When we built <a href="https://github.com/XiangpengHao/liquid-cache">LiquidCache</a> – a distributed pushdown cache for <a href="https://github.com/apache/datafusion">DataFusion</a> – we discovered that the way strings are stored and processed has an outsized impact on performance and memory. This post distills key points from my “On the Nature of Strings” talk at <a href="https://dcsystems.wtf">DC Systems</a> (slides <a href="./on-the-nature-of-strings.pdf">here</a>; recording coming soon) and explains how we rethink string storage to make LiquidCache fast and lean.</p>
+<section id="tldr" class="level2">
+<h2 class="anchored" data-anchor-id="tldr">TL;DR</h2>
 <ul>
-<li><p>Leptos is surprisingly intuitive and easy-to-use.</p></li>
-<li><p>DataFusion/Arrow/Parquet compiles to wasm with <em>almost</em> no modification.</p></li>
-<li><p>There’s surprisingly small amount of code needed to build an interactive UI.</p></li>
+<li><p>We analyzed the <a href="https://github.com/cwida/public_bi_benchmark">PublicBI dataset</a> (46 tables, 710 queries, 386 GB of data) and found that strings are the most important data type in the dataset: <strong>61 % of bytes are strings</strong>, and around <strong>40 % of projected columns are string columns</strong>.</p></li>
+<li><p>There are four types of strings, categorized by distinct ratio and average length: <img src="./string-type.jpg" class="img-fluid" style="width:70.0%"></p></li>
+<li><p>Dictionary encoding is crucial for storing string data: <img src="./dictionary-encoding.jpg" class="img-fluid" style="width:70.0%"></p></li>
+<li><p>Different trade-offs for representing variable-length strings: <img src="./string-storage.jpg" class="img-fluid"></p></li>
+<li><p>Inlined prefixes are critical for efficient comparisons: <img src="./string-prefix.jpg" class="img-fluid" style="width:70.0%"></p></li>
+<li><p>Null handling is essential: <img src="./null-handling.jpg" class="img-fluid" style="width:80.0%"></p></li>
+<li><p>Compression is important: <img src="./compression.jpg" class="img-fluid"></p></li>
 </ul>
 </section>
-<section id="the-bad" class="level4">
-<h4 class="anchored" data-anchor-id="the-bad">The bad</h4>
+<section id="conclusion" class="level2">
+<h2 class="anchored" data-anchor-id="conclusion">Conclusion</h2>
 <ul>
-<li><p>Build size is large, debug build is 100MB, release build is 40MB. Poor dev experience due to laggy edit-build-run cycle. (User experience is fine, though)</p></li>
-<li><p>Not every crate is wasm-compatible, and it’s very difficult to triangle down the root cause.</p></li>
-<li><p>I haven’t figure out how to nicely use JavaScript yet – sometimes you do need JS.</p></li>
+<li>Strings are the most important data type in analytics, and we need to take them seriously.</li>
+<li>Strings have many subtypes and should be treated differently.</li>
+<li>If you’re not sure, try <a href="https://github.com/XiangpengHao/liquid-cache">LiquidCache</a> – it has a state-of-the-art string-handling pipeline and delivers best-in-class string performance with easy integration.</li>
 </ul>
 
 
-</section>
 </section>
 
 </main> <!-- /main -->
@@ -631,38 +622,6 @@ ul.task-list li input[type="checkbox"] {
   });
   </script>
 </div> <!-- /content -->
-<script>var lightboxQuarto = GLightbox({"closeEffect":"fade","descPosition":"right","loop":false,"openEffect":"fade","selector":".lightbox"});
-(function() {
-  let previousOnload = window.onload;
-  window.onload = () => {
-    if (previousOnload) {
-      previousOnload();
-    }
-    lightboxQuarto.on('slide_before_load', (data) => {
-      const { slideIndex, slideNode, slideConfig, player, trigger } = data;
-      const href = trigger.getAttribute('href');
-      if (href !== null) {
-        const imgEl = window.document.querySelector(`a[href="${href}"] img`);
-        if (imgEl !== null) {
-          const srcAttr = imgEl.getAttribute("src");
-          if (srcAttr && srcAttr.startsWith("data:")) {
-            slideConfig.href = srcAttr;
-          }
-        }
-      } 
-    });
-  
-    lightboxQuarto.on('slide_after_load', (data) => {
-      const { slideIndex, slideNode, slideConfig, player, trigger } = data;
-      if (window.Quarto?.typesetMath) {
-        window.Quarto.typesetMath(slideNode);
-      }
-    });
-  
-  };
-  
-})();
-          </script>
 
 
 
