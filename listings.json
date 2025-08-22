@@ -2,7 +2,6 @@
   {
     "listing": "/index.html",
     "items": [
-      "/posts/what-is-liquid-cache/index.html",
       "/posts/nature-of-string/index.html",
       "/posts/build-s3-select/index.html",
       "/posts/parquet-pushdown/index.html",
