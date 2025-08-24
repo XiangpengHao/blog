@@ -2,7 +2,7 @@
 title: "What is LiquidCache?"
 date: "2025-08-22"
 date-modified: "2025-08-22"
-description: "Three roles: caching for diskless, state for serverless, and liquid data for compute pushdown."
+description: "Distributed caching with compute pushdown, compressed execution, and network-efficient data transfer."
 categories: []
 comments:
   giscus: 
@@ -22,24 +22,25 @@ This work is supported by [funding](https://xiangpeng.systems/fund/) from:<br>
 Your support for science is greatly appreciated!
 :::
 
-[LiquidCache](https://github.com/XiangpengHao/liquid-cache) is a new caching infrastructure for the next decade of data analytics.[^5]
+[LiquidCache](https://github.com/XiangpengHao/liquid-cache) is designed to be the new caching infrastructure for the next decade of data analytics.[^5]
 
+It seamlessly allows Parquet-based analytical systems to benefit from the latest data encodings and pushdown optimizations:
 
-At a glance, LiquidCache is a caching service for object stores that serves diverse analytical applications.
-Under the hood, LiquidCache is ultra-optimized for compute pushdown, larger‑than‑memory datasets, and network‑efficient data transfer.
+- At a glance, LiquidCache is a distributed caching service: it supports all object storage backends (S3, GCS, Azure Blob Storage, etc.), and serves all kinds of applications (knowledge bases, dashboards, etc) deployed on all kinds of compute (k8s, lambda, etc).
+- Under the hood, LiquidCache *caches Parquet as liquid data*, which is ultra-optimized for compute pushdown, compressed execution, modern storage, and network‑efficient data transfer.
 
 ![LiquidCache overview. It caches different object store sources and serves different analytical applications.](./liquid-cache-overview.png){width=80%}
 
 It is built on open standards: [Parquet](https://parquet.apache.org/) for data storage, [DataFusion](https://github.com/apache/datafusion) as the query engine, and [Arrow Flight](https://arrow.apache.org/docs/format/Flight.html) for data transfer.
-This makes LiquidCache highly composable; you can easily integrate it into your existing analytics stack.
+This makes LiquidCache highly composable -- you can easily integrate it into your existing analytics stack.
 
-This blog post discusses the three critical roles of LiquidCache in next-generation analytics: caching for diskless, state management for serverless, and liquid data for compute pushdown.
-
+This blog post discusses why we build LiquidCache, and how LiquidCache works. 
 
 [^5]: Check out our [research paper](https://github.com/XiangpengHao/liquid-cache/blob/main/dev/doc/liquid-cache-vldb.pdf) (VLDB 2026) for more technical details.
 
-## Caching for diskless
+## Why LiquidCache?
 
+### Caching for object stores 
 #### We like S3
 1. Simple durability: 11 nines of durability—you never have to worry about data loss.
 2. Simple scalability: virtually unlimited space and throughput.
@@ -51,20 +52,23 @@ This blog post discusses the three critical roles of LiquidCache in next-generat
 ![S3 prices have barely changed for a decade, despite ~20× reductions in underlying hardware costs, [credit to Andrew Lamb](https://x.com/andrewlamb1111/status/1909681433452724444)](./s3-price.jpg){width=80%}
 
 
-#### LiquidCache: foundation of diskless analytics
-1. Caches are everywhere[^1]: compute‑local caches (e.g., Snowflake/Databricks local NVMe, Spark host caches), shared‑nothing caches, and cache services.
+#### LiquidCache: foundation of diskless architectures
+1. Caches are everywhere[^1]: compute‑local caches (e.g., Snowflake/Databricks local NVMe, Spark host caches)[^8], shared‑nothing caches, and cache services[^7].
 2. DLC trilemma: among durability, low latency, and low cost, you can only choose two [^3].
 ![](./DLC.png){width=50%}
 
 [^1]: [The Five-Minute Rule for the Cloud: Caching in Analytics Systems](https://andrew.nerdnetworks.org/other/CIDR_2025_Cloud_5_Minute_Rule.pdf)
 [^2]: [Exploiting Cloud Object Storage for High-Performance Analytics](https://www.vldb.org/pvldb/vol16/p2769-durner.pdf)
 [^3]: [The Cloud Storage Triad: Latency, Cost, Durability](https://materializedview.io/p/cloud-storage-triad-latency-cost-durability)
+[^7]: [ClickHouse's distributed cache for S3](https://clickhouse.com/blog/building-a-distributed-cache-for-s3)
+[^8]: [DuckDB's external file cache](https://github.com/duckdb/duckdb/pull/16463)
 
-## State management for serverless 
+### State management for applications 
 
 #### We like serverless
 1. Simple scalability: automatic horizontal scaling and fine‑grained billing.
 2. Lower cost via higher utilization and elasticity; zero servers to manage.
+3. Available on all major cloud providers (AWS lambda, GCP cloud run, Azure functions, etc).
 
 #### But serverless analytics are slow and expensive 
 1. S3 is both too slow and too expensive. 
@@ -75,9 +79,9 @@ In practice, most production analytics pin workloads to EC2‑like servers with 
 
 With LiquidCache, all compute nodes can be serverless because they can connect to the shared LiquidCache service, which is deployed on conventional EC2 instances.
 
-![](./serverless.png){width=60%}
+![Compare the traditional on-premise architecture (left) with the new diskless+serverless architecture (right). LiquidCache is at the center of state management.](./state-management.png){width=100%}
 
-## Liquid data for compute pushdown 
+## How LiquidCache works
 
 #### We like Parquet
 1. All major query engines support it (DataFusion, Spark, Trino, DuckDB, Snowflake, BigQuery, and more).
@@ -106,7 +110,7 @@ LiquidCache is the one‑stop shop for diskless, serverless, and pushdown‑nati
 
 It is built on open standards (Parquet, Arrow Flight, DataFusion) for easy integration and stable governance.
 
-It optimizes for compute pushdown, larger‑than‑memory datasets, and network‑efficient data transfer.
+LiquidCache caches Parquet as liquid data, which is ultra-optimized for compute pushdown, compressed execution, modern storage, and network‑efficient data transfer.
  
 #### Who are we?
 - LiquidCache started as a research project at UW‑Madison [ADSL](https://research.cs.wisc.edu/adsl/) led by [Xiangpeng Hao](https://xiangpeng.systems).
