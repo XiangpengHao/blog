@@ -10,3 +10,5 @@ docs
 _site
 venv
 
+
+**/*.quarto_ipynb

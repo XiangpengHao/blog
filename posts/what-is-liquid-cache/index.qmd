@@ -1,14 +1,14 @@
 ---
 title: "What is LiquidCache?"
-date: "2025-08-22"
-date-modified: "2025-08-22"
-description: "Distributed caching with compute pushdown, compressed execution, and network-efficient data transfer."
+date: "2025-11-24"
+date-modified: "2025-11-24"
+description: "A caching layer to unify compute and storage."
 categories: []
 comments:
   giscus: 
     repo: XiangpengHao/blog
 toc: true
-draft: true 
+draft: false 
 reference-location: margin
 citation-location: margin
 ---
@@ -22,11 +22,24 @@ This work is supported by [funding](https://xiangpeng.systems/fund/) from:<br>
 Your support for science is greatly appreciated!
 :::
 
-[LiquidCache](https://github.com/XiangpengHao/liquid-cache) is designed to be the new caching infrastructure for the next decade of data analytics.[^5]
+![](./liquid-cache.jpg)
 
-It seamlessly allows Parquet-based analytical systems to benefit from the latest data encodings and pushdown optimizations:
+[LiquidCache](https://github.com/XiangpengHao/liquid-cache) is a caching layer that unifies the design goals of compute and storage[^5].
 
-- At a glance, LiquidCache is a distributed caching service: it supports all object storage backends (S3, GCS, Azure Blob Storage, etc.), and serves all kinds of applications (knowledge bases, dashboards, etc) deployed on all kinds of compute (k8s, lambda, etc).
+It accelerates query performance without needing to leave Parquet.
+
+It addresses this fundamental tension:
+
+- **Storage systems** want to optimize for ecosystem compatibility, and long-term, stable, open governance;
+industry thus gravitated towards Parquet as the de facto columnar format.
+
+- **Query engines** want the data to be optimized for flexible layouts, rapid evolution, and performance-first optimizations.
+
+
+Instead of squeezing the last bits of performance from Parquet[^9], or trying to create future-proof file formats[^10], 
+LiquidCache addresses this problem through a new abstraction: the caching layer. 
+
+- At a glance, LiquidCache is a distributed caching service: it supports all object storage backends (S3, GCS, Azure Blob Storage, etc.), and serves all kinds of applications (knowledge bases, dashboards, etc.) deployed on all kinds of compute (Kubernetes, Lambda, etc.).
 - Under the hood, LiquidCache *caches Parquet as liquid data*, which is ultra-optimized for compute pushdown, compressed execution, modern storage, and network‑efficient data transfer.
 
 ![LiquidCache overview. It caches different object store sources and serves different analytical applications.](./liquid-cache-overview.png){width=80%}
@@ -34,27 +47,30 @@ It seamlessly allows Parquet-based analytical systems to benefit from the latest
 It is built on open standards: [Parquet](https://parquet.apache.org/) for data storage, [DataFusion](https://github.com/apache/datafusion) as the query engine, and [Arrow Flight](https://arrow.apache.org/docs/format/Flight.html) for data transfer.
 This makes LiquidCache highly composable -- you can easily integrate it into your existing analytics stack.
 
-This blog post discusses why we build LiquidCache, and how LiquidCache works. 
 
-[^5]: Check out our [research paper](https://github.com/XiangpengHao/liquid-cache/blob/main/dev/doc/liquid-cache-vldb.pdf) (VLDB 2026) for more technical details.
+[^5]: Check out our [research paper](https://github.com/XiangpengHao/liquid-cache/blob/main/dev/doc/liquid-cache-vldb.pdf) (VLDB 2025) for more technical details.
+
+[^9]: Great paper on Parquet selection pushdown: [Selection Pushdown in Column Stores using Bit Manipulation Instructions](https://dl.acm.org/doi/10.1145/3589323).
+
+[^10]: [AnyBlox: A Framework for Self-Decoding Datasets](https://www.vldb.org/pvldb/vol18/p4017-gienieczko.pdf), and 
+[F3: The Open-Source Data File Format for the Future](https://db.cs.cmu.edu/papers/2025/zeng-sigmod2025.pdf)
 
 ## Why LiquidCache?
 
-### Caching for object stores 
 #### We like S3
 1. Simple durability: 11 nines of durability—you never have to worry about data loss.
 2. Simple scalability: virtually unlimited space and throughput.
 
 #### But S3 is slow and expensive
-1. ≈100 ms first‑byte latency plus transfer latency; this quickly adds up when multiple round‑trips are needed to fetch data. [^2]
-2. Storage, request, and data‑transfer/egress costs; prices have remained unchanged for a decade even as underlying hardware has become ~20× cheaper.
+1. ≈100 ms first‑byte latency plus transfer latency; this quickly adds up when multiple round‑trips are needed to fetch data.[^2]
+2. Storage, request, and data‑transfer/egress costs; prices have remained largely unchanged for a decade even as underlying hardware has become ~20× cheaper.
 
 ![S3 prices have barely changed for a decade, despite ~20× reductions in underlying hardware costs, [credit to Andrew Lamb](https://x.com/andrewlamb1111/status/1909681433452724444)](./s3-price.jpg){width=80%}
 
 
 #### LiquidCache: foundation of diskless architectures
 1. Caches are everywhere[^1]: compute‑local caches (e.g., Snowflake/Databricks local NVMe, Spark host caches)[^8], shared‑nothing caches, and cache services[^7].
-2. DLC trilemma: among durability, low latency, and low cost, you can only choose two [^3].
+2. DLC trilemma: among durability, low latency, and low cost, you can only choose two[^3].
 ![](./DLC.png){width=50%}
 
 [^1]: [The Five-Minute Rule for the Cloud: Caching in Analytics Systems](https://andrew.nerdnetworks.org/other/CIDR_2025_Cloud_5_Minute_Rule.pdf)
@@ -63,12 +79,13 @@ This blog post discusses why we build LiquidCache, and how LiquidCache works.
 [^7]: [ClickHouse's distributed cache for S3](https://clickhouse.com/blog/building-a-distributed-cache-for-s3)
 [^8]: [DuckDB's external file cache](https://github.com/duckdb/duckdb/pull/16463)
 
-### State management for applications 
+<!-- 
+### State Management for Applications 
 
 #### We like serverless
 1. Simple scalability: automatic horizontal scaling and fine‑grained billing.
 2. Lower cost via higher utilization and elasticity; zero servers to manage.
-3. Available on all major cloud providers (AWS lambda, GCP cloud run, Azure functions, etc).
+3. Available on all major cloud providers (AWS Lambda, GCP Cloud Run, Azure Functions, etc.).
 
 #### But serverless analytics are slow and expensive 
 1. S3 is both too slow and too expensive. 
@@ -79,9 +96,9 @@ In practice, most production analytics pin workloads to EC2‑like servers with 
 
 With LiquidCache, all compute nodes can be serverless because they can connect to the shared LiquidCache service, which is deployed on conventional EC2 instances.
 
-![Compare the traditional on-premise architecture (left) with the new diskless+serverless architecture (right). LiquidCache is at the center of state management.](./state-management.png){width=100%}
+![Compare the OLTP architecture (left) with the new diskless+serverless OLAP architecture (right). LiquidCache is at the center of state management.](./state-management.png){width=100%} -->
 
-## How LiquidCache works
+## How LiquidCache Works
 
 #### We like Parquet
 1. All major query engines support it (DataFusion, Spark, Trino, DuckDB, Snowflake, BigQuery, and more).
@@ -93,7 +110,7 @@ With LiquidCache, all compute nodes can be serverless because they can connect t
 2. Parquet is critical data infrastructure: it evolves cautiously to keep your data safe and stable—it can't try new research today and abandon your data tomorrow.
 
 #### LiquidCache: cache-only, pushdown-optimized data representation
-1. LiquidCache uses state‑of‑the‑art encodings and compression chosen by the workload. [^4]
+1. LiquidCache uses state‑of‑the‑art encodings and compression chosen by the workload.[^4]
 2. Liquid data is invisible to the rest of the ecosystem: it is cache‑only. This means it can freely change its layout, adding or removing encodings without breaking any user code.
 3. LiquidCache transparently, progressively, and selectively transcodes Parquet data to the liquid format.
 4. Liquid data is designed for efficient pushdown to save both compute and network resources. 
@@ -113,7 +130,7 @@ It is built on open standards (Parquet, Arrow Flight, DataFusion) for easy integ
 LiquidCache caches Parquet as liquid data, which is ultra-optimized for compute pushdown, compressed execution, modern storage, and network‑efficient data transfer.
  
 #### Who are we?
-- LiquidCache started as a research project at UW‑Madison [ADSL](https://research.cs.wisc.edu/adsl/) led by [Xiangpeng Hao](https://xiangpeng.systems).
+- LiquidCache started as a research project led by [Xiangpeng Hao](https://xiangpeng.systems) at UW‑Madison [ADSL](https://research.cs.wisc.edu/adsl/).
 - It was made possible by a research gift from [InfluxData](https://influxdata.com). One year later, [SpiralDB](https://spiraldb.com) and [Bauplan](https://www.bauplanlabs.com) also joined the journey.[^6]
 - LiquidCache will remain a public‑benefit project in appreciation of the support from taxpayers, research gifts, and the open‑source community.
 
