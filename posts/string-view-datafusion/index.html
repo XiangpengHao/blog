@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.7.33">
+<meta name="generator" content="quarto-1.8.26">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -69,14 +69,15 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <meta name="quarto:offset" content="../../">
 <script src="../../site_libs/quarto-html/quarto.js" type="module"></script>
 <script src="../../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
 <script src="../../site_libs/quarto-html/popper.min.js"></script>
 <script src="../../site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="../../site_libs/quarto-html/anchor.min.js"></script>
 <link href="../../site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="../../site_libs/quarto-html/quarto-syntax-highlighting-425560e6e27c88e19529b7c03591d40d.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="../../site_libs/quarto-html/quarto-syntax-highlighting-0a95de2c3be981c2e03029825b16c585.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="../../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../../site_libs/bootstrap/bootstrap-513c6d844cb9973a7471634b897feaa8.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="../../site_libs/bootstrap/bootstrap-541cc689fab2501f344469d138d6f9c8.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -308,12 +309,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 <p><strong>Mini benchmark</strong><br>
 Reusing Parquet buffers is great in theory, but how much does saving a copy actually matter? We can run the following benchmark in arrow-rs to find out:</p>
-<div class="sourceCode" id="cb1"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">cargo</span> bench <span class="at">--bench</span> arrow_reader <span class="at">--features</span><span class="op">=</span><span class="st">"arrow test_common experimental"</span> <span class="st">"arrow_array_reader/Binary.*Array/plain encoded"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">cargo</span> bench <span class="at">--bench</span> arrow_reader <span class="at">--features</span><span class="op">=</span><span class="st">"arrow test_common experimental"</span> <span class="st">"arrow_array_reader/Binary.*Array/plain encoded"</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>Our benchmarking machine shows that loading <em>BinaryViewArray</em> is almost 2x faster than loading BinaryArray (see next section about why this isn’t <em>String</em>ViewArray).</p>
-<div class="sourceCode" id="cb2"><pre class="sourceCode txt code-with-copy"><code class="sourceCode default"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>arrow_array_reader/BinaryArray/plain encoded                        time:   [315.86 µs 317.47 µs 319.00 µs]</span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode txt code-with-copy"><code class="sourceCode default"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>arrow_array_reader/BinaryArray/plain encoded                        time:   [315.86 µs 317.47 µs 319.00 µs]</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>arrow_array_reader/BinaryViewArray/plain encoded</span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>time:   [162.08 µs 162.20 µs 162.32 µs]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>time:   [162.08 µs 162.20 µs 162.32 µs]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>You can read more on this arrow-rs issue: <a href="https://github.com/apache/arrow-rs/issues/5904">https://github.com/apache/arrow-rs/issues/5904</a></p>
 <section id="section-2.1-from-binary-to-strings" class="level3">
 <h3 class="anchored" data-anchor-id="section-2.1-from-binary-to-strings">Section 2.1: From Binary to Strings</h3>
@@ -342,9 +343,9 @@ Reusing Parquet buffers is great in theory, but how much does saving a copy actu
 <h3 class="anchored" data-anchor-id="section-2.2-be-careful-about-implicit-copies">Section 2.2: Be Careful About Implicit Copies</h3>
 <p>After all the work to avoid copying strings when loading from Parquet, performance was still not as good as expected. We tracked the problem to a few implicit data copies that we weren’t aware of, as described in <a href="https://github.com/apache/arrow-rs/issues/6033">this issue</a>.</p>
 <p>The copies we eventually identified come from the following innocent-looking line of Rust code, where <code>self.buf</code> is a <a href="https://en.wikipedia.org/wiki/Reference_counting">reference counted</a> pointer that should transform without copying into a buffer for use in StringViewArray.</p>
-<div class="sourceCode" id="cb3"><pre class="sourceCode rust code-with-copy"><code class="sourceCode rust"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">let</span> block_id <span class="op">=</span> output<span class="op">.</span>append_block(<span class="kw">self</span><span class="op">.</span>buf<span class="op">.</span>clone()<span class="op">.</span>into())<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode rust code-with-copy"><code class="sourceCode rust"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">let</span> block_id <span class="op">=</span> output<span class="op">.</span>append_block(<span class="kw">self</span><span class="op">.</span>buf<span class="op">.</span>clone()<span class="op">.</span>into())<span class="op">;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>However, Rust-type coercion rules favored a blanket implementation that <em>did</em> copy data. This implementation is shown in the following code block where the <code>impl&lt;T: AsRef&lt;[u8]&gt;&gt;</code> will accept any type that implements <code>AsRef&lt;[u8]&gt;</code> and copies the data to create a new buffer. To avoid copying, users need to explicitly call <code>from_vec</code>, which consumes the <code>Vec</code> and transforms it into a buffer.</p>
-<div class="sourceCode" id="cb4"><pre class="sourceCode rust code-with-copy"><code class="sourceCode rust"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">impl</span><span class="op">&lt;</span>T<span class="op">:</span> <span class="bu">AsRef</span><span class="op">&lt;</span>[<span class="dt">u8</span>]<span class="op">&gt;&gt;</span> <span class="bu">From</span><span class="op">&lt;</span>T<span class="op">&gt;</span> <span class="cf">for</span> Buffer <span class="op">{</span></span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode rust code-with-copy"><code class="sourceCode rust"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">impl</span><span class="op">&lt;</span>T<span class="op">:</span> <span class="bu">AsRef</span><span class="op">&lt;</span>[<span class="dt">u8</span>]<span class="op">&gt;&gt;</span> <span class="bu">From</span><span class="op">&lt;</span>T<span class="op">&gt;</span> <span class="cf">for</span> Buffer <span class="op">{</span></span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">fn</span> from(p<span class="op">:</span> T) <span class="op">-&gt;</span> <span class="dt">Self</span> <span class="op">{</span></span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>        <span class="co">// copies data here</span></span>
 <span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>     <span class="op">...</span></span>
@@ -355,14 +356,14 @@ Reusing Parquet buffers is great in theory, but how much does saving a copy actu
 <span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="co">// zero-copy transformation</span></span>
 <span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="op">...</span></span>
 <span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>  <span class="op">}</span></span>
-<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>Diagnosing this implicit copy was time-consuming as it relied on subtle Rust language semantics. We needed to track every step of the data flow to ensure every copy was necessary. To help other users and prevent future mistakes, we also <a href="https://github.com/apache/arrow-rs/pull/6043">removed</a> the implicit API from arrow-rs in favor of an explicit API. Using this approach, we found and fixed several <a href="https://github.com/apache/arrow-rs/pull/6039">other unintentional copies</a> in the code base—hopefully, the change will help other <a href="https://github.com/spiraldb/vortex/pull/504">downstream users</a> avoid unnecessary copies.</p>
 </section>
 <section id="section-2.3-help-the-compiler-by-giving-it-more-information" class="level3">
 <h3 class="anchored" data-anchor-id="section-2.3-help-the-compiler-by-giving-it-more-information">Section 2.3: Help the Compiler by Giving it More Information</h3>
 <p>The Rust compiler’s automatic optimizations mostly work very well for a wide variety of use cases, but sometimes, it needs additional hints to generate the most efficient code. When profiling the performance of <code>view</code> construction, we found, counterintuitively, that constructing <strong>long</strong> strings was 10x faster than constructing <strong>short</strong> strings, which made short strings slower on StringViewArray than on StringArray!</p>
 <p>As described in Section 1, StringViewArray treats long and short strings differently. Short strings (&lt;12 bytes) directly inline to the <code>view</code> struct, while long strings only inline the first 4 bytes. The code to construct a <code>view</code> looks something like this:</p>
-<div class="sourceCode" id="cb5"><pre class="sourceCode rust code-with-copy"><code class="sourceCode rust"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> len <span class="op">&lt;=</span> <span class="dv">12</span> <span class="op">{</span></span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode rust code-with-copy"><code class="sourceCode rust"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> len <span class="op">&lt;=</span> <span class="dv">12</span> <span class="op">{</span></span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>   <span class="co">// Construct 16 byte view for short string</span></span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>   <span class="kw">let</span> <span class="kw">mut</span> view_buffer <span class="op">=</span> [<span class="dv">0</span><span class="op">;</span> <span class="dv">16</span>]<span class="op">;</span></span>
 <span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>   view_buffer[<span class="dv">0</span><span class="op">..</span><span class="dv">4</span>]<span class="op">.</span>copy_from_slice(<span class="op">&amp;</span>len<span class="op">.</span>to_le_bytes())<span class="op">;</span></span>
@@ -376,11 +377,11 @@ Reusing Parquet buffers is great in theory, but how much does saving a copy actu
 <span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>       buffer_index<span class="op">:</span> block_id<span class="op">,</span></span>
 <span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>       offset<span class="op">,</span></span>
 <span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>   <span class="op">}</span></span>
-<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>It appears that both branches of the code should be fast: they both involve copying at most 16 bytes of data and some memory shift/store operations. How could the branch for short strings be 10x slower?</p>
 <p>Looking at the assembly code using <a href="https://godbolt.org/">godbolt</a>, we (with help from <a href="https://github.com/aoli-al">Ao Li</a>) found the compiler used CPU <strong>load instructions</strong> to copy the fixed-sized 4 bytes to the <code>view</code> for long strings, but it calls a function, <a href="https://doc.rust-lang.org/std/ptr/fn.copy_nonoverlapping.html"><code>ptr::copy_non_overlapping</code></a>, to copy the inlined bytes to the <code>view</code> for short strings. The difference is that long strings have a prefix size (4 bytes) known at compile time, so the compiler directly uses efficient CPU instructions. But, since the size of the short string is unknown to the compiler, it has to call the general-purpose function <code>ptr::copy_non_coverlapping</code>. Making a function call is significant unnecessary overhead compared to a CPU copy instruction.</p>
 <p>However, we know something the compiler doesn’t know: the short string size is not arbitrary—it must be between 0 and 12 bytes, and we can leverage this information to avoid the function call. Our solution generates 13 copies of the function using generics, one for each of the possible prefix lengths. The code looks as follows, and <a href="https://godbolt.org/z/685YPsd5G">checking the assembly code</a>, we confirmed there are no calls to <code>ptr::copy_non_overlapping</code>, and only native CPU instructions are used. For more details, see <a href="https://github.com/apache/arrow-rs/issues/6034">the ticket</a>.</p>
-<div class="sourceCode" id="cb6"><pre class="sourceCode rust code-with-copy"><code class="sourceCode rust"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">fn</span> make_inlined_view<span class="op">&lt;</span><span class="kw">const</span> LEN<span class="op">:</span> <span class="dt">usize</span><span class="op">&gt;</span>(data<span class="op">:</span> <span class="op">&amp;</span>[<span class="dt">u8</span>]) <span class="op">-&gt;</span> <span class="dt">u128</span> <span class="op">{</span></span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode rust code-with-copy"><code class="sourceCode rust"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">fn</span> make_inlined_view<span class="op">&lt;</span><span class="kw">const</span> LEN<span class="op">:</span> <span class="dt">usize</span><span class="op">&gt;</span>(data<span class="op">:</span> <span class="op">&amp;</span>[<span class="dt">u8</span>]) <span class="op">-&gt;</span> <span class="dt">u128</span> <span class="op">{</span></span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>     <span class="kw">let</span> <span class="kw">mut</span> view_buffer <span class="op">=</span> [<span class="dv">0</span><span class="op">;</span> <span class="dv">16</span>]<span class="op">;</span></span>
 <span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>     view_buffer[<span class="dv">0</span><span class="op">..</span><span class="dv">4</span>]<span class="op">.</span>copy_from_slice(<span class="op">&amp;</span>(LEN <span class="kw">as</span> <span class="dt">u32</span>)<span class="op">.</span>to_le_bytes())<span class="op">;</span></span>
 <span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>     view_buffer[<span class="dv">4</span><span class="op">..</span><span class="dv">4</span> <span class="op">+</span> LEN]<span class="op">.</span>copy_from_slice(<span class="op">&amp;</span>data[<span class="op">..</span>LEN])<span class="op">;</span></span>
@@ -405,19 +406,19 @@ Reusing Parquet buffers is great in theory, but how much does saving a copy actu
 <span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a>         <span class="dv">12</span> <span class="op">=&gt;</span> <span class="pp">make_inlined_view::</span><span class="op">&lt;</span><span class="dv">12</span><span class="op">&gt;</span>(data)<span class="op">,</span></span>
 <span id="cb6-24"><a href="#cb6-24" aria-hidden="true" tabindex="-1"></a>         _ <span class="op">=&gt;</span> <span class="op">{</span></span>
 <span id="cb6-25"><a href="#cb6-25" aria-hidden="true" tabindex="-1"></a>           <span class="co">// handle long string</span></span>
-<span id="cb6-26"><a href="#cb6-26" aria-hidden="true" tabindex="-1"></a><span class="op">}}}</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb6-26"><a href="#cb6-26" aria-hidden="true" tabindex="-1"></a><span class="op">}}}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </section>
 <section id="section-2.4-end-to-end-query-performance" class="level3">
 <h3 class="anchored" data-anchor-id="section-2.4-end-to-end-query-performance">Section 2.4: End-to-End Query Performance</h3>
 <p>In the previous sections, we went out of our way to make sure loading StringViewArray is faster than StringArray. Before going further, we wanted to verify if obsessing about reducing copies and function calls has actually improved end-to-end performance in real-life queries. To do this, we evaluated a ClickBench query (Q20) in DataFusion that counts how many URLs contain the word <code>"google"</code>:</p>
-<div class="sourceCode" id="cb7"><pre class="sourceCode sql code-with-copy"><code class="sourceCode sql"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="kw">SELECT</span> <span class="fu">COUNT</span>(<span class="op">*</span>) <span class="kw">FROM</span> hits <span class="kw">WHERE</span> <span class="ot">"URL"</span> <span class="kw">LIKE</span> <span class="st">'%google%'</span>;</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode sql code-with-copy"><code class="sourceCode sql"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="kw">SELECT</span> <span class="fu">COUNT</span>(<span class="op">*</span>) <span class="kw">FROM</span> hits <span class="kw">WHERE</span> <span class="ot">"URL"</span> <span class="kw">LIKE</span> <span class="st">'%google%'</span>;</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>This is a relatively simple query; most of the time is spent on loading the “URL” column to find matching rows. The query plan looks like this:</p>
-<div class="sourceCode" id="cb8"><pre class="sourceCode txt code-with-copy"><code class="sourceCode default"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>Projection: COUNT(*) [COUNT(*):Int64;N]</span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8"><pre class="sourceCode txt code-with-copy"><code class="sourceCode default"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>Projection: COUNT(*) [COUNT(*):Int64;N]</span>
 <span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  Aggregate: groupBy=[[]], aggr=[[COUNT(*)]] [COUNT(*):Int64;N]</span>
 <span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    Filter: hits.URL LIKE Utf8("%google%")</span>
-<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>      TableScan: hits </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>      TableScan: hits </span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>We ran the benchmark in the DataFusion repo like this:</p>
-<div class="sourceCode" id="cb9"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="ex">cargo</span> run <span class="at">--profile</span> release-nonlto <span class="at">--bin</span> dfbench <span class="at">--</span> clickbench <span class="at">--queries-path</span> benchmarks/queries/clickbench/queries.sql <span class="at">--iterations</span> 3 <span class="at">--query</span> 20 <span class="at">--path</span> benchmarks/data/hits.parquet <span class="at">--string-view</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="ex">cargo</span> run <span class="at">--profile</span> release-nonlto <span class="at">--bin</span> dfbench <span class="at">--</span> clickbench <span class="at">--queries-path</span> benchmarks/queries/clickbench/queries.sql <span class="at">--iterations</span> 3 <span class="at">--query</span> 20 <span class="at">--path</span> benchmarks/data/hits.parquet <span class="at">--string-view</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>With StringViewArray we saw a 24% end-to-end performance improvement, as shown in Figure 7. With the <code>--string-view</code> argument, the end-to-end query time is <code>944.3 ms, 869.6 ms, 861.9 ms</code> (three iterations). Without <code>--string-view</code>, the end-to-end query time is <code>1186.1 ms, 1126.1 ms, 1138.3 ms</code>.</p>
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
@@ -475,7 +476,7 @@ Reusing Parquet buffers is great in theory, but how much does saving a copy actu
 <h3 class="anchored" data-anchor-id="section-3.6-end-to-end-query-performance">Section 3.6: End-to-end query performance</h3>
 <p>We have made significant progress in optimizing StringViewArray filtering operations. Now, let’s test it in the real world to see how it works!</p>
 <p>Let’s consider ClickBench query 22, which selects multiple string fields (<code>URL</code>, <code>Title</code>, and <code>SearchPhase</code>) and applies several filters.</p>
-<div class="sourceCode" id="cb10"><pre class="sourceCode sql code-with-copy"><code class="sourceCode sql"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="kw">SELECT</span> </span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb10"><pre class="sourceCode sql code-with-copy"><code class="sourceCode sql"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="kw">SELECT</span> </span>
 <span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  <span class="ot">"SearchPhrase"</span>, </span>
 <span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">MIN</span>(<span class="ot">"URL"</span>), <span class="fu">MIN</span>(<span class="ot">"Title"</span>), <span class="fu">COUNT</span>(<span class="op">*</span>) <span class="kw">AS</span> c, <span class="fu">COUNT</span>(<span class="kw">DISTINCT</span> <span class="ot">"UserID"</span>) </span>
 <span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a><span class="kw">FROM</span> hits </span>
@@ -485,9 +486,9 @@ Reusing Parquet buffers is great in theory, but how much does saving a copy actu
 <span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>  <span class="ot">"SearchPhrase"</span> <span class="op">&lt;&gt;</span> <span class="st">''</span> </span>
 <span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a><span class="kw">GROUP</span> <span class="kw">BY</span> <span class="ot">"SearchPhrase"</span> </span>
 <span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a><span class="kw">ORDER</span> <span class="kw">BY</span> c <span class="kw">DESC</span> </span>
-<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a><span class="kw">LIMIT</span> <span class="dv">10</span>;</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a><span class="kw">LIMIT</span> <span class="dv">10</span>;</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>We ran the benchmark using the following command in the DataFusion repo. Again, the <code>--string-view</code> option means we use StringViewArray instead of StringArray.</p>
-<div class="sourceCode" id="cb11"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="ex">cargo</span> run <span class="at">--profile</span> release-nonlto <span class="at">--bin</span> dfbench <span class="at">--</span> clickbench <span class="at">--queries-path</span> benchmarks/queries/clickbench/queries.sql <span class="at">--iterations</span> 3 <span class="at">--query</span> 22 <span class="at">--path</span> benchmarks/data/hits.parquet <span class="at">--string-view</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb11"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="ex">cargo</span> run <span class="at">--profile</span> release-nonlto <span class="at">--bin</span> dfbench <span class="at">--</span> clickbench <span class="at">--queries-path</span> benchmarks/queries/clickbench/queries.sql <span class="at">--iterations</span> 3 <span class="at">--query</span> 22 <span class="at">--path</span> benchmarks/data/hits.parquet <span class="at">--string-view</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>To eliminate the impact of the faster Parquet reading using StringViewArray (see the first part of this blog), Figure 9 plots only the time spent in <code>FilterExec</code>. Without StringViewArray, the filter takes 7.17s; with StringViewArray, the filter only takes 4.86s, a 32% reduction in time. Moreover, we see a 17% improvement in end-to-end query performance.</p>
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
@@ -593,13 +594,14 @@ Reusing Parquet buffers is great in theory, but how much does saving a copy actu
       e.clearSelection();
     }
     const getTextToCopy = function(trigger) {
-        const codeEl = trigger.previousElementSibling.cloneNode(true);
-        for (const childEl of codeEl.children) {
-          if (isCodeAnnotation(childEl)) {
-            childEl.remove();
-          }
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
         }
-        return codeEl.innerText;
+      }
+      return codeEl.innerText;
     }
     const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
       text: getTextToCopy

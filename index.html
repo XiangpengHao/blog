@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.7.33">
+<meta name="generator" content="quarto-1.8.26">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -34,14 +34,15 @@ ul.task-list li input[type="checkbox"] {
 <script src="site_libs/quarto-listing/quarto-listing.js"></script>
 <script src="site_libs/quarto-html/quarto.js" type="module"></script>
 <script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="site_libs/quarto-html/axe/axe-check.js" type="module"></script>
 <script src="site_libs/quarto-html/popper.min.js"></script>
 <script src="site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="site_libs/quarto-html/anchor.min.js"></script>
 <link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="site_libs/quarto-html/quarto-syntax-highlighting-ea385d0e468b0dd5ea5bf0780b1290d9.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-587c61ba64f3a5504c4d52d930310e48.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="site_libs/bootstrap/bootstrap-4df3b0c4fafa0f66eafcead0ee6cff11.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="site_libs/bootstrap/bootstrap-0b37c64f34216b628666a8dac638b53b.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -112,7 +113,7 @@ const typesetMath = (el) => {
     var macros = [];
     for (var i = 0; i < mathElements.length; i++) {
       var texText = mathElements[i].firstChild;
-      if (mathElements[i].tagName == "SPAN") {
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
         window.katex.render(texText.data, mathElements[i], {
           displayMode: mathElements[i].classList.contains('display'),
           throwOnError: false,
@@ -213,7 +214,29 @@ window.Quarto = {
 
 <div class="quarto-listing quarto-listing-container-default" id="listing-listing">
 <div class="list quarto-listing-default">
-<div class="quarto-post image-right" data-index="0" data-categories="" data-listing-date-sort="1755043200000" data-listing-file-modified-sort="1756059748836" data-listing-date-modified-sort="1755043200000" data-listing-reading-time-sort="2" data-listing-word-count-sort="236">
+<div class="quarto-post image-right" data-index="0" data-categories="" data-listing-date-sort="1763942400000" data-listing-file-modified-sort="1764015598909" data-listing-date-modified-sort="1763942400000" data-listing-reading-time-sort="5" data-listing-word-count-sort="866">
+<div class="thumbnail"><a href="./posts/what-is-liquid-cache/index.html" class="no-external">
+
+<p class="card-img-top"><img src="posts/what-is-liquid-cache/liquid-cache.jpg"  class="thumbnail-image card-img"/></p>
+
+</a></div>
+<div class="body">
+<h3 class="no-anchor listing-title">
+<a href="./posts/what-is-liquid-cache/index.html" class="no-external">What is LiquidCache?</a>
+</h3>
+<div class="delink listing-description"><a href="./posts/what-is-liquid-cache/index.html" class="no-external">
+<p>A caching layer to unify compute and storage.</p>
+</a></div>
+</div>
+<div class="metadata">
+<a href="./posts/what-is-liquid-cache/index.html" class="no-external">
+<div class="listing-date">
+Nov 24, 2025
+</div>
+</a>
+</div>
+</div>
+<div class="quarto-post image-right" data-index="1" data-categories="" data-listing-date-sort="1755043200000" data-listing-file-modified-sort="1764015598867" data-listing-date-modified-sort="1755043200000" data-listing-reading-time-sort="2" data-listing-word-count-sort="236">
 <div class="thumbnail"><a href="./posts/nature-of-string/index.html" class="no-external">
 
 <p class="card-img-top"><img src="posts/nature-of-string/string-type.jpg"  class="thumbnail-image card-img"/></p>
@@ -235,7 +258,7 @@ Aug 13, 2025
 </a>
 </div>
 </div>
-<div class="quarto-post image-right" data-index="1" data-categories="" data-listing-date-sort="1742688000000" data-listing-file-modified-sort="1756059748826" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="15" data-listing-word-count-sort="3000">
+<div class="quarto-post image-right" data-index="2" data-categories="" data-listing-date-sort="1742688000000" data-listing-file-modified-sort="1764015598857" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="15" data-listing-word-count-sort="3000">
 <div class="thumbnail"><a href="./posts/build-s3-select/index.html" class="no-external">
 
 <p class="card-img-top"><img src="posts/build-s3-select/s3-select.jpg"  class="thumbnail-image card-img"/></p>
@@ -257,7 +280,7 @@ Mar 23, 2025
 </a>
 </div>
 </div>
-<div class="quarto-post image-right" data-index="2" data-categories="" data-listing-date-sort="1741737600000" data-listing-file-modified-sort="1756059748852" data-listing-date-modified-sort="1741737600000" data-listing-reading-time-sort="12" data-listing-word-count-sort="2307">
+<div class="quarto-post image-right" data-index="3" data-categories="" data-listing-date-sort="1741737600000" data-listing-file-modified-sort="1764015598883" data-listing-date-modified-sort="1741737600000" data-listing-reading-time-sort="12" data-listing-word-count-sort="2307">
 <div class="thumbnail"><a href="./posts/parquet-pushdown/index.html" class="no-external">
 
 <p class="card-img-top"><img src="posts/parquet-pushdown/pushdown-vs-no-pushdown.jpg"  class="thumbnail-image card-img"/></p>
@@ -279,7 +302,7 @@ Mar 12, 2025
 </a>
 </div>
 </div>
-<div class="quarto-post image-right" data-index="3" data-categories="" data-listing-date-sort="1741478400000" data-listing-file-modified-sort="1756059748877" data-listing-date-modified-sort="1741478400000" data-listing-reading-time-sort="8" data-listing-word-count-sort="1412">
+<div class="quarto-post image-right" data-index="4" data-categories="" data-listing-date-sort="1741478400000" data-listing-file-modified-sort="1764015598908" data-listing-date-modified-sort="1741478400000" data-listing-reading-time-sort="8" data-listing-word-count-sort="1412">
 <div class="thumbnail"><a href="./posts/system-researchers/index.html" class="no-external">
 
 <p class="card-img-top"><img src="posts/system-researchers/meme.jpg"  class="thumbnail-image card-img"/></p>
@@ -301,7 +324,7 @@ Mar 9, 2025
 </a>
 </div>
 </div>
-<div class="quarto-post image-right" data-index="4" data-categories="" data-listing-date-sort="1731369600000" data-listing-file-modified-sort="1756059748858" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="2" data-listing-word-count-sort="229">
+<div class="quarto-post image-right" data-index="5" data-categories="" data-listing-date-sort="1731369600000" data-listing-file-modified-sort="1764015598889" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="2" data-listing-word-count-sort="229">
 <div class="thumbnail"><a href="./posts/parquet-viewer/index.html" class="no-external">
 
 <p class="card-img-top"><img src="posts/parquet-viewer/screenshot4.jpg"  class="thumbnail-image card-img"/></p>
@@ -326,7 +349,7 @@ Xiangpeng Hao
 </a>
 </div>
 </div>
-<div class="quarto-post image-right" data-index="5" data-categories="" data-listing-date-sort="1729987200000" data-listing-file-modified-sort="1756059748833" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="9" data-listing-word-count-sort="1705">
+<div class="quarto-post image-right" data-index="6" data-categories="" data-listing-date-sort="1729987200000" data-listing-file-modified-sort="1764015598864" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="9" data-listing-word-count-sort="1705">
 <div class="thumbnail"><a href="./posts/caching-datafusion/index.html" class="no-external">
 
 <p class="card-img-top"><img src="posts/caching-datafusion/cache-arrow.png"  class="thumbnail-image card-img"/></p>
@@ -351,7 +374,7 @@ Xiangpeng Hao
 </a>
 </div>
 </div>
-<div class="quarto-post image-right" data-index="6" data-categories="" data-listing-date-sort="1729728000000" data-listing-file-modified-sort="1756059748857" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="4" data-listing-word-count-sort="762">
+<div class="quarto-post image-right" data-index="7" data-categories="" data-listing-date-sort="1729728000000" data-listing-file-modified-sort="1764015598888" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="4" data-listing-word-count-sort="762">
 <div class="thumbnail"><a href="./posts/parquet-to-arrow/index.html" class="no-external">
 
 <p class="card-img-top"><img src="posts/parquet-to-arrow/read-parquet.jpg"  class="thumbnail-image card-img"/></p>
@@ -376,7 +399,7 @@ Xiangpeng Hao
 </a>
 </div>
 </div>
-<div class="quarto-post image-right" data-index="7" data-categories="" data-listing-date-sort="1726185600000" data-listing-file-modified-sort="1756059748872" data-listing-date-modified-sort="1726185600000" data-listing-reading-time-sort="25" data-listing-word-count-sort="4927">
+<div class="quarto-post image-right" data-index="8" data-categories="" data-listing-date-sort="1726185600000" data-listing-file-modified-sort="1764015598904" data-listing-date-modified-sort="1726185600000" data-listing-reading-time-sort="25" data-listing-word-count-sort="4927">
 <div class="thumbnail"><a href="./posts/string-view-datafusion/index.html" class="no-external">
 
 <p class="card-img-top"><img src="posts/string-view-datafusion/click-perf.png"  class="thumbnail-image card-img"/></p>
@@ -401,7 +424,7 @@ Xiangpeng Hao, Andrew Lamb
 </a>
 </div>
 </div>
-<div class="quarto-post image-right" data-index="8" data-categories="" data-listing-date-sort="1724198400000" data-listing-file-modified-sort="1756059748868" data-listing-date-modified-sort="1724371200000" data-listing-reading-time-sort="6" data-listing-word-count-sort="1157">
+<div class="quarto-post image-right" data-index="9" data-categories="" data-listing-date-sort="1724198400000" data-listing-file-modified-sort="1764015598900" data-listing-date-modified-sort="1724371200000" data-listing-reading-time-sort="6" data-listing-word-count-sort="1157">
 <div class="thumbnail"><a href="./posts/research-statement/index.html" class="no-external">
 
 <p class="card-img-top"><img src="posts/research-statement/20240808145348.png"  class="thumbnail-image card-img"/></p>
@@ -423,7 +446,7 @@ Aug 21, 2024
 </a>
 </div>
 </div>
-<div class="quarto-post image-right" data-index="9" data-categories="" data-listing-date-sort="1723939200000" data-listing-file-modified-sort="1756059748880" data-listing-date-modified-sort="1724371200000" data-listing-reading-time-sort="4" data-listing-word-count-sort="745">
+<div class="quarto-post image-right" data-index="10" data-categories="" data-listing-date-sort="1723939200000" data-listing-file-modified-sort="1764015598915" data-listing-date-modified-sort="1724371200000" data-listing-reading-time-sort="4" data-listing-word-count-sort="745">
 <div class="thumbnail"><a href="./posts/working-at-influxdata/index.html" class="no-external">
 
 <div class="listing-item-img-placeholder card-img-top" >&nbsp;</div>
@@ -445,7 +468,7 @@ Aug 18, 2024
 </a>
 </div>
 </div>
-<div class="quarto-post image-right" data-index="10" data-categories="" data-listing-date-sort="1715040000000" data-listing-file-modified-sort="1756059748834" data-listing-date-modified-sort="1715040000000" data-listing-reading-time-sort="4" data-listing-word-count-sort="787">
+<div class="quarto-post image-right" data-index="11" data-categories="" data-listing-date-sort="1715040000000" data-listing-file-modified-sort="1764015598866" data-listing-date-modified-sort="1715040000000" data-listing-reading-time-sort="4" data-listing-word-count-sort="787">
 <div class="thumbnail"><a href="./posts/good-advisor/index.html" class="no-external">
 
 <div class="listing-item-img-placeholder card-img-top" >&nbsp;</div>
@@ -467,7 +490,7 @@ May 7, 2024
 </a>
 </div>
 </div>
-<div class="quarto-post image-right" data-index="11" data-categories="" data-listing-date-sort="1714089600000" data-listing-file-modified-sort="1756059748871" data-listing-date-modified-sort="1714435200000" data-listing-reading-time-sort="12" data-listing-word-count-sort="2278">
+<div class="quarto-post image-right" data-index="12" data-categories="" data-listing-date-sort="1714089600000" data-listing-file-modified-sort="1764015598902" data-listing-date-modified-sort="1714435200000" data-listing-reading-time-sort="12" data-listing-word-count-sort="2278">
 <div class="thumbnail"><a href="./posts/sql-to-results/index.html" class="no-external">
 
 <p class="card-img-top"><img src="posts/sql-to-results/f4.png"  class="thumbnail-image card-img"/></p>
@@ -543,13 +566,14 @@ Apr 26, 2024
       e.clearSelection();
     }
     const getTextToCopy = function(trigger) {
-        const codeEl = trigger.previousElementSibling.cloneNode(true);
-        for (const childEl of codeEl.children) {
-          if (isCodeAnnotation(childEl)) {
-            childEl.remove();
-          }
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
         }
-        return codeEl.innerText;
+      }
+      return codeEl.innerText;
     }
     const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
       text: getTextToCopy

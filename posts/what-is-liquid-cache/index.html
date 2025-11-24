@@ -1,2 +1,748 @@
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"></html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.26">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="dcterms.date" content="2025-11-24">
+<meta name="description" content="A caching layer to unify compute and storage.">
+
+<title>What is LiquidCache? – Xiangpeng’s blog</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+</style>
+
+
+<script src="../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../">
+<script src="../../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../site_libs/quarto-html/quarto-syntax-highlighting-587c61ba64f3a5504c4d52d930310e48.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../site_libs/bootstrap/bootstrap-0b37c64f34216b628666a8dac638b53b.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "/"
+  ],
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<!-- Cloudflare Web Analytics -->
+<script defer="" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon="{&quot;token&quot;: &quot;eb43fd3c2c574a2590aae63c67009129&quot;}"></script><!-- End Cloudflare Web Analytics -->
+
+
+<link rel="stylesheet" href="../../styles.css">
+<meta property="og:title" content="What is LiquidCache? – Xiangpeng’s blog">
+<meta property="og:description" content="A caching layer to unify compute and storage.">
+<meta property="og:image" content="https://blog.xiangpeng.systems/posts/what-is-liquid-cache/liquid-cache.jpg">
+<meta property="og:site_name" content="Xiangpeng's blog">
+<meta name="twitter:title" content="What is LiquidCache? – Xiangpeng’s blog">
+<meta name="twitter:description" content="A caching layer to unify compute and storage.">
+<meta name="twitter:image" content="https://blog.xiangpeng.systems/posts/what-is-liquid-cache/liquid-cache.jpg">
+<meta name="twitter:card" content="summary_large_image">
+</head>
+
+<body class="nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top quarto-banner">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../../index.html">
+    <span class="navbar-title">Xiangpeng’s blog</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://xiangpeng.systems"> <i class="bi bi-person-circle" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/XiangpengHao"> <i class="bi bi-github" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://www.linkedin.com/in/hao-xiangpeng/"> <i class="bi bi-linkedin" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="../../index.xml"> <i class="bi bi-rss" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<header id="title-block-header" class="quarto-title-block default page-columns page-full">
+  <div class="quarto-title-banner page-columns page-full">
+    <div class="quarto-title column-body">
+      <h1 class="title">What is LiquidCache?</h1>
+                  <div>
+        <div class="description">
+          A caching layer to unify compute and storage.
+        </div>
+      </div>
+                </div>
+  </div>
+    
+  
+  <div class="quarto-title-meta">
+
+      
+      <div>
+      <div class="quarto-title-meta-heading">Published</div>
+      <div class="quarto-title-meta-contents">
+        <p class="date">November 24, 2025</p>
+      </div>
+    </div>
+    
+      <div>
+      <div class="quarto-title-meta-heading">Modified</div>
+      <div class="quarto-title-meta-contents">
+        <p class="date-modified">November 24, 2025</p>
+      </div>
+    </div>
+      
+    </div>
+    
+  
+  </header><div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#why-liquidcache" id="toc-why-liquidcache" class="nav-link active" data-scroll-target="#why-liquidcache">Why LiquidCache?</a></li>
+  <li><a href="#how-liquidcache-works" id="toc-how-liquidcache-works" class="nav-link" data-scroll-target="#how-liquidcache-works">How LiquidCache Works</a></li>
+  <li><a href="#conclusions" id="toc-conclusions" class="nav-link" data-scroll-target="#conclusions">Conclusions</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content quarto-banner-title-block page-columns page-full" id="quarto-document-content">
+
+
+
+
+
+<div class="callout callout-style-simple callout-warning no-icon callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon no-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Warning</span>Acknowledgments
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>This work is supported by <a href="https://xiangpeng.systems/fund/">funding</a> from:<br> 1.&nbsp;&nbsp;<a href="https://influxdata.com">InfluxData</a>, <a href="https://www.bauplanlabs.com">Bauplan</a>, and <a href="https://spiraldb.com">SpiralDB</a>.<br> 2.&nbsp;&nbsp;The taxpayers of the State of Wisconsin and the federal government.</p>
+<p>Your support for science is greatly appreciated!</p>
+</div>
+</div>
+<p><img src="./liquid-cache.jpg" class="img-fluid"></p>
+<p><a href="https://github.com/XiangpengHao/liquid-cache">LiquidCache</a> is a caching layer that unifies the design goals of compute and storage<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a>.</p>
+<div class="no-row-height column-margin column-container"><div id="fn1"><p><sup>1</sup>&nbsp;Check out our <a href="https://github.com/XiangpengHao/liquid-cache/blob/main/dev/doc/liquid-cache-vldb.pdf">research paper</a> (VLDB 2025) for more technical details.</p></div></div><p>It accelerates query performance without needing to leave Parquet.</p>
+<p>It addresses this fundamental tension:</p>
+<ul>
+<li><p><strong>Storage systems</strong> want to optimize for ecosystem compatibility, and long-term, stable, open governance; industry thus gravitated towards Parquet as the de facto columnar format.</p></li>
+<li><p><strong>Query engines</strong> want the data to be optimized for flexible layouts, rapid evolution, and performance-first optimizations.</p></li>
+</ul>
+<p>Instead of squeezing the last bits of performance from Parquet<a href="#fn2" class="footnote-ref" id="fnref2" role="doc-noteref"><sup>2</sup></a>, or trying to create future-proof file formats<a href="#fn3" class="footnote-ref" id="fnref3" role="doc-noteref"><sup>3</sup></a>, LiquidCache addresses this problem through a new abstraction: the caching layer.</p>
+<div class="no-row-height column-margin column-container"><div id="fn2"><p><sup>2</sup>&nbsp;Great paper on Parquet selection pushdown: <a href="https://dl.acm.org/doi/10.1145/3589323">Selection Pushdown in Column Stores using Bit Manipulation Instructions</a>.</p></div><div id="fn3"><p><sup>3</sup>&nbsp;<a href="https://www.vldb.org/pvldb/vol18/p4017-gienieczko.pdf">AnyBlox: A Framework for Self-Decoding Datasets</a>, and <a href="https://db.cs.cmu.edu/papers/2025/zeng-sigmod2025.pdf">F3: The Open-Source Data File Format for the Future</a></p></div></div><ul>
+<li>At a glance, LiquidCache is a distributed caching service: it supports all object storage backends (S3, GCS, Azure Blob Storage, etc.), and serves all kinds of applications (knowledge bases, dashboards, etc.) deployed on all kinds of compute (Kubernetes, Lambda, etc.).</li>
+<li>Under the hood, LiquidCache <em>caches Parquet as liquid data</em>, which is ultra-optimized for compute pushdown, compressed execution, modern storage, and network‑efficient data transfer.</li>
+</ul>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="./liquid-cache-overview.png" class="img-fluid figure-img" style="width:80.0%"></p>
+<figcaption>LiquidCache overview. It caches different object store sources and serves different analytical applications.</figcaption>
+</figure>
+</div>
+<p>It is built on open standards: <a href="https://parquet.apache.org/">Parquet</a> for data storage, <a href="https://github.com/apache/datafusion">DataFusion</a> as the query engine, and <a href="https://arrow.apache.org/docs/format/Flight.html">Arrow Flight</a> for data transfer. This makes LiquidCache highly composable – you can easily integrate it into your existing analytics stack.</p>
+<section id="why-liquidcache" class="level2 page-columns page-full">
+<h2 class="anchored" data-anchor-id="why-liquidcache">Why LiquidCache?</h2>
+<section id="we-like-s3" class="level4">
+<h4 class="anchored" data-anchor-id="we-like-s3">We like S3</h4>
+<ol type="1">
+<li>Simple durability: 11 nines of durability—you never have to worry about data loss.</li>
+<li>Simple scalability: virtually unlimited space and throughput.</li>
+</ol>
+</section>
+<section id="but-s3-is-slow-and-expensive" class="level4 page-columns page-full">
+<h4 class="anchored" data-anchor-id="but-s3-is-slow-and-expensive">But S3 is slow and expensive</h4>
+<ol type="1">
+<li>≈100 ms first‑byte latency plus transfer latency; this quickly adds up when multiple round‑trips are needed to fetch data.<a href="#fn4" class="footnote-ref" id="fnref4" role="doc-noteref"><sup>4</sup></a></li>
+<li>Storage, request, and data‑transfer/egress costs; prices have remained largely unchanged for a decade even as underlying hardware has become ~20× cheaper.</li>
+</ol>
+<div class="no-row-height column-margin column-container"><div id="fn4"><p><sup>4</sup>&nbsp;<a href="https://www.vldb.org/pvldb/vol16/p2769-durner.pdf">Exploiting Cloud Object Storage for High-Performance Analytics</a></p></div></div><div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="./s3-price.jpg" class="img-fluid figure-img" style="width:80.0%"></p>
+<figcaption>S3 prices have barely changed for a decade, despite ~20× reductions in underlying hardware costs, <a href="https://x.com/andrewlamb1111/status/1909681433452724444">credit to Andrew Lamb</a></figcaption>
+</figure>
+</div>
+</section>
+<section id="liquidcache-foundation-of-diskless-architectures" class="level4 page-columns page-full">
+<h4 class="anchored" data-anchor-id="liquidcache-foundation-of-diskless-architectures">LiquidCache: foundation of diskless architectures</h4>
+<ol type="1">
+<li>Caches are everywhere<a href="#fn5" class="footnote-ref" id="fnref5" role="doc-noteref"><sup>5</sup></a>: compute‑local caches (e.g., Snowflake/Databricks local NVMe, Spark host caches)<a href="#fn6" class="footnote-ref" id="fnref6" role="doc-noteref"><sup>6</sup></a>, shared‑nothing caches, and cache services<a href="#fn7" class="footnote-ref" id="fnref7" role="doc-noteref"><sup>7</sup></a>.</li>
+<li>DLC trilemma: among durability, low latency, and low cost, you can only choose two<a href="#fn8" class="footnote-ref" id="fnref8" role="doc-noteref"><sup>8</sup></a>. <img src="./DLC.png" class="img-fluid" style="width:50.0%"></li>
+</ol>
+<!-- 
+### State Management for Applications 
+
+#### We like serverless
+1. Simple scalability: automatic horizontal scaling and fine‑grained billing.
+2. Lower cost via higher utilization and elasticity; zero servers to manage.
+3. Available on all major cloud providers (AWS Lambda, GCP Cloud Run, Azure Functions, etc.).
+
+#### But serverless analytics are slow and expensive 
+1. S3 is both too slow and too expensive. 
+2. You can't build a sticky compute‑local cache: serverless compute is one‑shot, ephemeral, and stateless.
+
+#### LiquidCache: the missing piece for serverless analytics
+In practice, most production analytics pin workloads to EC2‑like servers with a compute‑local cache for predictable performance.
+
+With LiquidCache, all compute nodes can be serverless because they can connect to the shared LiquidCache service, which is deployed on conventional EC2 instances.
+
+![Compare the OLTP architecture (left) with the new diskless+serverless OLAP architecture (right). LiquidCache is at the center of state management.](./state-management.png){width=100%} -->
+<div class="no-row-height column-margin column-container"><div id="fn5"><p><sup>5</sup>&nbsp;<a href="https://andrew.nerdnetworks.org/other/CIDR_2025_Cloud_5_Minute_Rule.pdf">The Five-Minute Rule for the Cloud: Caching in Analytics Systems</a></p></div><div id="fn6"><p><sup>6</sup>&nbsp;<a href="https://github.com/duckdb/duckdb/pull/16463">DuckDB’s external file cache</a></p></div><div id="fn7"><p><sup>7</sup>&nbsp;<a href="https://clickhouse.com/blog/building-a-distributed-cache-for-s3">ClickHouse’s distributed cache for S3</a></p></div><div id="fn8"><p><sup>8</sup>&nbsp;<a href="https://materializedview.io/p/cloud-storage-triad-latency-cost-durability">The Cloud Storage Triad: Latency, Cost, Durability</a></p></div></div></section>
+</section>
+<section id="how-liquidcache-works" class="level2 page-columns page-full">
+<h2 class="anchored" data-anchor-id="how-liquidcache-works">How LiquidCache Works</h2>
+<section id="we-like-parquet" class="level4">
+<h4 class="anchored" data-anchor-id="we-like-parquet">We like Parquet</h4>
+<ol type="1">
+<li>All major query engines support it (DataFusion, Spark, Trino, DuckDB, Snowflake, BigQuery, and more).</li>
+<li>It is battle‑tested and keeps evolving (e.g., page indexes, new encodings).</li>
+<li>It is under open, stable governance (Apache Software Foundation), so your data is in good hands.</li>
+</ol>
+</section>
+<section id="but-sometimes-we-want-more-aggressive-performance" class="level4">
+<h4 class="anchored" data-anchor-id="but-sometimes-we-want-more-aggressive-performance">But sometimes we want more aggressive performance</h4>
+<ol type="1">
+<li>There are better encodings and compression schemes out there.</li>
+<li>Parquet is critical data infrastructure: it evolves cautiously to keep your data safe and stable—it can’t try new research today and abandon your data tomorrow.</li>
+</ol>
+</section>
+<section id="liquidcache-cache-only-pushdown-optimized-data-representation" class="level4 page-columns page-full">
+<h4 class="anchored" data-anchor-id="liquidcache-cache-only-pushdown-optimized-data-representation">LiquidCache: cache-only, pushdown-optimized data representation</h4>
+<ol type="1">
+<li>LiquidCache uses state‑of‑the‑art encodings and compression chosen by the workload.<a href="#fn9" class="footnote-ref" id="fnref9" role="doc-noteref"><sup>9</sup></a></li>
+<li>Liquid data is invisible to the rest of the ecosystem: it is cache‑only. This means it can freely change its layout, adding or removing encodings without breaking any user code.</li>
+<li>LiquidCache transparently, progressively, and selectively transcodes Parquet data to the liquid format.</li>
+<li>Liquid data is designed for efficient pushdown to save both compute and network resources.</li>
+</ol>
+<div class="no-row-height column-margin column-container"><div id="fn9"><p><sup>9</sup>&nbsp;The liquid format is heavily inspired by <a href="https://github.com/vortex-data/vortex">Vortex</a>. We plan to support a Vortex backend in the future.</p></div></div><p>Without any changes to Parquet, LiquidCache takes care of the performance optimizations.</p>
+<p><img src="./liquid-data.jpg" class="img-fluid" style="width:80.0%"></p>
+</section>
+</section>
+<section id="conclusions" class="level2 page-columns page-full">
+<h2 class="anchored" data-anchor-id="conclusions">Conclusions</h2>
+<p>LiquidCache is the one‑stop shop for diskless, serverless, and pushdown‑native analytics.</p>
+<p>It is built on open standards (Parquet, Arrow Flight, DataFusion) for easy integration and stable governance.</p>
+<p>LiquidCache caches Parquet as liquid data, which is ultra-optimized for compute pushdown, compressed execution, modern storage, and network‑efficient data transfer.</p>
+<section id="who-are-we" class="level4 page-columns page-full">
+<h4 class="anchored" data-anchor-id="who-are-we">Who are we?</h4>
+<ul>
+<li>LiquidCache started as a research project led by <a href="https://xiangpeng.systems">Xiangpeng Hao</a> at UW‑Madison <a href="https://research.cs.wisc.edu/adsl/">ADSL</a>.</li>
+<li>It was made possible by a research gift from <a href="https://influxdata.com">InfluxData</a>. One year later, <a href="https://spiraldb.com">SpiralDB</a> and <a href="https://www.bauplanlabs.com">Bauplan</a> also joined the journey.<a href="#fn10" class="footnote-ref" id="fnref10" role="doc-noteref"><sup>10</sup></a></li>
+<li>LiquidCache will remain a public‑benefit project in appreciation of the support from taxpayers, research gifts, and the open‑source community.</li>
+</ul>
+
+
+<div class="no-row-height column-margin column-container"><div id="fn10"><p><sup>10</sup>&nbsp;Support our research <a href="https://xiangpeng.systems/fund/">here</a>!</p></div></div></section>
+</section>
+
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/blog\.xiangpeng\.systems");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<input type="hidden" id="giscus-base-theme" value="light">
+<input type="hidden" id="giscus-alt-theme" value="dark">
+<script>
+  function loadGiscus() {
+    // Function to get the theme based on body class
+    const getTheme = () => {
+      let baseTheme = document.getElementById('giscus-base-theme').value;
+      let altTheme = document.getElementById('giscus-alt-theme').value;
+      return document.body.classList.contains('quarto-dark') ? altTheme : baseTheme;
+    };
+    const script = document.createElement("script");
+    script.src = "https://giscus.app/client.js";
+    script.async = true;
+    script.dataset.repo = "XiangpengHao/blog";
+    script.dataset.repoId = "R_kgDOLz4gpg";
+    script.dataset.category = "General";
+    script.dataset.categoryId = "DIC_kwDOLz4gps4CjzbT";
+    script.dataset.mapping = "title";
+    script.dataset.reactionsEnabled = "1";
+    script.dataset.emitMetadata = "0";
+    script.dataset.inputPosition = "top";
+    script.dataset.theme = getTheme();
+    script.dataset.lang = "en";
+    script.crossOrigin = "anonymous";
+    // Append the script to the desired div instead of at the end of the body
+    document.getElementById("quarto-content").appendChild(script);
+  }
+  loadGiscus();
+</script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

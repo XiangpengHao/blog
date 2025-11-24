@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.7.33">
+<meta name="generator" content="quarto-1.8.26">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -70,14 +70,15 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <meta name="quarto:offset" content="../../">
 <script src="../../site_libs/quarto-html/quarto.js" type="module"></script>
 <script src="../../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
 <script src="../../site_libs/quarto-html/popper.min.js"></script>
 <script src="../../site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="../../site_libs/quarto-html/anchor.min.js"></script>
 <link href="../../site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="../../site_libs/quarto-html/quarto-syntax-highlighting-425560e6e27c88e19529b7c03591d40d.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="../../site_libs/quarto-html/quarto-syntax-highlighting-0a95de2c3be981c2e03029825b16c585.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="../../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../../site_libs/bootstrap/bootstrap-513c6d844cb9973a7471634b897feaa8.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="../../site_libs/bootstrap/bootstrap-541cc689fab2501f344469d138d6f9c8.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -241,17 +242,17 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h4 class="anchored" data-anchor-id="list-files-cache">1. List files cache</h4>
 <p>The <a href="https://github.com/apache/datafusion/blob/5db274004bc4a7d493aba6764a8521694a67cd11/datafusion/execution/src/cache/cache_unit.rs#L103">list files cache</a> optimizes directory scanning operations in DataFusion. When a <a href="https://github.com/apache/datafusion/blob/5db274004bc4a7d493aba6764a8521694a67cd11/datafusion/core/src/datasource/listing/table.rs#L683">ListingTable</a> needs to access files in a directory, it first checks this cache before performing expensive <a href="https://github.com/apache/datafusion/blob/5db274004bc4a7d493aba6764a8521694a67cd11/datafusion/core/src/datasource/listing/url.rs#L207">filesystem listing operations</a>.</p>
 <p>This cache is implemented as a simple but effective <code>HashMap</code> that stores directory paths as keys and lists of file metadata as values. The metadata includes important file information like size, last modified time, and other attributes that would otherwise require filesystem/network calls to retrieve:</p>
-<div class="sourceCode" id="cb1"><pre class="sourceCode rust code-with-copy"><code class="sourceCode rust"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">struct</span> ListFilesCache <span class="op">{</span></span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode rust code-with-copy"><code class="sourceCode rust"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">struct</span> ListFilesCache <span class="op">{</span></span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    cached<span class="op">:</span> HashMap<span class="op">&lt;</span><span class="dt">Path</span><span class="op">,</span> <span class="dt">Vec</span><span class="op">&lt;</span>ObjectMeta<span class="op">&gt;&gt;,</span></span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </section>
 <section id="file-statistics-cache" class="level4">
 <h4 class="anchored" data-anchor-id="file-statistics-cache">2. File statistics cache</h4>
 <p>The <a href="https://github.com/apache/datafusion/blob/5db274004bc4a7d493aba6764a8521694a67cd11/datafusion/execution/src/cache/cache_unit.rs#L31">file statistics cache</a> stores important statistics about each file, such as row count and column statistics (min/max values). These statistics are used by DataFusion’s query optimizer to make better execution decisions, like pruning files that cannot contain matching data.</p>
 <p>The cache avoids having to <a href="https://github.com/apache/datafusion/blob/5db274004bc4a7d493aba6764a8521694a67cd11/datafusion/core/src/datasource/listing/table.rs#L1091">recompute/re-decode these statistics</a> for each query by storing them in a <code>HashMap</code> that maps file paths to both file metadata and statistics:</p>
-<div class="sourceCode" id="cb2"><pre class="sourceCode rust code-with-copy"><code class="sourceCode rust"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">struct</span> FileStatisticsCache <span class="op">{</span></span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode rust code-with-copy"><code class="sourceCode rust"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">struct</span> FileStatisticsCache <span class="op">{</span></span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    cached<span class="op">:</span> HashMap<span class="op">&lt;</span><span class="dt">Path</span><span class="op">,</span> (ObjectMeta<span class="op">,</span> Statistics)<span class="op">&gt;,</span></span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </section>
 <section id="parquet-metadata-cache" class="level4">
 <h4 class="anchored" data-anchor-id="parquet-metadata-cache">3. Parquet metadata cache</h4>
@@ -261,13 +262,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <li>Processing overhead: Decoding the metadata can be computationally expensive, especially for <a href="https://www.influxdata.com/blog/how-good-parquet-wide-tables/">tables with many columns</a></li>
 </ol>
 <p>To address these challenges, DataFusion provides the <a href="https://github.com/apache/datafusion/blob/5db274004bc4a7d493aba6764a8521694a67cd11/datafusion/core/src/datasource/physical_plan/parquet/reader.rs#L39">ParquetFileReaderFactory</a> trait. This trait allows developers to implement custom metadata handling strategies. The factory returns an <code>AsyncFileReader</code> that separates metadata access from data page access, enabling different caching and optimization approaches for each:</p>
-<div class="sourceCode" id="cb3"><pre class="sourceCode rust code-with-copy"><code class="sourceCode rust"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">pub</span> <span class="kw">trait</span> AsyncFileReader<span class="op">:</span> <span class="bu">Send</span> <span class="op">{</span></span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode rust code-with-copy"><code class="sourceCode rust"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">pub</span> <span class="kw">trait</span> AsyncFileReader<span class="op">:</span> <span class="bu">Send</span> <span class="op">{</span></span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">fn</span> get_metadata(<span class="op">&amp;</span><span class="kw">mut</span> <span class="kw">self</span>) <span class="op">-&gt;</span> BoxFuture<span class="op">&lt;</span><span class="ot">'_</span><span class="op">,</span> <span class="dt">Result</span><span class="op">&lt;</span>Arc<span class="op">&lt;</span>ParquetMetaData<span class="op">&gt;&gt;&gt;;</span></span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">fn</span> get_bytes(<span class="op">&amp;</span><span class="kw">mut</span> <span class="kw">self</span><span class="op">,</span> range<span class="op">:</span> Range<span class="op">&lt;</span><span class="dt">usize</span><span class="op">&gt;</span>) <span class="op">-&gt;</span> BoxFuture<span class="op">&lt;</span><span class="ot">'_</span><span class="op">,</span> <span class="dt">Result</span><span class="op">&lt;</span>Bytes<span class="op">&gt;&gt;;</span></span>
 <span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">...</span> <span class="co">// other methods</span></span>
-<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </section>
 <section id="parquet-file-range-cache" class="level4">
 <h4 class="anchored" data-anchor-id="parquet-file-range-cache">4. Parquet file range cache</h4>
@@ -281,11 +282,11 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <li>Implementing cache eviction policies based on access patterns</li>
 </ul>
 <p>Notably, the <code>AsyncFileReader</code> trait has a <code>get_bytes_ranges</code> method:</p>
-<div class="sourceCode" id="cb4"><pre class="sourceCode rust code-with-copy"><code class="sourceCode rust"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">pub</span> <span class="kw">trait</span> AsyncFileReader<span class="op">:</span> <span class="bu">Send</span> <span class="op">{</span></span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode rust code-with-copy"><code class="sourceCode rust"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">pub</span> <span class="kw">trait</span> AsyncFileReader<span class="op">:</span> <span class="bu">Send</span> <span class="op">{</span></span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    <span class="op">...</span> <span class="co">// previously mentioned methods </span></span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">fn</span> get_byte_ranges(<span class="op">&amp;</span><span class="kw">mut</span> <span class="kw">self</span><span class="op">,</span> ranges<span class="op">:</span> <span class="dt">Vec</span><span class="op">&lt;</span>Range<span class="op">&lt;</span><span class="dt">usize</span><span class="op">&gt;&gt;</span>) <span class="op">-&gt;</span> BoxFuture<span class="op">&lt;</span><span class="ot">'_</span><span class="op">,</span> <span class="dt">Result</span><span class="op">&lt;</span><span class="dt">Vec</span><span class="op">&lt;</span>Bytes<span class="op">&gt;&gt;&gt;;</span></span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>The default implementation of <code>get_byte_ranges</code> simply calls <code>get_bytes</code> sequentially for each range, which can be inefficient when reading many small ranges. This is because each range requires a separate network request, leading to higher latency and costs.</p>
 <p>However, developers can implement their own <a href="https://xiangpeng-hao.notion.site/Cool-Projects-with-Modern-Data-Analytics-11ed7d7dd30380a888eed5614fb79aa0#11ed7d7dd3038017b7b1e0c589aa6765">IO coalescing logic</a> to optimize performance. For example, they could:</p>
 <ul>
@@ -331,13 +332,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="zoom-in-a-bit" class="level3">
 <h3 class="anchored" data-anchor-id="zoom-in-a-bit">Zoom-in a bit</h3>
 <p>Now we take a closer look at Q21 – one of the queries that benefit a lot from caching Arrow:</p>
-<div class="sourceCode" id="cb5"><pre class="sourceCode sql code-with-copy"><code class="sourceCode sql"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">SELECT</span> <span class="ot">"SearchPhrase"</span>, <span class="fu">MIN</span>(<span class="ot">"URL"</span>), <span class="fu">COUNT</span>(<span class="op">*</span>) <span class="kw">AS</span> c </span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode sql code-with-copy"><code class="sourceCode sql"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">SELECT</span> <span class="ot">"SearchPhrase"</span>, <span class="fu">MIN</span>(<span class="ot">"URL"</span>), <span class="fu">COUNT</span>(<span class="op">*</span>) <span class="kw">AS</span> c </span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="kw">FROM</span> hits </span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="kw">WHERE</span> <span class="ot">"URL"</span> <span class="kw">LIKE</span> <span class="st">'%google%'</span> </span>
 <span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>      <span class="kw">AND</span> <span class="ot">"SearchPhrase"</span> <span class="op">&lt;&gt;</span> <span class="st">''</span> </span>
 <span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="kw">GROUP</span> <span class="kw">BY</span> <span class="ot">"SearchPhrase"</span> </span>
 <span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="kw">ORDER</span> <span class="kw">BY</span> c </span>
-<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="kw">DESC</span> <span class="kw">LIMIT</span> <span class="dv">10</span>;</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="kw">DESC</span> <span class="kw">LIMIT</span> <span class="dv">10</span>;</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>The query scans two string columns (“URL” and “SearchPhrase”) and applies a filter on them.</p>
 <p>Let’s now compare their query time and memory usage – we got roughly 3x speedup by using 4x more memory, not bad! <img src="cache-arrow-q21.png" class="img-fluid"></p>
 </section>
@@ -455,13 +456,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       e.clearSelection();
     }
     const getTextToCopy = function(trigger) {
-        const codeEl = trigger.previousElementSibling.cloneNode(true);
-        for (const childEl of codeEl.children) {
-          if (isCodeAnnotation(childEl)) {
-            childEl.remove();
-          }
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
         }
-        return codeEl.innerText;
+      }
+      return codeEl.innerText;
     }
     const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
       text: getTextToCopy
