@@ -13,6 +13,13 @@ format:
     highlight-style: tango 
 ---
 
+::: {.callout-warning appearance="simple" icon=false}
+## Acknowledgments
+
+My work is supported by [funding](https://xiangpeng.systems/fund/) from [InfluxData](https://influxdata.com), [Bauplan](https://www.bauplanlabs.com), [SpiralDB](https://spiraldb.com), and the taxpayers of the State of Wisconsin and the federal government. Much appreciation!
+:::
+
+
 ### The Wrong Direction
 
 Everyone knows today's systems are sub-optimal for agents. They waste context, confuse models with unstructured output, and prioritize vision-based human interaction over text-based LLMs. 
