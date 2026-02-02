@@ -9,8 +9,70 @@
 <link>https://blog.xiangpeng.systems/</link>
 <atom:link href="https://blog.xiangpeng.systems/index.xml" rel="self" type="application/rss+xml"/>
 <description></description>
-<generator>quarto-1.8.26</generator>
-<lastBuildDate>Mon, 24 Nov 2025 00:00:00 GMT</lastBuildDate>
+<generator>quarto-1.8.27</generator>
+<lastBuildDate>Mon, 02 Feb 2026 00:00:00 GMT</lastBuildDate>
+<item>
+  <title>Stop building systems for agents</title>
+  <link>https://blog.xiangpeng.systems/posts/stop-building-agent-systems/</link>
+  <description><![CDATA[ 
+
+
+
+
+
+<section id="the-wrong-direction" class="level3">
+<h3 class="anchored" data-anchor-id="the-wrong-direction">The Wrong Direction</h3>
+<p>Everyone knows today’s systems are sub-optimal for agents. They waste context, confuse models with unstructured output, and prioritize vision-based human interaction over text-based LLMs.</p>
+<p>So we desperately need to build agent systems that treat LLMs as first-class citizens. I’m sure you can generate a hundred papers or spawn a hundred startups in this direction.</p>
+<p>This approach surely works, but it is not fundamental: if humans can live with it, LLMs <strong>can eventually</strong> catch up. Maybe next month, maybe next year, but eventually LLMs can easily do what humans can do, and then your mission-critical agent-native system becomes a nice-to-have.</p>
+<p>In the LLM era, we need to ask not what humans can do for LLMs, but what LLMs can do for humans.</p>
+<p>So what is the fundamental challenge here? <strong>The velocity at which a human can take responsibility for an agent’s actions.</strong></p>
+</section>
+<section id="the-unaccountable-machine" class="level3">
+<h3 class="anchored" data-anchor-id="the-unaccountable-machine">The Unaccountable Machine</h3>
+<p><img src="https://blog.xiangpeng.systems/posts/stop-building-agent-systems/scale.png" class="img-fluid" style="width:80.0%"></p>
+<p>In human society, every functional system relies on an accountability chain. When things break, we need a person to blame, and to fix it.</p>
+<p>For the last few decades, we maintained a subtle balance where the velocity of building systems roughly equals the velocity of accountability.</p>
+<p>LLMs changed this by making it 1000x faster to write code, but our ability to hold accountability for a system barely changed.</p>
+<p>This creates a perfect <a href="https://en.wikipedia.org/wiki/The_Unaccountability_Machine">accountability sink</a>. When a vibe-system fails, we can only hope LLMs will fix it by themselves. But systems that are unaccountable are useless, and will eventually collapse.</p>
+<p>Most LLM-vibed systems look fancy at first, but without a human owning their behavior, they are useless at best, and burdensome to society at worst.</p>
+<p><strong>Axiom:</strong> AI systems, no matter how capable, must be held accountable by a human.</p>
+<p>Therefore, the real bottleneck of agent adoption is the <strong>Time to Accountability</strong>: how quickly can a human operator understand, diagnose, and own the system’s behavior?</p>
+</section>
+<section id="the-happen-to-work-foundation" class="level3">
+<h3 class="anchored" data-anchor-id="the-happen-to-work-foundation">The “Happen-to-Work” Foundation</h3>
+<p>(Un)Surprisingly, this bottleneck has almost nothing to do with AI.</p>
+<p>You join a new team. How long does it take for you to be held accountable for a production system? It happens when you can observe the system interactions, reproduce regressions and failures, and explain what’s going on.</p>
+<p>You may think, isn’t this what we have been preparing for? Hasn’t computer science been working on this for decades? Isn’t this a solved problem?</p>
+<p>Unfortunately, the answer is no. We don’t have enough infrastructure to understand the systems we build, maintain, and rely on.</p>
+<p>When we compile software, it just happens-to-compile. We hope we are using the right compiler version, compiling the right dependencies, executing in the correct parallel order, and persisting files without corrupting data (in fact, we don’t even know if the data is corrupted or persisted).</p>
+<p>When we issue a database transaction, it just happens-to-work. We hope the data transferred from disk returns in a deterministic order, that transactions respect isolation levels, and that our access controls actually work.</p>
+</section>
+<section id="llm-agents-shake-our-fragile-foundation" class="level3">
+<h3 class="anchored" data-anchor-id="llm-agents-shake-our-fragile-foundation">LLM Agents Shake Our Fragile Foundation</h3>
+<p>How could it be that our modern society is based on something so fragile that nobody understands? You might ask.</p>
+<p>The answer is simple: we only spent minimal effort to make it work most of the time. When rare edge cases happen, we just retry and hope they don’t appear. No one is able to reproduce a rare production bug, no one is able to fully explain why performance jitters, and no one is able to fully understand how systems interact.</p>
+<p>It has been fine, you may argue. But no, it’s not fine. As LLMs elevate humanity to the next level, what used to be ok is no longer ok.</p>
+<p>We’re now capable of operating tremendously more systems; tremendous amounts of work will be cheaply digitalized, and a tremendous number of tasks will be cheaply performed by LLMs. When the scale grows 100 times, our fragile foundation becomes the problem.</p>
+</section>
+<section id="the-real-agent-native-systems" class="level3">
+<h3 class="anchored" data-anchor-id="the-real-agent-native-systems">The Real Agent-Native Systems</h3>
+<p>So what defines an agent-native system? They are human-centric:</p>
+<ol type="1">
+<li>Radically observable.</li>
+<li>Radically deterministic.</li>
+</ol>
+<p><strong>Radically observable</strong> means we must see exactly how the system performs: who invokes a system call, how threads interleave, which function writes to a memory address, etc. We should act like a glass box—observing system behavior from all levels of the stack. If performance regresses, we should see the exact reason, whether the CPU core is overheating or the SSD firmware is garbage collecting.</p>
+<p><strong>Radically deterministic</strong> means that given the same input, the program produces <em>exactly</em> the same output (randomness is controlled via seeds). This applies not only to a single function, but to the entire multi-threaded, distributed system. Threads must interleave in exactly the same way, hash tables must iterate in exactly the same order, and environmental noise (like noisy neighbors) must never alter the software’s execution.</p>
+<p>Stop building systems tailored for agents, build systems that easier for human to own, make them observable and deterministic.</p>
+
+
+</section>
+
+ ]]></description>
+  <guid>https://blog.xiangpeng.systems/posts/stop-building-agent-systems/</guid>
+  <pubDate>Mon, 02 Feb 2026 00:00:00 GMT</pubDate>
+</item>
 <item>
   <title>What is LiquidCache?</title>
   <link>https://blog.xiangpeng.systems/posts/what-is-liquid-cache/</link>
