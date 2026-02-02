@@ -45,8 +45,8 @@ For the last few decades, we maintained a subtle balance where the velocity of b
 LLMs changed this by making it 1000x faster to write code, but our ability to hold accountability for a system barely changed.
 
 This creates a perfect [accountability sink](https://en.wikipedia.org/wiki/The_Unaccountability_Machine). 
-When a vibe-system fails, we can only hope LLMs will fix it by themselves. 
-But systems that are unaccountable are useless, and will eventually collapse.
+When a vibe-system fails, we can only hope LLMs will fix it by themselves, they are unaccountable.
+But unaccountable systems are useless, and will eventually collapse.
 
 Most LLM-vibed systems look fancy at first, but without a human owning their behavior, they are useless at best, and burdensome to society at worst. 
 
@@ -64,7 +64,8 @@ You join a new team. How long does it take for you to be held accountable for a 
 You may think, isn’t this what we have been preparing for? Hasn't computer science been working on this for decades? Isn’t this a solved problem?
 
 Unfortunately, the answer is no.
-We don't have enough infrastructure to understand the systems we build, maintain, and rely on.
+We lack the infrastructure to understand systems from a third-party perspective; instead, the wisdom is hidden in the brain of the engineer who built it.
+__From a user's perspective, every thing just happens-to-work.__
 
 When we compile software, it just happens-to-compile. We hope we are using the right compiler version, compiling the right dependencies, executing in the correct parallel order, and persisting files without corrupting data (in fact, we don't even know if the data is corrupted or persisted).
 
@@ -73,15 +74,15 @@ When we issue a database transaction, it just happens-to-work. We hope the data 
 
 ### LLM Agents Shake Our Fragile Foundation 
 
-How could it be that our modern society is based on something so fragile that nobody understands? You might ask.
+How could it be that our modern society is based on something so fragile that almost nobody understands? You might ask.
 
 The answer is simple: we only spent minimal effort to make it work most of the time. When rare edge cases happen, we just retry and hope they don't appear. 
-No one is able to reproduce a rare production bug, no one is able to fully explain why performance jitters, and no one is able to fully understand how systems interact.
+No one is able to reproduce a rare production bug, no one is able to fully explain why performance jitters, and no one is able to fully understand how sub-systems interact.
 
 It has been fine, you may argue.
 But no, it’s not fine. As LLMs elevate humanity to the next level, what used to be ok is no longer ok.
 
-We’re now capable of operating tremendously more systems; tremendous amounts of work will be cheaply digitalized, and a tremendous number of tasks will be cheaply performed by LLMs. When the scale grows 100 times, our fragile foundation becomes the problem.
+We’re now capable of operating tremendously more systems; tremendous amounts of work will be cheaply digitalized, and a tremendous number of tasks will be cheaply performed by LLMs. When the scale grows 1000 times, our fragile foundation becomes the problem.
 
 ### The Real Agent-Native Systems
 
