@@ -2,66 +2,66 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://blog.xiangpeng.systems/AGENTS.html</loc>
-    <lastmod>2026-02-04T14:23:40.918Z</lastmod>
+    <lastmod>2026-02-04T14:38:12.739Z</lastmod>
   </url>
   <url>
     <loc>https://blog.xiangpeng.systems/posts/working-at-influxdata/index.html</loc>
-    <lastmod>2026-02-04T14:23:40.979Z</lastmod>
+    <lastmod>2026-02-04T14:38:12.797Z</lastmod>
   </url>
   <url>
     <loc>https://blog.xiangpeng.systems/posts/research-statement/index.html</loc>
-    <lastmod>2026-02-04T14:23:40.962Z</lastmod>
+    <lastmod>2026-02-04T14:38:12.780Z</lastmod>
   </url>
   <url>
     <loc>https://blog.xiangpeng.systems/posts/parquet-pushdown/index.html</loc>
-    <lastmod>2026-02-04T14:23:40.945Z</lastmod>
+    <lastmod>2026-02-04T14:38:12.766Z</lastmod>
   </url>
   <url>
     <loc>https://blog.xiangpeng.systems/posts/string-view-datafusion/index.html</loc>
-    <lastmod>2026-02-04T14:23:40.971Z</lastmod>
+    <lastmod>2026-02-04T14:38:12.790Z</lastmod>
   </url>
   <url>
     <loc>https://blog.xiangpeng.systems/posts/nature-of-string/index.html</loc>
-    <lastmod>2026-02-04T14:23:40.929Z</lastmod>
+    <lastmod>2026-02-04T14:38:12.749Z</lastmod>
   </url>
   <url>
     <loc>https://blog.xiangpeng.systems/posts/parquet-to-arrow/index.html</loc>
-    <lastmod>2026-02-04T14:23:40.950Z</lastmod>
+    <lastmod>2026-02-04T14:38:12.770Z</lastmod>
   </url>
   <url>
     <loc>https://blog.xiangpeng.systems/posts/what-is-liquid-cache/index.html</loc>
-    <lastmod>2026-02-04T14:23:40.976Z</lastmod>
+    <lastmod>2026-02-04T14:38:12.795Z</lastmod>
   </url>
   <url>
     <loc>https://blog.xiangpeng.systems/index.html</loc>
-    <lastmod>2026-02-04T14:23:40.918Z</lastmod>
+    <lastmod>2026-02-04T14:38:12.739Z</lastmod>
   </url>
   <url>
     <loc>https://blog.xiangpeng.systems/posts/good-advisor/index.html</loc>
-    <lastmod>2026-02-04T14:23:40.927Z</lastmod>
+    <lastmod>2026-02-04T14:38:12.747Z</lastmod>
   </url>
   <url>
     <loc>https://blog.xiangpeng.systems/posts/sql-to-results/index.html</loc>
-    <lastmod>2026-02-04T14:23:40.964Z</lastmod>
+    <lastmod>2026-02-04T14:38:12.782Z</lastmod>
   </url>
   <url>
     <loc>https://blog.xiangpeng.systems/posts/build-s3-select/index.html</loc>
-    <lastmod>2026-02-04T14:23:40.919Z</lastmod>
+    <lastmod>2026-02-04T14:38:12.740Z</lastmod>
   </url>
   <url>
     <loc>https://blog.xiangpeng.systems/posts/caching-datafusion/index.html</loc>
-    <lastmod>2026-02-04T14:23:40.926Z</lastmod>
+    <lastmod>2026-02-04T14:38:12.746Z</lastmod>
   </url>
   <url>
     <loc>https://blog.xiangpeng.systems/posts/system-researchers/index.html</loc>
-    <lastmod>2026-02-04T14:23:40.975Z</lastmod>
+    <lastmod>2026-02-04T14:38:12.794Z</lastmod>
   </url>
   <url>
     <loc>https://blog.xiangpeng.systems/posts/parquet-viewer/index.html</loc>
-    <lastmod>2026-02-04T14:23:40.951Z</lastmod>
+    <lastmod>2026-02-04T14:38:12.771Z</lastmod>
   </url>
   <url>
     <loc>https://blog.xiangpeng.systems/posts/stop-building-agent-systems/index.html</loc>
-    <lastmod>2026-02-04T14:23:40.964Z</lastmod>
+    <lastmod>2026-02-04T14:38:12.782Z</lastmod>
   </url>
 </urlset>

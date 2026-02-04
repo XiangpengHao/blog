@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 <meta name="dcterms.date" content="2026-02-02">
-<meta name="description" content="Build agent systems for human instead.">
+<meta name="description" content="Build agent systems for humans instead.">
 
 <title>Stop building systems for agents – Xiangpeng’s blog</title>
 <style>
@@ -43,6 +43,8 @@ ul.task-list li input[type="checkbox"] {
 <script src="../../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
 <link href="../../site_libs/bootstrap/bootstrap-541cc689fab2501f344469d138d6f9c8.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script src="../../site_libs/quarto-contrib/bluesky-comments-1.0.0/bluesky-comments.js"></script>
+<link href="../../site_libs/quarto-contrib/bluesky-comments-1.0.0/styles.css" rel="stylesheet">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -73,13 +75,13 @@ ul.task-list li input[type="checkbox"] {
 
 <link rel="stylesheet" href="../../styles.css">
 <meta property="og:title" content="Stop building systems for agents – Xiangpeng’s blog">
-<meta property="og:description" content="Build agent systems for human instead.">
+<meta property="og:description" content="Build agent systems for humans instead.">
 <meta property="og:image" content="https://blog.xiangpeng.systems/posts/stop-building-agent-systems/scale.png">
 <meta property="og:site_name" content="Xiangpeng's blog">
 <meta property="og:image:height" content="1286">
 <meta property="og:image:width" content="2678">
 <meta name="twitter:title" content="Stop building systems for agents – Xiangpeng’s blog">
-<meta name="twitter:description" content="Build agent systems for human instead.">
+<meta name="twitter:description" content="Build agent systems for humans instead.">
 <meta name="twitter:image" content="https://blog.xiangpeng.systems/posts/stop-building-agent-systems/scale.png">
 <meta name="twitter:image-height" content="1286">
 <meta name="twitter:image-width" content="2678">
@@ -137,7 +139,7 @@ ul.task-list li input[type="checkbox"] {
       <h1 class="title">Stop building systems for agents</h1>
                   <div>
         <div class="description">
-          Build agent systems for human instead.
+          Build agent systems for humans instead.
         </div>
       </div>
                 </div>
@@ -212,39 +214,42 @@ ul.task-list li input[type="checkbox"] {
 <h3 class="anchored" data-anchor-id="the-unaccountable-machine">The Unaccountable Machine</h3>
 <p><img src="scale.png" class="img-fluid" style="width:80.0%"></p>
 <p>In human society, every functional system relies on an accountability chain. When things break, we need a person to blame, and to fix it.</p>
-<p>For the last few decades, we maintained a subtle balance where <strong>the velocity of building systems roughly equals the velocity of accountability</strong>.</p>
-<p>LLMs changed this by making it 1000x faster to write code, but our ability to hold accountability for a system barely changed.</p>
-<p>This creates a perfect <a href="https://en.wikipedia.org/wiki/The_Unaccountability_Machine">accountability sink</a>. When a vibe-system fails, we can only hope LLMs will fix it by themselves, they are unaccountable. But unaccountable systems are useless, and will eventually collapse.</p>
+<p>For the last few decades, we have maintained a subtle balance where <strong>the velocity of building systems roughly equals the velocity of accountability</strong>.</p>
+<p>LLMs changed this by making it 1000x faster to write code, but our ability to take accountability for a system barely changed.</p>
+<p>This creates a perfect <a href="https://en.wikipedia.org/wiki/The_Unaccountability_Machine">accountability sink</a>. When a vibe-system fails, we can only hope LLMs will fix it by themselves; they are unaccountable. But unaccountable systems are useless, and will eventually collapse.</p>
 <p>Most LLM-vibed systems look fancy at first, but without a human owning their behavior, they are useless at best, and burdensome to society at worst.</p>
 <p><strong>Axiom:</strong> AI systems, no matter how capable, must be held accountable by a human.</p>
-<p>Therefore, the real bottleneck of agent adoption is the <strong>Time to Accountability</strong>: how quickly can a human operator understand, diagnose, and own the system’s behavior?</p>
+<p>Therefore, the real bottleneck of agent adoption is the <strong>Time to Accountability</strong>: how quickly a human operator can understand, diagnose, and own the system’s behavior?</p>
 </section>
 <section id="the-happen-to-work-foundation" class="level3">
 <h3 class="anchored" data-anchor-id="the-happen-to-work-foundation">The “Happen-to-Work” Foundation</h3>
 <p>(Un)Surprisingly, this bottleneck has almost nothing to do with AI.</p>
 <p>You join a new team. How long does it take for you to be held accountable for a production system? It happens when you can observe the system interactions, reproduce regressions and failures, and explain what’s going on.</p>
 <p>You may think, isn’t this what we have been preparing for? Hasn’t computer science been working on this for decades? Isn’t this a solved problem?</p>
-<p>Unfortunately, the answer is no. We lack the infrastructure to understand systems from a third-party perspective; instead, the wisdom is hidden in the brain of the engineer who built it. <strong>From a user’s perspective, every thing just happens-to-work.</strong></p>
+<p>Unfortunately, the answer is no. We lack the infrastructure to understand systems from a third-party perspective; instead, the wisdom is hidden in the brain of the engineer who built it. <strong>From a user’s perspective, everything just happens-to-work.</strong></p>
 <p>When we compile software, it just happens-to-compile. We hope we are using the right compiler version, compiling the right dependencies, executing in the correct parallel order, and persisting files without corrupting data (in fact, we don’t even know if the data is corrupted or persisted).</p>
 <p>When we issue a database transaction, it just happens-to-work. We hope the data transferred from disk returns in a deterministic order, that transactions respect isolation levels, and that our access controls actually work.</p>
 </section>
 <section id="llm-agents-shake-our-fragile-foundation" class="level3">
 <h3 class="anchored" data-anchor-id="llm-agents-shake-our-fragile-foundation">LLM Agents Shake Our Fragile Foundation</h3>
 <p>How could it be that our modern society is based on something so fragile that almost nobody understands? You might ask.</p>
-<p>The answer is simple: we only spent minimal effort to make it work most of the time. When rare edge cases happen, we just retry and hope they don’t appear. No one is able to reproduce a rare production bug, no one is able to fully explain why performance jitters, and no one is able to fully understand how sub-systems interact.</p>
+<p>The answer is simple: we have only spent minimal effort to make it work most of the time. When rare edge cases happen, we just retry and hope they don’t appear. No one is able to reproduce a rare production bug, no one is able to fully explain why performance jitters, and no one is able to fully understand how sub-systems interact.</p>
 <p>It has been fine, you may argue. But no, it’s not fine. As LLMs elevate humanity to the next level, what used to be ok is no longer ok.</p>
-<p>We’re now capable of operating tremendously more systems; tremendous amounts of work will be cheaply digitalized, and a tremendous number of tasks will be cheaply performed by LLMs. When the scale grows 1000 times, our fragile foundation becomes the problem.</p>
+<p>We’re now capable of operating tremendously more systems; tremendous amounts of work will be cheaply digitized, and a tremendous number of tasks will be cheaply performed by LLMs. When the scale grows 1000 times, our fragile foundation becomes the problem.</p>
 </section>
 <section id="the-real-agent-native-systems" class="level3">
 <h3 class="anchored" data-anchor-id="the-real-agent-native-systems">The Real Agent-Native Systems</h3>
-<p>So what defines an agent-native system? They are human-centric:</p>
+<p>So what defines agent-native systems? They are human-centric:</p>
 <ol type="1">
 <li>Radically observable.</li>
 <li>Radically deterministic.</li>
 </ol>
-<p><strong>Radically observable</strong> means we must see exactly how the system performs: who invokes a system call, how threads interleave, which function writes to a memory address, etc. We should act like a glass box—observing system behavior from all levels of the stack. If performance regresses, we should see the exact reason, whether the CPU core is overheating or the SSD firmware is garbage collecting.</p>
+<p><strong>Radically observable</strong> means we must see exactly how the system performs: who invokes a system call, how threads interleave, which function writes to a memory address, etc. The system should act like a glass box—observing system behavior from all levels of the stack. If performance regresses, we should see the exact reason, whether the CPU core is overheating or the SSD firmware is garbage collecting.</p>
 <p><strong>Radically deterministic</strong> means that given the same input, the program produces <em>exactly</em> the same output (randomness is controlled via seeds). This applies not only to a single function, but to the entire multi-threaded, distributed system. Threads must interleave in exactly the same way, hash tables must iterate in exactly the same order, and environmental noise (like noisy neighbors) must never alter the software’s execution.</p>
-<p>Stop building systems tailored for agents, build systems that easier for human to own, make them observable and deterministic.</p>
+<p>Stop building systems tailored for agents, build systems that are easier for humans to own, make them observable and deterministic.</p>
+<hr>
+    <bluesky-comments post="at://did:plc:zuu6vyw33exwnkcoe75k4vje/app.bsky.feed.post/3mdveyk6nks27" filter-config="{&quot;filterEmptyReplies&quot;:true,&quot;mutePatterns&quot;:[],&quot;muteUsers&quot;:[]}"></bluesky-comments>
+  
 
 
 </section>
@@ -650,35 +655,6 @@ ul.task-list li input[type="checkbox"] {
     }
   });
   </script>
-<input type="hidden" id="giscus-base-theme" value="light">
-<input type="hidden" id="giscus-alt-theme" value="dark">
-<script>
-  function loadGiscus() {
-    // Function to get the theme based on body class
-    const getTheme = () => {
-      let baseTheme = document.getElementById('giscus-base-theme').value;
-      let altTheme = document.getElementById('giscus-alt-theme').value;
-      return document.body.classList.contains('quarto-dark') ? altTheme : baseTheme;
-    };
-    const script = document.createElement("script");
-    script.src = "https://giscus.app/client.js";
-    script.async = true;
-    script.dataset.repo = "XiangpengHao/blog";
-    script.dataset.repoId = "R_kgDOLz4gpg";
-    script.dataset.category = "General";
-    script.dataset.categoryId = "DIC_kwDOLz4gps4CjzbT";
-    script.dataset.mapping = "title";
-    script.dataset.reactionsEnabled = "1";
-    script.dataset.emitMetadata = "0";
-    script.dataset.inputPosition = "top";
-    script.dataset.theme = getTheme();
-    script.dataset.lang = "en";
-    script.crossOrigin = "anonymous";
-    // Append the script to the desired div instead of at the end of the body
-    document.getElementById("quarto-content").appendChild(script);
-  }
-  loadGiscus();
-</script>
 </div> <!-- /content -->
 
 
