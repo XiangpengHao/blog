@@ -4,6 +4,7 @@ date: "2026-02-02"
 date-modified: "2026-02-02"
 categories: []
 description: "Build agent systems for humans instead."
+authors: ["Xiangpeng Hao", "Ao Li"]
 toc: true
 format:
   html: 
