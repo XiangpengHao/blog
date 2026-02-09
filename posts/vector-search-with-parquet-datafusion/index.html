@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.27">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="dcterms.date" content="2026-02-09">
+<meta name="description" content="You don’t need a vector database.">
+
+<title>Vector search using only Parquet and DataFusion – Xiangpeng’s blog</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../">
+<script src="../../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../site_libs/quarto-html/quarto-syntax-highlighting-795e9e8eca1e12b12abcb09a27409631.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../site_libs/bootstrap/bootstrap-541cc689fab2501f344469d138d6f9c8.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "/"
+  ],
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<!-- Cloudflare Web Analytics -->
+<script defer="" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon="{&quot;token&quot;: &quot;eb43fd3c2c574a2590aae63c67009129&quot;}"></script><!-- End Cloudflare Web Analytics -->
+
+
+<link rel="stylesheet" href="../../styles.css">
+<meta property="og:title" content="Vector search using only Parquet and DataFusion – Xiangpeng’s blog">
+<meta property="og:description" content="You don’t need a vector database.">
+<meta property="og:image" content="https://blog.xiangpeng.systems/posts/vector-search-with-parquet-datafusion/random-access.png">
+<meta property="og:site_name" content="Xiangpeng's blog">
+<meta property="og:image:height" content="716">
+<meta property="og:image:width" content="902">
+<meta name="twitter:title" content="Vector search using only Parquet and DataFusion – Xiangpeng’s blog">
+<meta name="twitter:description" content="You don’t need a vector database.">
+<meta name="twitter:image" content="https://blog.xiangpeng.systems/posts/vector-search-with-parquet-datafusion/random-access.png">
+<meta name="twitter:image-height" content="716">
+<meta name="twitter:image-width" content="902">
+<meta name="twitter:card" content="summary_large_image">
+</head>
+
+<body class="nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top quarto-banner">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../../index.html">
+    <span class="navbar-title">Xiangpeng’s blog</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://xiangpeng.systems"> <i class="bi bi-person-circle" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/XiangpengHao"> <i class="bi bi-github" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://www.linkedin.com/in/hao-xiangpeng/"> <i class="bi bi-linkedin" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="../../index.xml"> <i class="bi bi-rss" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<header id="title-block-header" class="quarto-title-block default page-columns page-full">
+  <div class="quarto-title-banner page-columns page-full">
+    <div class="quarto-title column-body">
+      <h1 class="title">Vector search using only Parquet and DataFusion</h1>
+                  <div>
+        <div class="description">
+          You don’t need a vector database.
+        </div>
+      </div>
+                </div>
+  </div>
+    
+  
+  <div class="quarto-title-meta">
+
+      <div>
+      <div class="quarto-title-meta-heading">Author</div>
+      <div class="quarto-title-meta-contents">
+               <p>Xiangpeng Hao </p>
+            </div>
+    </div>
+      
+      <div>
+      <div class="quarto-title-meta-heading">Published</div>
+      <div class="quarto-title-meta-contents">
+        <p class="date">February 9, 2026</p>
+      </div>
+    </div>
+    
+      
+    </div>
+    
+  
+  </header><div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#wait-isnt-parquet-terrible-for-random-access" id="toc-wait-isnt-parquet-terrible-for-random-access" class="nav-link active" data-scroll-target="#wait-isnt-parquet-terrible-for-random-access">Wait, Isn’t Parquet Terrible for Random Access?</a></li>
+  <li><a href="#zero-copy-vector-indexing" id="toc-zero-copy-vector-indexing" class="nav-link" data-scroll-target="#zero-copy-vector-indexing">Zero-copy Vector Indexing</a></li>
+  <li><a href="#in-place-index-creation" id="toc-in-place-index-creation" class="nav-link" data-scroll-target="#in-place-index-creation">In-Place Index Creation</a></li>
+  <li><a href="#datafusion-integration" id="toc-datafusion-integration" class="nav-link" data-scroll-target="#datafusion-integration">DataFusion Integration</a></li>
+  <li><a href="#how-it-looks-in-code" id="toc-how-it-looks-in-code" class="nav-link" data-scroll-target="#how-it-looks-in-code">How It Looks in Code</a>
+  <ul class="collapse">
+  <li><a href="#building-the-index" id="toc-building-the-index" class="nav-link" data-scroll-target="#building-the-index">1. Building the Index</a></li>
+  <li><a href="#searching-with-sql-datafusion" id="toc-searching-with-sql-datafusion" class="nav-link" data-scroll-target="#searching-with-sql-datafusion">2. Searching with SQL (DataFusion)</a></li>
+  </ul></li>
+  <li><a href="#does-it-actually-work" id="toc-does-it-actually-work" class="nav-link" data-scroll-target="#does-it-actually-work">Does It Actually Work?</a></li>
+  <li><a href="#need-your-help" id="toc-need-your-help" class="nav-link" data-scroll-target="#need-your-help">Need your help!</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content quarto-banner-title-block" id="quarto-document-content">
+
+
+
+
+
+<div class="callout callout-style-simple callout-warning no-icon callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon no-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Warning</span>Acknowledgments
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>My work is supported by <a href="https://xiangpeng.systems/fund/">funding</a> from <a href="https://influxdata.com">InfluxData</a>, <a href="https://www.bauplanlabs.com">Bauplan</a>, <a href="https://spiraldb.com">SpiralDB</a>, and the taxpayers of the State of Wisconsin and the federal government. Much appreciation!</p>
+</div>
+</div>
+<p>To search vector embeddings, the standard advice is almost always “spin up a vector database.”</p>
+<p>Tools like <a href="https://www.pinecone.io/">Pinecone</a>, <a href="https://milvus.io/">Milvus</a>, or specialized formats like <a href="https://lancedb.com/">Lance</a> are fantastic pieces of engineering.</p>
+<p>But they come with a hidden cost: complexity. New infrastructure to manage, new file formats to learn, and new data to coordinate.</p>
+<p>But what if you didn’t need any of that? What if you could just keep your data in Parquet, the format you’re already using?</p>
+<p>This post explores a little experiment: implementing efficient, native vector search directly inside Parquet files. Introducing <code>pq-vector</code>: <a href="https://github.com/XiangpengHao/pq-vector">https://github.com/XiangpengHao/pq-vector</a></p>
+<section id="wait-isnt-parquet-terrible-for-random-access" class="level2">
+<h2 class="anchored" data-anchor-id="wait-isnt-parquet-terrible-for-random-access">Wait, Isn’t Parquet Terrible for Random Access?</h2>
+<p>“But Parquet is a columnar format!” I can hear you screaming. “It’s designed for heavy scans, not point lookups!”</p>
+<p>You’re not wrong. The common wisdom is that Parquet is ill-suited for random access because it compresses data into pages. To read a single row, you typically have to decompress an entire page, which is wasteful if you only want one item.</p>
+<p>But let’s look at the actual numbers.</p>
+<p>A typical vector embedding—say, from OpenAI’s <code>text-embedding-3-small</code> model—has 1,536 dimensions. That’s about 6KB of data. Now, guess how big a standard Parquet page is? Usually a few KB as well.</p>
+<p>If we simply configure the <a href="https://docs.rs/parquet/latest/parquet/file/properties/struct.WriterPropertiesBuilder.html">Parquet writer</a> to match the page size with the embedding size, we can effectively force each embedding into its own page. With this, “decompressing a page” just means “reading the one vector we want.”</p>
+<p>We don’t change the file format; we just tune it.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode rust code-with-copy"><code class="sourceCode rust"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Configure parquet to store one embedding per page</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">let</span> props <span class="op">=</span> <span class="pp">WriterProperties::</span>builder()</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span>set_data_page_size_limit(vector_size)     <span class="co">// one vector per page</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span>set_column_compression(embedding_col<span class="op">,</span> <span class="pp">Compression::</span><span class="cn">None</span>)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span>build()<span class="op">;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>With this simple configuration change, we’ve effectively turned Parquet into a random-access friendly format for our vectors.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="random-access.png" class="img-fluid figure-img" style="width:50.0%"></p>
+<figcaption>By simply configuring the page size to match the embedding size, we can effectively turn Parquet into a random-access friendly format for our vectors.</figcaption>
+</figure>
+</div>
+</section>
+<section id="zero-copy-vector-indexing" class="level2">
+<h2 class="anchored" data-anchor-id="zero-copy-vector-indexing">Zero-copy Vector Indexing</h2>
+<p>Of course, fast random access isn’t enough. If you have to scan every single row to calculate distances (O(N)), it doesn’t matter how fast you can read an individual page — it’ll still be slow. We need an index.</p>
+<p>But here’s the challenge: <strong>how do we add an index without breaking compatibility?</strong> We don’t want to create a “custom Parquet” that DuckDB or Spark can’t read.</p>
+<p>The solution is surprisingly elegant. Parquet allows you to embed arbitrary metadata in the file footer (more details <a href="https://datafusion.apache.org/blog/2025/07/14/user-defined-parquet-indexes/">here</a>). Standard readers will happily ignore it, but our specialized reader can look for it.</p>
+<p>We chose the <a href="https://www.pinecone.io/learn/series/faiss/vector-indexes/">Inverted File (IVF) index</a> for this prototype. It works by partitioning the vector space into clusters (centroids). When we want to search, we figure out which clusters are close to our query, and then we only look at the vectors in those clusters.</p>
+<p>The best part? It’s <strong>zero-copy</strong>.</p>
+<p>Some vector stores (HNSW-based) force you to duplicate your data into their internal structures. Our index is just a lightweight list of pointers (row IDs) and cluster centroids. The actual heavy vector data stays right where it is — in the Parquet data pages.</p>
+<p>In our experiments with ~5,000 academic papers each with 4096-dimensional embeddings (we used <code>qwen/qwen3-embedding-8b</code>), the index added a negligible <strong>0.21 MB</strong> to a <strong>68 MB</strong> file. That’s an overhead of just <strong>0.3%</strong>.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="zero-copy-index.png" class="img-fluid figure-img" style="width:50.0%"></p>
+<figcaption>The vector index references to the embedding vectors in Parquet files, without duplicating the data.</figcaption>
+</figure>
+</div>
+</section>
+<section id="in-place-index-creation" class="level2">
+<h2 class="anchored" data-anchor-id="in-place-index-creation">In-Place Index Creation</h2>
+<p>Now we understand vector search in Parquet is not only feasible, but also fast.</p>
+<p>You might ask: doesn’t this mean I need to rewrite my entire Parquet file just to create that index? But here’s the kicker: creating a vector index on Parquet doesn’t require a rewrite.</p>
+<p>Wait, isn’t Parquet immutable? How can you add an index to a Parquet file without rewriting it?</p>
+<p>Enter another beautiful part of Parquet files: <strong>The Footer.</strong> At the end of each Parquet file is its metadata. We can simply append our vector index after the end of the metadata, and then copy that old metadata to the end of the vector index.</p>
+<p>This way we create a perfectly legit Parquet file without rewriting any data pages.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="index-footer.png" class="img-fluid figure-img" style="width:50.0%"></p>
+<figcaption>The index is appended after the end of the old metadata</figcaption>
+</figure>
+</div>
+</section>
+<section id="datafusion-integration" class="level2">
+<h2 class="anchored" data-anchor-id="datafusion-integration">DataFusion Integration</h2>
+<p>An index is useless if you can’t use it. DataFusion lacks “official” support for custom indexes. But its modularity is its superpower: anyone can extend it.</p>
+<p>We implemented a DataFusion query optimizer which will automatically rewrite the query plan to use the index, if the Parquet file has one.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="query-plan.png" class="img-fluid figure-img" style="width:80.0%"></p>
+<figcaption>pq-vector automatically rewrites the query plan to use the index</figcaption>
+</figure>
+</div>
+</section>
+<section id="how-it-looks-in-code" class="level2">
+<h2 class="anchored" data-anchor-id="how-it-looks-in-code">How It Looks in Code</h2>
+<p>We implemented a proof-of-concept using Rust, using <code>parquet</code> and <code>datafusion</code>.</p>
+<section id="building-the-index" class="level3">
+<h3 class="anchored" data-anchor-id="building-the-index">1. Building the Index</h3>
+<p>The builder reads your existing Parquet file, trains K-means centroids, and writes the index to the file footer.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode rust code-with-copy"><code class="sourceCode rust"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> <span class="pp">pq_vector::</span>IndexBuilder<span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="pp">IndexBuilder::</span>new(</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="st">"data/combined.parquet"</span><span class="op">,</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="st">"embedding"</span><span class="op">,</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="op">.</span>n_clusters(<span class="dv">100</span>)</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="op">.</span>build_inplace()<span class="op">?;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="searching-with-sql-datafusion" class="level3">
+<h3 class="anchored" data-anchor-id="searching-with-sql-datafusion">2. Searching with SQL (DataFusion)</h3>
+<p>To make this actually useful, we hooked it into DataFusion’s optimizer rules. This lets you run vector searches using <strong>standard SQL syntax</strong>.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode rust code-with-copy"><code class="sourceCode rust"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> <span class="pp">datafusion::execution::</span>SessionStateBuilder<span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> <span class="pp">datafusion::prelude::</span>SessionContext<span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> <span class="pp">pq_vector::df_vector::</span><span class="op">{</span>PqVectorSessionBuilderExt<span class="op">,</span> VectorTopKOptions<span class="op">};</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="co">// Enable the pq-vector extension in DataFusion</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="kw">let</span> state <span class="op">=</span> <span class="pp">SessionStateBuilder::</span>new()</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span>with_default_features()</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span>with_pq_vector(VectorTopKOptions <span class="op">{</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>        nprobe<span class="op">:</span> <span class="dv">10</span><span class="op">,</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>        <span class="op">..</span><span class="bu">Default</span><span class="pp">::</span><span class="kw">default</span>()</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span>)</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span>build()<span class="op">;</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a><span class="kw">let</span> ctx <span class="op">=</span> <span class="pp">SessionContext::</span>new_with_state(state)<span class="op">;</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>ctx<span class="op">.</span>register_parquet(<span class="st">"t"</span><span class="op">,</span> <span class="st">"data/combined.parquet"</span><span class="op">,</span> <span class="bu">Default</span><span class="pp">::</span><span class="kw">default</span>())</span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="kw">await</span><span class="op">?;</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a><span class="co">// Standard SQL vector search!</span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a><span class="kw">let</span> df <span class="op">=</span> ctx</span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span>sql(<span class="st">"SELECT * FROM t ORDER BY array_distance(embedding, [0.1, 0.2, 0.3]) LIMIT 10"</span>)</span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="kw">await</span><span class="op">?;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Notice that we can mix the vector search with normal SQL filters, one of the key features of Vector Databases. This is the power of keeping everything in one engine. <strong>You don’t need a vector search engine.</strong></p>
+</section>
+</section>
+<section id="does-it-actually-work" class="level2">
+<h2 class="anchored" data-anchor-id="does-it-actually-work">Does It Actually Work?</h2>
+<p>We benchmarked this on our dataset of 4,886 vectors (4096 dimensions).</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Operation</th>
+<th>Time</th>
+<th>Speedup</th>
+<th>Recall@10</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Brute force</td>
+<td>100ms</td>
+<td>1x</td>
+<td>1.00</td>
+</tr>
+<tr class="even">
+<td>IVF search (nprobe=1)</td>
+<td>3.4ms</td>
+<td><strong>29x</strong></td>
+<td>0.83</td>
+</tr>
+<tr class="odd">
+<td>IVF search (nprobe=5)</td>
+<td>17.7ms</td>
+<td><strong>5.7x</strong></td>
+<td>0.96</td>
+</tr>
+<tr class="even">
+<td>IVF search (nprobe=10)</td>
+<td>32.4ms</td>
+<td><strong>3.1x</strong></td>
+<td>1.00</td>
+</tr>
+</tbody>
+</table>
+<p>The results are pretty clear. Even with a simple IVF index, we see massive speedups compared to a full scan. With <code>nprobe=5</code>, we’re getting <strong>96% recall</strong> at <strong>5.7x the speed</strong> of a brute force scan.</p>
+<p>The latency is almost entirely dominated by random I/O, which validates our theory: if you tune the page size correctly, Parquet handles random access just fine.</p>
+</section>
+<section id="need-your-help" class="level2">
+<h2 class="anchored" data-anchor-id="need-your-help">Need your help!</h2>
+<p><code>pq-vector</code> is very early; it’s definitely not as polished as commercial vector databases now, but we have just shown that there’s nothing we can’t do with standard open source tools like Parquet and DataFusion. Here are a few things we’re planning to do next:</p>
+<ul>
+<li><strong>No HNSW</strong>: We used IVF because it’s simple and compact. Graph-based indexes like <a href="https://www.pinecone.io/learn/series/faiss/hnsw/">HNSW</a> are probably more accurate, but they have much higher space overhead.</li>
+<li><strong>Multi-Parquet index</strong>: We often query many Parquet files, not just one file. We plan to support querying multiple Parquet files seamlessly.</li>
+</ul>
+<p><a href="https://github.com/XiangpengHao/pq-vector">github.com/XiangpengHao/pq-vector</a></p>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/blog\.xiangpeng\.systems");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

@@ -10,7 +10,358 @@
 <atom:link href="https://blog.xiangpeng.systems/index.xml" rel="self" type="application/rss+xml"/>
 <description></description>
 <generator>quarto-1.8.27</generator>
-<lastBuildDate>Mon, 02 Feb 2026 00:00:00 GMT</lastBuildDate>
+<lastBuildDate>Mon, 09 Feb 2026 00:00:00 GMT</lastBuildDate>
+<item>
+  <title>Vector search using only Parquet and DataFusion</title>
+  <link>https://blog.xiangpeng.systems/posts/vector-search-with-parquet-datafusion/</link>
+  <description><![CDATA[ 
+
+
+
+
+
+<div class="callout callout-style-simple callout-warning no-icon callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon no-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Warning</span>Acknowledgments
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>My work is supported by <a href="https://xiangpeng.systems/fund/">funding</a> from <a href="https://influxdata.com">InfluxData</a>, <a href="https://www.bauplanlabs.com">Bauplan</a>, <a href="https://spiraldb.com">SpiralDB</a>, and the taxpayers of the State of Wisconsin and the federal government. Much appreciation!</p>
+</div>
+</div>
+<p>To search vector embeddings, the standard advice is almost always “spin up a vector database.”</p>
+<p>Tools like <a href="https://www.pinecone.io/">Pinecone</a>, <a href="https://milvus.io/">Milvus</a>, or specialized formats like <a href="https://lancedb.com/">Lance</a> are fantastic pieces of engineering.</p>
+<p>But they come with a hidden cost: complexity. New infrastructure to manage, new file formats to learn, and new data to coordinate.</p>
+<p>But what if you didn’t need any of that? What if you could just keep your data in Parquet, the format you’re already using?</p>
+<p>This post explores a little experiment: implementing efficient, native vector search directly inside Parquet files. Introducing <code>pq-vector</code>: <a href="https://github.com/XiangpengHao/pq-vector">https://github.com/XiangpengHao/pq-vector</a></p>
+<section id="wait-isnt-parquet-terrible-for-random-access" class="level2">
+<h2 class="anchored" data-anchor-id="wait-isnt-parquet-terrible-for-random-access">Wait, Isn’t Parquet Terrible for Random Access?</h2>
+<p>“But Parquet is a columnar format!” I can hear you screaming. “It’s designed for heavy scans, not point lookups!”</p>
+<p>You’re not wrong. The common wisdom is that Parquet is ill-suited for random access because it compresses data into pages. To read a single row, you typically have to decompress an entire page, which is wasteful if you only want one item.</p>
+<p>But let’s look at the actual numbers.</p>
+<p>A typical vector embedding—say, from OpenAI’s <code>text-embedding-3-small</code> model—has 1,536 dimensions. That’s about 6KB of data. Now, guess how big a standard Parquet page is? Usually a few KB as well.</p>
+<p>If we simply configure the <a href="https://docs.rs/parquet/latest/parquet/file/properties/struct.WriterPropertiesBuilder.html">Parquet writer</a> to match the page size with the embedding size, we can effectively force each embedding into its own page. With this, “decompressing a page” just means “reading the one vector we want.”</p>
+<p>We don’t change the file format; we just tune it.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1" style="background: #f1f3f5;"><pre class="sourceCode rust code-with-copy"><code class="sourceCode rust"><span id="cb1-1"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">// Configure parquet to store one embedding per page</span></span>
+<span id="cb1-2"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">let</span> props <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> <span class="pp" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">WriterProperties::</span>builder()</span>
+<span id="cb1-3">    <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span>set_data_page_size_limit(vector_size)     <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">// one vector per page</span></span>
+<span id="cb1-4">    <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span>set_column_compression(embedding_col<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span> <span class="pp" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">Compression::</span><span class="cn" style="color: #8f5902;
+background-color: null;
+font-style: inherit;">None</span>)</span>
+<span id="cb1-5">    <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span>build()<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">;</span></span></code></pre></div></div>
+<p>With this simple configuration change, we’ve effectively turned Parquet into a random-access friendly format for our vectors.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="https://blog.xiangpeng.systems/posts/vector-search-with-parquet-datafusion/random-access.png" class="img-fluid figure-img" style="width:50.0%"></p>
+<figcaption>By simply configuring the page size to match the embedding size, we can effectively turn Parquet into a random-access friendly format for our vectors.</figcaption>
+</figure>
+</div>
+</section>
+<section id="zero-copy-vector-indexing" class="level2">
+<h2 class="anchored" data-anchor-id="zero-copy-vector-indexing">Zero-copy Vector Indexing</h2>
+<p>Of course, fast random access isn’t enough. If you have to scan every single row to calculate distances (O(N)), it doesn’t matter how fast you can read an individual page — it’ll still be slow. We need an index.</p>
+<p>But here’s the challenge: <strong>how do we add an index without breaking compatibility?</strong> We don’t want to create a “custom Parquet” that DuckDB or Spark can’t read.</p>
+<p>The solution is surprisingly elegant. Parquet allows you to embed arbitrary metadata in the file footer (more details <a href="https://datafusion.apache.org/blog/2025/07/14/user-defined-parquet-indexes/">here</a>). Standard readers will happily ignore it, but our specialized reader can look for it.</p>
+<p>We chose the <a href="https://www.pinecone.io/learn/series/faiss/vector-indexes/">Inverted File (IVF) index</a> for this prototype. It works by partitioning the vector space into clusters (centroids). When we want to search, we figure out which clusters are close to our query, and then we only look at the vectors in those clusters.</p>
+<p>The best part? It’s <strong>zero-copy</strong>.</p>
+<p>Some vector stores (HNSW-based) force you to duplicate your data into their internal structures. Our index is just a lightweight list of pointers (row IDs) and cluster centroids. The actual heavy vector data stays right where it is — in the Parquet data pages.</p>
+<p>In our experiments with ~5,000 academic papers each with 4096-dimensional embeddings (we used <code>qwen/qwen3-embedding-8b</code>), the index added a negligible <strong>0.21 MB</strong> to a <strong>68 MB</strong> file. That’s an overhead of just <strong>0.3%</strong>.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="https://blog.xiangpeng.systems/posts/vector-search-with-parquet-datafusion/zero-copy-index.png" class="img-fluid figure-img" style="width:50.0%"></p>
+<figcaption>The vector index references to the embedding vectors in Parquet files, without duplicating the data.</figcaption>
+</figure>
+</div>
+</section>
+<section id="in-place-index-creation" class="level2">
+<h2 class="anchored" data-anchor-id="in-place-index-creation">In-Place Index Creation</h2>
+<p>Now we understand vector search in Parquet is not only feasible, but also fast.</p>
+<p>You might ask: doesn’t this mean I need to rewrite my entire Parquet file just to create that index? But here’s the kicker: creating a vector index on Parquet doesn’t require a rewrite.</p>
+<p>Wait, isn’t Parquet immutable? How can you add an index to a Parquet file without rewriting it?</p>
+<p>Enter another beautiful part of Parquet files: <strong>The Footer.</strong> At the end of each Parquet file is its metadata. We can simply append our vector index after the end of the metadata, and then copy that old metadata to the end of the vector index.</p>
+<p>This way we create a perfectly legit Parquet file without rewriting any data pages.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="https://blog.xiangpeng.systems/posts/vector-search-with-parquet-datafusion/index-footer.png" class="img-fluid figure-img" style="width:50.0%"></p>
+<figcaption>The index is appended after the end of the old metadata</figcaption>
+</figure>
+</div>
+</section>
+<section id="datafusion-integration" class="level2">
+<h2 class="anchored" data-anchor-id="datafusion-integration">DataFusion Integration</h2>
+<p>An index is useless if you can’t use it. DataFusion lacks “official” support for custom indexes. But its modularity is its superpower: anyone can extend it.</p>
+<p>We implemented a DataFusion query optimizer which will automatically rewrite the query plan to use the index, if the Parquet file has one.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="https://blog.xiangpeng.systems/posts/vector-search-with-parquet-datafusion/query-plan.png" class="img-fluid figure-img" style="width:80.0%"></p>
+<figcaption>pq-vector automatically rewrites the query plan to use the index</figcaption>
+</figure>
+</div>
+</section>
+<section id="how-it-looks-in-code" class="level2">
+<h2 class="anchored" data-anchor-id="how-it-looks-in-code">How It Looks in Code</h2>
+<p>We implemented a proof-of-concept using Rust, using <code>parquet</code> and <code>datafusion</code>.</p>
+<section id="building-the-index" class="level3">
+<h3 class="anchored" data-anchor-id="building-the-index">1. Building the Index</h3>
+<p>The builder reads your existing Parquet file, trains K-means centroids, and writes the index to the file footer.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2" style="background: #f1f3f5;"><pre class="sourceCode rust code-with-copy"><code class="sourceCode rust"><span id="cb2-1"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">use</span> <span class="pp" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">pq_vector::</span>IndexBuilder<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">;</span></span>
+<span id="cb2-2"></span>
+<span id="cb2-3"><span class="pp" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">IndexBuilder::</span>new(</span>
+<span id="cb2-4">    <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"data/combined.parquet"</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span></span>
+<span id="cb2-5">    <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"embedding"</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span></span>
+<span id="cb2-6">)</span>
+<span id="cb2-7"><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span>n_clusters(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">100</span>)</span>
+<span id="cb2-8"><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span>build_inplace()<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">?;</span></span></code></pre></div></div>
+</section>
+<section id="searching-with-sql-datafusion" class="level3">
+<h3 class="anchored" data-anchor-id="searching-with-sql-datafusion">2. Searching with SQL (DataFusion)</h3>
+<p>To make this actually useful, we hooked it into DataFusion’s optimizer rules. This lets you run vector searches using <strong>standard SQL syntax</strong>.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3" style="background: #f1f3f5;"><pre class="sourceCode rust code-with-copy"><code class="sourceCode rust"><span id="cb3-1"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">use</span> <span class="pp" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">datafusion::execution::</span>SessionStateBuilder<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">;</span></span>
+<span id="cb3-2"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">use</span> <span class="pp" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">datafusion::prelude::</span>SessionContext<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">;</span></span>
+<span id="cb3-3"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">use</span> <span class="pp" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">pq_vector::df_vector::</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{</span>PqVectorSessionBuilderExt<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span> VectorTopKOptions<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">};</span></span>
+<span id="cb3-4"></span>
+<span id="cb3-5"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">// Enable the pq-vector extension in DataFusion</span></span>
+<span id="cb3-6"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">let</span> state <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> <span class="pp" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">SessionStateBuilder::</span>new()</span>
+<span id="cb3-7">    <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span>with_default_features()</span>
+<span id="cb3-8">    <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span>with_pq_vector(VectorTopKOptions <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{</span></span>
+<span id="cb3-9">        nprobe<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">:</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">10</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span></span>
+<span id="cb3-10">        <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">..</span><span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">Default</span><span class="pp" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">::</span><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">default</span>()</span>
+<span id="cb3-11">    <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">}</span>)</span>
+<span id="cb3-12">    <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span>build()<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">;</span></span>
+<span id="cb3-13"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">let</span> ctx <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> <span class="pp" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">SessionContext::</span>new_with_state(state)<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">;</span></span>
+<span id="cb3-14"></span>
+<span id="cb3-15">ctx<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span>register_parquet(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"t"</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"data/combined.parquet"</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">Default</span><span class="pp" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">::</span><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">default</span>())</span>
+<span id="cb3-16">    <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">await</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">?;</span></span>
+<span id="cb3-17"></span>
+<span id="cb3-18"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">// Standard SQL vector search!</span></span>
+<span id="cb3-19"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">let</span> df <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> ctx</span>
+<span id="cb3-20">    <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span>sql(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"SELECT * FROM t ORDER BY array_distance(embedding, [0.1, 0.2, 0.3]) LIMIT 10"</span>)</span>
+<span id="cb3-21">    <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">await</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">?;</span></span></code></pre></div></div>
+<p>Notice that we can mix the vector search with normal SQL filters, one of the key features of Vector Databases. This is the power of keeping everything in one engine. <strong>You don’t need a vector search engine.</strong></p>
+</section>
+</section>
+<section id="does-it-actually-work" class="level2">
+<h2 class="anchored" data-anchor-id="does-it-actually-work">Does It Actually Work?</h2>
+<p>We benchmarked this on our dataset of 4,886 vectors (4096 dimensions).</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Operation</th>
+<th>Time</th>
+<th>Speedup</th>
+<th>Recall@10</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Brute force</td>
+<td>100ms</td>
+<td>1x</td>
+<td>1.00</td>
+</tr>
+<tr class="even">
+<td>IVF search (nprobe=1)</td>
+<td>3.4ms</td>
+<td><strong>29x</strong></td>
+<td>0.83</td>
+</tr>
+<tr class="odd">
+<td>IVF search (nprobe=5)</td>
+<td>17.7ms</td>
+<td><strong>5.7x</strong></td>
+<td>0.96</td>
+</tr>
+<tr class="even">
+<td>IVF search (nprobe=10)</td>
+<td>32.4ms</td>
+<td><strong>3.1x</strong></td>
+<td>1.00</td>
+</tr>
+</tbody>
+</table>
+<p>The results are pretty clear. Even with a simple IVF index, we see massive speedups compared to a full scan. With <code>nprobe=5</code>, we’re getting <strong>96% recall</strong> at <strong>5.7x the speed</strong> of a brute force scan.</p>
+<p>The latency is almost entirely dominated by random I/O, which validates our theory: if you tune the page size correctly, Parquet handles random access just fine.</p>
+</section>
+<section id="need-your-help" class="level2">
+<h2 class="anchored" data-anchor-id="need-your-help">Need your help!</h2>
+<p><code>pq-vector</code> is very early; it’s definitely not as polished as commercial vector databases now, but we have just shown that there’s nothing we can’t do with standard open source tools like Parquet and DataFusion. Here are a few things we’re planning to do next:</p>
+<ul>
+<li><strong>No HNSW</strong>: We used IVF because it’s simple and compact. Graph-based indexes like <a href="https://www.pinecone.io/learn/series/faiss/hnsw/">HNSW</a> are probably more accurate, but they have much higher space overhead.</li>
+<li><strong>Multi-Parquet index</strong>: We often query many Parquet files, not just one file. We plan to support querying multiple Parquet files seamlessly.</li>
+</ul>
+<p><a href="https://github.com/XiangpengHao/pq-vector">github.com/XiangpengHao/pq-vector</a></p>
+
+
+</section>
+
+ ]]></description>
+  <guid>https://blog.xiangpeng.systems/posts/vector-search-with-parquet-datafusion/</guid>
+  <pubDate>Mon, 09 Feb 2026 00:00:00 GMT</pubDate>
+</item>
 <item>
   <title>Stop building systems for agents</title>
   <link>https://blog.xiangpeng.systems/posts/stop-building-agent-systems/</link>
