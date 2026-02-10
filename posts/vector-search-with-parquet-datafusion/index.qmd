@@ -69,8 +69,10 @@ But here’s the challenge: **how do we add an index without breaking compatibil
 We don't want to create a "custom Parquet" that DuckDB or Spark can't read.
 
 The solution is surprisingly elegant.
-Parquet allows you to embed arbitrary metadata in the file footer (more details [here](https://datafusion.apache.org/blog/2025/07/14/user-defined-parquet-indexes/)).
+Parquet allows you to embed arbitrary metadata in the file footer [^2] .
 Standard readers will happily ignore it, but our specialized reader can look for it.
+
+[^2]: This is not a hack, it a elegant Parquet feature that allows you to extend the file format, more details [here](https://datafusion.apache.org/blog/2025/07/14/user-defined-parquet-indexes/)
 
 We chose the [Inverted File (IVF) index](https://www.pinecone.io/learn/series/faiss/vector-indexes/) for this prototype.
 It works by partitioning the vector space into clusters (centroids).
