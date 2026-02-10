@@ -2,9 +2,11 @@
 title: "Vector search using only Parquet and DataFusion"
 date: "2026-02-09"
 categories: []
-description: "You don't need a vector database."
+description: "Just tune your existing stack"
 authors: ["Xiangpeng Hao"]
 toc: true
+reference-location: margin
+citation-location: margin
 format:
   html: 
     highlight-style: tango 
@@ -33,8 +35,8 @@ Introducing `pq-vector`: [https://github.com/XiangpengHao/pq-vector](https://git
 
 "But Parquet is a columnar format!" I can hear you screaming. "It's designed for heavy scans, not point lookups!"
 
-You’re not wrong. The common wisdom is that Parquet is ill-suited for random access because it compresses data into pages.
-To read a single row, you typically have to decompress an entire page, which is wasteful if you only want one item.
+You’re not wrong. The common wisdom is that Parquet is ill-suited for random access because it stores column values in compressed pages.
+To retrieve a single value—like a specific vector embedding—you typically have to decompress the entire page it resides in. This is wasteful if you only need that one item.
 
 But let's look at the actual numbers.
 
@@ -97,9 +99,11 @@ Wait, isn’t Parquet immutable? How can you add an index to a Parquet file with
 Enter another beautiful part of Parquet files: **The Footer.**
 At the end of each Parquet file is its metadata. We can simply append our vector index after the end of the metadata, and then copy that old metadata to the end of the vector index.
 
-This way we create a perfectly legit Parquet file without rewriting any data pages.
+This way we create a perfectly legit Parquet file without rewriting any data pages[^1].
 
 ![The index is appended after the end of the old metadata](index-footer.png){width=50%}
+
+[^1]: This assumes the embedding column is already optimized for random access. There are likely clever ways to rewrite only the embedding column, though.
 
 ## DataFusion Integration
 
@@ -183,5 +187,6 @@ Here are a few things we're planning to do next:
 
 - **No HNSW**: We used IVF because it's simple and compact. Graph-based indexes like [HNSW](https://www.pinecone.io/learn/series/faiss/hnsw/) are probably more accurate, but they have much higher space overhead.
 - **Multi-Parquet index**: We often query many Parquet files, not just one file. We plan to support querying multiple Parquet files seamlessly.
+- **Better filter support**: Like DuckDB's VSS, our implementation currently has limited support for filters. We plan to allow users to write SQL like: `SELECT * FROM t WHERE col_1=5 ORDER BY array_distance(embedding, [0.1, 0.2, 0.3]) LIMIT 10`.
 
 [github.com/XiangpengHao/pq-vector](https://github.com/XiangpengHao/pq-vector)
