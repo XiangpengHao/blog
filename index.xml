@@ -41,7 +41,7 @@
 <section id="wait-isnt-parquet-terrible-for-random-access" class="level2">
 <h2 class="anchored" data-anchor-id="wait-isnt-parquet-terrible-for-random-access">Wait, Isn’t Parquet Terrible for Random Access?</h2>
 <p>“But Parquet is a columnar format!” I can hear you screaming. “It’s designed for heavy scans, not point lookups!”</p>
-<p>You’re not wrong. The common wisdom is that Parquet is ill-suited for random access because it compresses data into pages. To read a single row, you typically have to decompress an entire page, which is wasteful if you only want one item.</p>
+<p>You’re not wrong. The common wisdom is that Parquet is ill-suited for random access because it stores column values in compressed pages. To retrieve a single value—like a specific vector embedding—you typically have to decompress the entire page it resides in. This is wasteful if you only need that one item.</p>
 <p>But let’s look at the actual numbers.</p>
 <p>A typical vector embedding—say, from OpenAI’s <code>text-embedding-3-small</code> model—has 1,536 dimensions. That’s about 6KB of data. Now, guess how big a standard Parquet page is? Usually a few KB as well.</p>
 <p>If we simply configure the <a href="https://docs.rs/parquet/latest/parquet/file/properties/struct.WriterPropertiesBuilder.html">Parquet writer</a> to match the page size with the embedding size, we can effectively force each embedding into its own page. With this, “decompressing a page” just means “reading the one vector we want.”</p>
@@ -100,14 +100,14 @@ font-style: inherit;">;</span></span></code></pre></div></div>
 </figure>
 </div>
 </section>
-<section id="in-place-index-creation" class="level2">
+<section id="in-place-index-creation" class="level2 page-columns page-full">
 <h2 class="anchored" data-anchor-id="in-place-index-creation">In-Place Index Creation</h2>
 <p>Now we understand vector search in Parquet is not only feasible, but also fast.</p>
 <p>You might ask: doesn’t this mean I need to rewrite my entire Parquet file just to create that index? But here’s the kicker: creating a vector index on Parquet doesn’t require a rewrite.</p>
 <p>Wait, isn’t Parquet immutable? How can you add an index to a Parquet file without rewriting it?</p>
 <p>Enter another beautiful part of Parquet files: <strong>The Footer.</strong> At the end of each Parquet file is its metadata. We can simply append our vector index after the end of the metadata, and then copy that old metadata to the end of the vector index.</p>
-<p>This way we create a perfectly legit Parquet file without rewriting any data pages.</p>
-<div class="quarto-figure quarto-figure-center">
+<p>This way we create a perfectly legit Parquet file without rewriting any data pages<sup>1</sup>.</p>
+<div class="no-row-height column-margin column-container"><div id="fn1"><p><sup>1</sup>&nbsp;This assumes the embedding column is already optimized for random access. There are likely clever ways to rewrite only the embedding column, though.</p></div></div><div class="quarto-figure quarto-figure-center">
 <figure class="figure">
 <p><img src="https://blog.xiangpeng.systems/posts/vector-search-with-parquet-datafusion/index-footer.png" class="img-fluid figure-img" style="width:50.0%"></p>
 <figcaption>The index is appended after the end of the old metadata</figcaption>
@@ -352,11 +352,13 @@ font-style: inherit;">?;</span></span></code></pre></div></div>
 <ul>
 <li><strong>No HNSW</strong>: We used IVF because it’s simple and compact. Graph-based indexes like <a href="https://www.pinecone.io/learn/series/faiss/hnsw/">HNSW</a> are probably more accurate, but they have much higher space overhead.</li>
 <li><strong>Multi-Parquet index</strong>: We often query many Parquet files, not just one file. We plan to support querying multiple Parquet files seamlessly.</li>
+<li><strong>Better filter support</strong>: Like DuckDB’s VSS, our implementation currently has limited support for filters. We plan to allow users to write SQL like: <code>SELECT * FROM t WHERE col_1=5 ORDER BY array_distance(embedding, [0.1, 0.2, 0.3]) LIMIT 10</code>.</li>
 </ul>
 <p><a href="https://github.com/XiangpengHao/pq-vector">github.com/XiangpengHao/pq-vector</a></p>
 
 
 </section>
+
 
  ]]></description>
   <guid>https://blog.xiangpeng.systems/posts/vector-search-with-parquet-datafusion/</guid>
