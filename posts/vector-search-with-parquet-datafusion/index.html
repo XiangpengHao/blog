@@ -267,12 +267,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </figure>
 </div>
 </section>
-<section id="zero-copy-vector-indexing" class="level2">
+<section id="zero-copy-vector-indexing" class="level2 page-columns page-full">
 <h2 class="anchored" data-anchor-id="zero-copy-vector-indexing">Zero-copy Vector Indexing</h2>
 <p>Of course, fast random access isn’t enough. If you have to scan every single row to calculate distances (O(N)), it doesn’t matter how fast you can read an individual page — it’ll still be slow. We need an index.</p>
 <p>But here’s the challenge: <strong>how do we add an index without breaking compatibility?</strong> We don’t want to create a “custom Parquet” that DuckDB or Spark can’t read.</p>
-<p>The solution is surprisingly elegant. Parquet allows you to embed arbitrary metadata in the file footer (more details <a href="https://datafusion.apache.org/blog/2025/07/14/user-defined-parquet-indexes/">here</a>). Standard readers will happily ignore it, but our specialized reader can look for it.</p>
-<p>We chose the <a href="https://www.pinecone.io/learn/series/faiss/vector-indexes/">Inverted File (IVF) index</a> for this prototype. It works by partitioning the vector space into clusters (centroids). When we want to search, we figure out which clusters are close to our query, and then we only look at the vectors in those clusters.</p>
+<p>The solution is surprisingly elegant. Parquet allows you to embed arbitrary metadata in the file footer <a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a> . Standard readers will happily ignore it, but our specialized reader can look for it.</p>
+<div class="no-row-height column-margin column-container"><div id="fn1"><p><sup>1</sup>&nbsp;This is not a hack, it a elegant Parquet feature that allows you to extend the file format, more details <a href="https://datafusion.apache.org/blog/2025/07/14/user-defined-parquet-indexes/">here</a></p></div></div><p>We chose the <a href="https://www.pinecone.io/learn/series/faiss/vector-indexes/">Inverted File (IVF) index</a> for this prototype. It works by partitioning the vector space into clusters (centroids). When we want to search, we figure out which clusters are close to our query, and then we only look at the vectors in those clusters.</p>
 <p>The best part? It’s <strong>zero-copy</strong>.</p>
 <p>Some vector stores (HNSW-based) force you to duplicate your data into their internal structures. Our index is just a lightweight list of pointers (row IDs) and cluster centroids. The actual heavy vector data stays right where it is — in the Parquet data pages.</p>
 <p>In our experiments with ~5,000 academic papers each with 4096-dimensional embeddings (we used <code>qwen/qwen3-embedding-8b</code>), the index added a negligible <strong>0.21 MB</strong> to a <strong>68 MB</strong> file. That’s an overhead of just <strong>0.3%</strong>.</p>
@@ -289,8 +289,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p>You might ask: doesn’t this mean I need to rewrite my entire Parquet file just to create that index? But here’s the kicker: creating a vector index on Parquet doesn’t require a rewrite.</p>
 <p>Wait, isn’t Parquet immutable? How can you add an index to a Parquet file without rewriting it?</p>
 <p>Enter another beautiful part of Parquet files: <strong>The Footer.</strong> At the end of each Parquet file is its metadata. We can simply append our vector index after the end of the metadata, and then copy that old metadata to the end of the vector index.</p>
-<p>This way we create a perfectly legit Parquet file without rewriting any data pages<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a>.</p>
-<div class="no-row-height column-margin column-container"><div id="fn1"><p><sup>1</sup>&nbsp;This assumes the embedding column is already optimized for random access. There are likely clever ways to rewrite only the embedding column, though.</p></div></div><div class="quarto-figure quarto-figure-center">
+<p>This way we create a perfectly legit Parquet file without rewriting any data pages<a href="#fn2" class="footnote-ref" id="fnref2" role="doc-noteref"><sup>2</sup></a>.</p>
+<div class="no-row-height column-margin column-container"><div id="fn2"><p><sup>2</sup>&nbsp;This assumes the embedding column is already optimized for random access. There are likely clever ways to rewrite only the embedding column, though.</p></div></div><div class="quarto-figure quarto-figure-center">
 <figure class="figure">
 <p><img src="index-footer.png" class="img-fluid figure-img" style="width:50.0%"></p>
 <figcaption>The index is appended after the end of the old metadata</figcaption>
