@@ -1,0 +1,69 @@
+---
+title: "We waste too much time on evaluations"
+date: "2026-02-20"
+categories: []
+description: "Evaluations are for losers"
+authors: ["Xiangpeng Hao"]
+toc: true
+reference-location: margin
+citation-location: margin
+format:
+  html: 
+    highlight-style: tango 
+---
+
+::: {.callout-warning appearance="simple" icon=false}
+## Acknowledgments
+
+My work is supported by [funding](https://xiangpeng.systems/fund/) from [InfluxData](https://influxdata.com), [Bauplan](https://www.bauplanlabs.com), [SpiralDB](https://spiraldb.com), and the taxpayers of the State of Wisconsin and the federal government. Much appreciation!
+:::
+
+## I don't read evaluations
+
+Here I make two claims:
+
+1. If your idea doesn't make sense, I don't care about your evaluation
+
+2. If your idea is good, I don't need your evaluation
+
+Evaluations are mostly branding. They're not scientific, they're only partial truth (if any), and they only make the authors feel good about themselves.
+ 
+
+## Why evaluations?
+
+The above two claims are almost too obvious, at least for someone who is outside the academic community.
+
+But the academic community really really likes extensive evaluations. It took me five years to understand this (maybe I'm still scratching the surface).
+
+### Reason 1: our work is not so important
+
+Our ideas are neither good nor bad — they are complex. They navigate trade-offs that work well for certain use cases and are mostly unnecessary complexity for others.
+Most systems research is optional: it changes virtually nothing, it is nice to have, and its papers get read only because later researchers need to cite them.
+
+Therefore, under Occam's razor, none of those systems are going to be remotely relevant to the real world.
+
+In fear of irrelevancy, we try our best to over-claim, write extensive evaluations to show that our work is so remarkable, so important, that you can't miss it. 
+
+### Reason 2: we need to fool ourselves
+
+We know from the bottom of our hearts that our work is not so important.
+The more we know this, the more we need to over-claim to compensate for it.
+
+We're so terrified that we, academics, are just like other normal people; we just happened to get this job, this degree, happened to work on this topic; but we need to change the world, we need to seek truth, we need to act as if we are another Einstein.
+But unfortunately, we are not.
+
+We all know this: the world will just be as good (if not better) without 99% of the research. 
+Because of that, everyone must pretend that their work falls into that 1% category.
+<!-- After all, as they all say, we don't know which papers are those 1% impactful papers.  -->
+
+System researchers often laugh at AI researchers, considering their work to be non-scientific, not solid, and incremental.
+From system researcher's perspective, the evaluations from NeurIPS, ICML, etc, are basically jokes.
+Their evaluations are nonsense compared to the rigorous evaluations in system research papers.
+
+It's funny to see a diminishing community laughing at a community that is changing the entire world.
+
+## Evaluations are for losers
+
+If you fail at every chance to convince me that your research is worthwhile, you use extensive evaluations to shut my mouth.
+
+You're good at what you benchmark, I know.
