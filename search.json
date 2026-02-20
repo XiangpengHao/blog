@@ -301,13 +301,6 @@
     "text": "Self-reflections\nIt’s easy to blame bad advisors, but it is hard not to become one.\nI suffered a lot from bad advisors, but I often wonder if I can be better than them. Toxic advisors result from systematic academia problems, and changing the system is hard. That’s why good advisors are rare and worth being recognized and appreciated.\nWhen pressured with tenure, funding, and publication, will I be as nice/patient/motivating/caring as I imagined myself to be?"
   },
   {
-    "objectID": "index.html",
-    "href": "index.html",
-    "title": "Database/storage systems",
-    "section": "",
-    "text": "Vector search using only Parquet and DataFusion\n\n\nJust tune your existing stack\n\n\n\n\n\nFeb 9, 2026\n\n\n\n\n\n\n\n\n\n\n\n\nStop building systems for agents\n\n\nBuild agent systems for humans instead.\n\n\n\n\n\nFeb 2, 2026\n\n\n\n\n\n\n\n\n\n\n\n\nWhat is LiquidCache?\n\n\nA caching layer to unify compute and storage.\n\n\n\n\n\nNov 24, 2025\n\n\n\n\n\n\n\n\n\n\n\n\nOn the Nature of Strings\n\n\nStrings are the most important data type in analytics, and we need to take them seriously.\n\n\n\n\n\nAug 13, 2025\n\n\n\n\n\n\n\n\n\n\n\n\nBuild your own S3-Select in 400 lines of Rust\n\n\nDataFusion is ALL YOU NEED\n\n\n\n\n\nMar 23, 2025\n\n\n\n\n\n\n\n\n\n\n\n\nEfficient Filter Pushdown in Parquet\n\n\nHow to implement efficient filter pushdown in Parquet readers and why it’s challenging in practice.\n\n\n\n\n\nMar 12, 2025\n\n\n\n\n\n\n\n\n\n\n\n\nWhere are we now, system researchers?\n\n\nWhat I cannot create, I do not understand.\n\n\n\n\n\nMar 9, 2025\n\n\n\n\n\n\n\n\n\n\n\n\nOnline Parquet Viewer with Rust\n\n\nNo JS, no server, just Rust\n\n\n\n\n\nNov 12, 2024\n\n\nXiangpeng Hao\n\n\n\n\n\n\n\n\n\n\n\n\nCaching in DataFusion\n\n\nDon’t read twice.\n\n\n\n\n\nOct 27, 2024\n\n\nXiangpeng Hao\n\n\n\n\n\n\n\n\n\n\n\n\nParquet pruning in DataFusion\n\n\nRead no more than you need\n\n\n\n\n\nOct 24, 2024\n\n\nXiangpeng Hao\n\n\n\n\n\n\n\n\n\n\n\n\nUse StringView to make DataFusion faster\n\n\n\n\n\n\n\n\nSep 13, 2024\n\n\nXiangpeng Hao, Andrew Lamb\n\n\n\n\n\n\n\n\n\n\n\n\nMy research statement\n\n\n\n\n\n\n\n\nAug 21, 2024\n\n\n\n\n\n\n\n\n\n\n\n\nInfluxData &gt; Google and Microsoft\n\n\n\n\n\n\n\n\nAug 18, 2024\n\n\n\n\n\n\n\n\n\n\n\n\nThree types of good academic advisors\n\n\n\n\n\n\n\n\nMay 7, 2024\n\n\n\n\n\n\n\n\n\n\n\n\nWhat happens when you type a SQL in the database\n\n\n\n\n\n\n\n\nApr 26, 2024\n\n\n\n\n\nNo matching items"
-  },
-  {
     "objectID": "posts/what-is-liquid-cache/index.html",
     "href": "posts/what-is-liquid-cache/index.html",
     "title": "What is LiquidCache?",
@@ -334,6 +327,41 @@
     "title": "What is LiquidCache?",
     "section": "Conclusions",
     "text": "Conclusions\nLiquidCache is the one‑stop shop for diskless, serverless, and pushdown‑native analytics.\nIt is built on open standards (Parquet, Arrow Flight, DataFusion) for easy integration and stable governance.\nLiquidCache caches Parquet as liquid data, which is ultra-optimized for compute pushdown, compressed execution, modern storage, and network‑efficient data transfer.\n\nWho are we?\n\nLiquidCache started as a research project led by Xiangpeng Hao at UW‑Madison ADSL.\nIt was made possible by a research gift from InfluxData. One year later, SpiralDB and Bauplan also joined the journey.10\nLiquidCache will remain a public‑benefit project in appreciation of the support from taxpayers, research gifts, and the open‑source community.\n\n\n\n10 Support our research here!"
+  },
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "Database/storage systems",
+    "section": "",
+    "text": "We waste too much time on evaluations\n\n\nEvaluations are for losers\n\n\n\n\n\nFeb 20, 2026\n\n\n\n\n\n\n\n\n\n\n\n\nVector search using only Parquet and DataFusion\n\n\nJust tune your existing stack\n\n\n\n\n\nFeb 9, 2026\n\n\n\n\n\n\n\n\n\n\n\n\nStop building systems for agents\n\n\nBuild agent systems for humans instead.\n\n\n\n\n\nFeb 2, 2026\n\n\n\n\n\n\n\n\n\n\n\n\nWhat is LiquidCache?\n\n\nA caching layer to unify compute and storage.\n\n\n\n\n\nNov 24, 2025\n\n\n\n\n\n\n\n\n\n\n\n\nOn the Nature of Strings\n\n\nStrings are the most important data type in analytics, and we need to take them seriously.\n\n\n\n\n\nAug 13, 2025\n\n\n\n\n\n\n\n\n\n\n\n\nBuild your own S3-Select in 400 lines of Rust\n\n\nDataFusion is ALL YOU NEED\n\n\n\n\n\nMar 23, 2025\n\n\n\n\n\n\n\n\n\n\n\n\nEfficient Filter Pushdown in Parquet\n\n\nHow to implement efficient filter pushdown in Parquet readers and why it’s challenging in practice.\n\n\n\n\n\nMar 12, 2025\n\n\n\n\n\n\n\n\n\n\n\n\nWhere are we now, system researchers?\n\n\nWhat I cannot create, I do not understand.\n\n\n\n\n\nMar 9, 2025\n\n\n\n\n\n\n\n\n\n\n\n\nOnline Parquet Viewer with Rust\n\n\nNo JS, no server, just Rust\n\n\n\n\n\nNov 12, 2024\n\n\nXiangpeng Hao\n\n\n\n\n\n\n\n\n\n\n\n\nCaching in DataFusion\n\n\nDon’t read twice.\n\n\n\n\n\nOct 27, 2024\n\n\nXiangpeng Hao\n\n\n\n\n\n\n\n\n\n\n\n\nParquet pruning in DataFusion\n\n\nRead no more than you need\n\n\n\n\n\nOct 24, 2024\n\n\nXiangpeng Hao\n\n\n\n\n\n\n\n\n\n\n\n\nUse StringView to make DataFusion faster\n\n\n\n\n\n\n\n\nSep 13, 2024\n\n\nXiangpeng Hao, Andrew Lamb\n\n\n\n\n\n\n\n\n\n\n\n\nMy research statement\n\n\n\n\n\n\n\n\nAug 21, 2024\n\n\n\n\n\n\n\n\n\n\n\n\nInfluxData &gt; Google and Microsoft\n\n\n\n\n\n\n\n\nAug 18, 2024\n\n\n\n\n\n\n\n\n\n\n\n\nThree types of good academic advisors\n\n\n\n\n\n\n\n\nMay 7, 2024\n\n\n\n\n\n\n\n\n\n\n\n\nWhat happens when you type a SQL in the database\n\n\n\n\n\n\n\n\nApr 26, 2024\n\n\n\n\n\nNo matching items"
+  },
+  {
+    "objectID": "posts/evaluations-are-waste-of-time/index.html",
+    "href": "posts/evaluations-are-waste-of-time/index.html",
+    "title": "We waste too much time on evaluations",
+    "section": "",
+    "text": "WarningAcknowledgments\n\n\n\nMy work is supported by funding from InfluxData, Bauplan, SpiralDB, and the taxpayers of the State of Wisconsin and the federal government. Much appreciation!"
+  },
+  {
+    "objectID": "posts/evaluations-are-waste-of-time/index.html#i-dont-read-evaluations",
+    "href": "posts/evaluations-are-waste-of-time/index.html#i-dont-read-evaluations",
+    "title": "We waste too much time on evaluations",
+    "section": "I don’t read evaluations",
+    "text": "I don’t read evaluations\nHere I make two claims:\n\nIf your idea doesn’t make sense, I don’t care about your evaluation\nIf your idea is good, I don’t need your evaluation\n\nEvaluations are mostly branding. They’re not scientific, they’re only partial truth (if any), and they only make the authors feel good about themselves."
+  },
+  {
+    "objectID": "posts/evaluations-are-waste-of-time/index.html#why-evaluations",
+    "href": "posts/evaluations-are-waste-of-time/index.html#why-evaluations",
+    "title": "We waste too much time on evaluations",
+    "section": "Why evaluations?",
+    "text": "Why evaluations?\nThe above two claims are almost too obvious, at least for someone who is outside the academic community.\nBut the academic community really really likes extensive evaluations. It took me five years to understand this (maybe I’m still scratching the surface).\n\nReason 1: our work is not so important\nOur ideas are neither good nor bad — they are complex. They navigate trade-offs that work well for certain use cases and are mostly unnecessary complexity for others. Most systems research is optional: it changes virtually nothing, it is nice to have, and its papers get read only because later researchers need to cite them.\nTherefore, under Occam’s razor, none of those systems are going to be remotely relevant to the real world.\nIn fear of irrelevancy, we try our best to over-claim, write extensive evaluations to show that our work is so remarkable, so important, that you can’t miss it.\n\n\nReason 2: we need to fool ourselves\nWe know from the bottom of our hearts that our work is not so important. The more we know this, the more we need to over-claim to compensate for it.\nWe’re so terrified that we, academics, are just like other normal people; we just happened to get this job, this degree, happened to work on this topic; but we need to change the world, we need to seek truth, we need to act as if we are another Einstein. But unfortunately, we are not.\nWe all know this: the world will just be as good (if not better) without 99% of the research. Because of that, everyone must pretend that their work falls into that 1% category. \nSystem researchers often laugh at AI researchers, considering their work to be non-scientific, not solid, and incremental. From system researcher’s perspective, the evaluations from NeurIPS, ICML, etc, are basically jokes. Their evaluations are nonsense compared to the rigorous evaluations in system research papers.\nIt’s funny to see a diminishing community laughing at a community that is changing the entire world."
+  },
+  {
+    "objectID": "posts/evaluations-are-waste-of-time/index.html#evaluations-are-for-losers",
+    "href": "posts/evaluations-are-waste-of-time/index.html#evaluations-are-for-losers",
+    "title": "We waste too much time on evaluations",
+    "section": "Evaluations are for losers",
+    "text": "Evaluations are for losers\nIf you fail at every chance to convince me that your research is worthwhile, you use extensive evaluations to shut my mouth.\nYou’re good at what you benchmark, I know."
   },
   {
     "objectID": "posts/parquet-to-arrow/index.html",

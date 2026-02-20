@@ -10,7 +10,69 @@
 <atom:link href="https://blog.xiangpeng.systems/index.xml" rel="self" type="application/rss+xml"/>
 <description></description>
 <generator>quarto-1.8.27</generator>
-<lastBuildDate>Mon, 09 Feb 2026 00:00:00 GMT</lastBuildDate>
+<lastBuildDate>Fri, 20 Feb 2026 00:00:00 GMT</lastBuildDate>
+<item>
+  <title>We waste too much time on evaluations</title>
+  <link>https://blog.xiangpeng.systems/posts/evaluations-are-waste-of-time/</link>
+  <description><![CDATA[ 
+
+
+
+
+
+<div class="callout callout-style-simple callout-warning no-icon callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon no-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Warning</span>Acknowledgments
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>My work is supported by <a href="https://xiangpeng.systems/fund/">funding</a> from <a href="https://influxdata.com">InfluxData</a>, <a href="https://www.bauplanlabs.com">Bauplan</a>, <a href="https://spiraldb.com">SpiralDB</a>, and the taxpayers of the State of Wisconsin and the federal government. Much appreciation!</p>
+</div>
+</div>
+<section id="i-dont-read-evaluations" class="level2">
+<h2 class="anchored" data-anchor-id="i-dont-read-evaluations">I don’t read evaluations</h2>
+<p>Here I make two claims:</p>
+<ol type="1">
+<li><p>If your idea doesn’t make sense, I don’t care about your evaluation</p></li>
+<li><p>If your idea is good, I don’t need your evaluation</p></li>
+</ol>
+<p>Evaluations are mostly branding. They’re not scientific, they’re only partial truth (if any), and they only make the authors feel good about themselves.</p>
+</section>
+<section id="why-evaluations" class="level2">
+<h2 class="anchored" data-anchor-id="why-evaluations">Why evaluations?</h2>
+<p>The above two claims are almost too obvious, at least for someone who is outside the academic community.</p>
+<p>But the academic community really really likes extensive evaluations. It took me five years to understand this (maybe I’m still scratching the surface).</p>
+<section id="reason-1-our-work-is-not-so-important" class="level3">
+<h3 class="anchored" data-anchor-id="reason-1-our-work-is-not-so-important">Reason 1: our work is not so important</h3>
+<p>Our ideas are neither good nor bad — they are complex. They navigate trade-offs that work well for certain use cases and are mostly unnecessary complexity for others. Most systems research is optional: it changes virtually nothing, it is nice to have, and its papers get read only because later researchers need to cite them.</p>
+<p>Therefore, under Occam’s razor, none of those systems are going to be remotely relevant to the real world.</p>
+<p>In fear of irrelevancy, we try our best to over-claim, write extensive evaluations to show that our work is so remarkable, so important, that you can’t miss it.</p>
+</section>
+<section id="reason-2-we-need-to-fool-ourselves" class="level3">
+<h3 class="anchored" data-anchor-id="reason-2-we-need-to-fool-ourselves">Reason 2: we need to fool ourselves</h3>
+<p>We know from the bottom of our hearts that our work is not so important. The more we know this, the more we need to over-claim to compensate for it.</p>
+<p>We’re so terrified that we, academics, are just like other normal people; we just happened to get this job, this degree, happened to work on this topic; but we need to change the world, we need to seek truth, we need to act as if we are another Einstein. But unfortunately, we are not.</p>
+<p>We all know this: the world will just be as good (if not better) without 99% of the research. Because of that, everyone must pretend that their work falls into that 1% category. <!-- After all, as they all say, we don't know which papers are those 1% impactful papers.  --></p>
+<p>System researchers often laugh at AI researchers, considering their work to be non-scientific, not solid, and incremental. From system researcher’s perspective, the evaluations from NeurIPS, ICML, etc, are basically jokes. Their evaluations are nonsense compared to the rigorous evaluations in system research papers.</p>
+<p>It’s funny to see a diminishing community laughing at a community that is changing the entire world.</p>
+</section>
+</section>
+<section id="evaluations-are-for-losers" class="level2">
+<h2 class="anchored" data-anchor-id="evaluations-are-for-losers">Evaluations are for losers</h2>
+<p>If you fail at every chance to convince me that your research is worthwhile, you use extensive evaluations to shut my mouth.</p>
+<p>You’re good at what you benchmark, I know.</p>
+
+
+</section>
+
+ ]]></description>
+  <guid>https://blog.xiangpeng.systems/posts/evaluations-are-waste-of-time/</guid>
+  <pubDate>Fri, 20 Feb 2026 00:00:00 GMT</pubDate>
+</item>
 <item>
   <title>Vector search using only Parquet and DataFusion</title>
   <link>https://blog.xiangpeng.systems/posts/vector-search-with-parquet-datafusion/</link>

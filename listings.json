@@ -2,6 +2,7 @@
   {
     "listing": "/index.html",
     "items": [
+      "/posts/evaluations-are-waste-of-time/index.html",
       "/posts/vector-search-with-parquet-datafusion/index.html",
       "/posts/stop-building-agent-systems/index.html",
       "/posts/what-is-liquid-cache/index.html",
