@@ -34,12 +34,101 @@
 </div>
 </div>
 <p>Try it out here: <a href="https://github.com/XiangpengHao/parquet-linter">https://github.com/XiangpengHao/parquet-linter</a></p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1" style="background: #f1f3f5;"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb1-1"><span class="ex" style="color: null;
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1" style="background: #f1f3f5;"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb1-1"><span class="op" style="color: #5E5E5E;
 background-color: null;
-font-style: inherit;">cargo</span> install parquet-linter-cli</span>
-<span id="cb1-2"><span class="ex" style="color: null;
+font-style: inherit;">&gt;</span> cargo <span class="fu" style="color: #4758AB;
 background-color: null;
-font-style: inherit;">parquet-linter</span> data.parquet</span></code></pre></div></div>
+font-style: inherit;">install</span> parquet-linter-cli</span>
+<span id="cb1-2"></span>
+<span id="cb1-3"><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&gt;</span> parquet-linter <span class="ex" style="color: null;
+background-color: null;
+font-style: inherit;">data.parquet</span></span>
+<span id="cb1-4"></span>
+<span id="cb1-5"><span class="ex" style="color: null;
+background-color: null;
+font-style: inherit;">warning</span> low-compression-ratio</span>
+<span id="cb1-6">  <span class="ex" style="color: null;
+background-color: null;
+font-style: inherit;">--</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&gt;</span> column<span class="pp" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">[</span><span class="ss" style="color: #20794D;
+background-color: null;
+font-style: inherit;">2</span><span class="pp" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">]</span><span class="er" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">(</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"pid"</span><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">)</span></span>
+<span id="cb1-7">  <span class="ex" style="color: null;
+background-color: null;
+font-style: inherit;">aggregated</span> compression ratio is 1.09 <span class="er" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">(</span><span class="ex" style="color: null;
+background-color: null;
+font-style: inherit;">SNAPPY</span><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">)</span> <span class="ex" style="color: null;
+background-color: null;
+font-style: inherit;">across</span> 1/1 row groups<span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">;</span> <span class="ex" style="color: null;
+background-color: null;
+font-style: inherit;">data</span> is nearly incompressible</span>
+<span id="cb1-8">  <span class="ex" style="color: null;
+background-color: null;
+font-style: inherit;">fix:</span> set column pid compression uncompressed</span>
+<span id="cb1-9"></span>
+<span id="cb1-10"><span class="ex" style="color: null;
+background-color: null;
+font-style: inherit;">warning</span> dictionary-encoding-cardinality</span>
+<span id="cb1-11">  <span class="ex" style="color: null;
+background-color: null;
+font-style: inherit;">--</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&gt;</span> column<span class="pp" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">[</span><span class="ss" style="color: #20794D;
+background-color: null;
+font-style: inherit;">1</span><span class="pp" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">]</span><span class="er" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">(</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"ts_ns"</span><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">)</span></span>
+<span id="cb1-12">  <span class="ex" style="color: null;
+background-color: null;
+font-style: inherit;">dictionary</span> data pages fell back to PLAIN in 1/1 row groups<span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">;</span> <span class="ex" style="color: null;
+background-color: null;
+font-style: inherit;">estimated</span> cardinality is moderate <span class="er" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">(</span><span class="ex" style="color: null;
+background-color: null;
+font-style: inherit;">~132048</span> distinct / 380089 non-null = 35%<span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">)</span><span class="ex" style="color: null;
+background-color: null;
+font-style: inherit;">,</span> dictionary page size may be too small</span>
+<span id="cb1-13">  <span class="ex" style="color: null;
+background-color: null;
+font-style: inherit;">fix:</span> set column ts_ns dictionary_page_size_limit 2097152</span></code></pre></div></div>
 <section id="parquet-is-a-spec-not-an-implementation" class="level2">
 <h2 class="anchored" data-anchor-id="parquet-is-a-spec-not-an-implementation">Parquet is a spec, not an implementation</h2>
 <p>When we talk about Parquet, we often refer to one of its readers or writers, likely the <a href="https://github.com/apache/arrow/tree/main/cpp/src/parquet">C++</a>, <a href="https://github.com/apache/arrow-rs/tree/master/parquet">Rust</a>, or <a href="https://github.com/duckdb/duckdb/tree/main/extension/parquet">DuckDB</a> implementation.</p>

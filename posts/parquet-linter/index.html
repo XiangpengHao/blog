@@ -235,8 +235,19 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 <p>Try it out here: <a href="https://github.com/XiangpengHao/parquet-linter">https://github.com/XiangpengHao/parquet-linter</a></p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">cargo</span> install parquet-linter-cli</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="ex">parquet-linter</span> data.parquet</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;</span> cargo <span class="fu">install</span> parquet-linter-cli</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;</span> parquet-linter <span class="ex">data.parquet</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="ex">warning</span> low-compression-ratio</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--</span><span class="op">&gt;</span> column<span class="pp">[</span><span class="ss">2</span><span class="pp">]</span><span class="er">(</span><span class="st">"pid"</span><span class="kw">)</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  <span class="ex">aggregated</span> compression ratio is 1.09 <span class="er">(</span><span class="ex">SNAPPY</span><span class="kw">)</span> <span class="ex">across</span> 1/1 row groups<span class="kw">;</span> <span class="ex">data</span> is nearly incompressible</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>  <span class="ex">fix:</span> set column pid compression uncompressed</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="ex">warning</span> dictionary-encoding-cardinality</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--</span><span class="op">&gt;</span> column<span class="pp">[</span><span class="ss">1</span><span class="pp">]</span><span class="er">(</span><span class="st">"ts_ns"</span><span class="kw">)</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>  <span class="ex">dictionary</span> data pages fell back to PLAIN in 1/1 row groups<span class="kw">;</span> <span class="ex">estimated</span> cardinality is moderate <span class="er">(</span><span class="ex">~132048</span> distinct / 380089 non-null = 35%<span class="kw">)</span><span class="ex">,</span> dictionary page size may be too small</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>  <span class="ex">fix:</span> set column ts_ns dictionary_page_size_limit 2097152</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <section id="parquet-is-a-spec-not-an-implementation" class="level2">
 <h2 class="anchored" data-anchor-id="parquet-is-a-spec-not-an-implementation">Parquet is a spec, not an implementation</h2>
 <p>When we talk about Parquet, we often refer to one of its readers or writers, likely the <a href="https://github.com/apache/arrow/tree/main/cpp/src/parquet">C++</a>, <a href="https://github.com/apache/arrow-rs/tree/master/parquet">Rust</a>, or <a href="https://github.com/duckdb/duckdb/tree/main/extension/parquet">DuckDB</a> implementation.</p>
