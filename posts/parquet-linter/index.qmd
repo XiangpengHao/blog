@@ -21,8 +21,19 @@ My work is supported by [funding](https://xiangpeng.systems/fund/) from [InfluxD
 Try it out here: [https://github.com/XiangpengHao/parquet-linter](https://github.com/XiangpengHao/parquet-linter)
 
 ```bash
-cargo install parquet-linter-cli
-parquet-linter data.parquet
+> cargo install parquet-linter-cli
+
+> parquet-linter data.parquet
+
+warning low-compression-ratio
+  --> column[2]("pid")
+  aggregated compression ratio is 1.09 (SNAPPY) across 1/1 row groups; data is nearly incompressible
+  fix: set column pid compression uncompressed
+
+warning dictionary-encoding-cardinality
+  --> column[1]("ts_ns")
+  dictionary data pages fell back to PLAIN in 1/1 row groups; estimated cardinality is moderate (~132048 distinct / 380089 non-null = 35%), dictionary page size may be too small
+  fix: set column ts_ns dictionary_page_size_limit 2097152
 ```
 
 
