@@ -304,19 +304,20 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <li><code>decode time (ms)</code>: time to convert a Parquet file into Arrow <code>RecordBatch</code>es</li>
 <li><code>file size (MB)</code>: size of the Parquet file on disk</li>
 </ul>
-<p>Even with just simple heuristics from Level 1, Parquet Linter can achieve significant reduction in both file size (up to -19.2%) and decode time (up to -85.9%). Level 2 and 3 are currently on the roadmap. With the collective wisdom of the community, I’m sure we can do much better.</p>
+<p>Even with just simple heuristics from Level 1, Parquet Linter can achieve significant reduction in both file size (up to -19.2%) and decode time (up to -29.8%). Level 2 and 3 are currently on the roadmap. With the collective wisdom of the community, I’m sure we can do much better.</p>
 <section id="file-size-leaderboard-mb-lower-is-better" class="level4">
 <h4 class="anchored" data-anchor-id="file-size-leaderboard-mb-lower-is-better">File Size Leaderboard (MB, lower is better)</h4>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 9%">
-<col style="width: 12%">
-<col style="width: 12%">
-<col style="width: 12%">
-<col style="width: 12%">
-<col style="width: 12%">
-<col style="width: 12%">
-<col style="width: 12%">
+<col style="width: 8%">
+<col style="width: 11%">
+<col style="width: 11%">
+<col style="width: 11%">
+<col style="width: 11%">
+<col style="width: 11%">
+<col style="width: 11%">
+<col style="width: 11%">
+<col style="width: 11%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -328,6 +329,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <th style="text-align: right;">File 4</th>
 <th style="text-align: right;">File 5</th>
 <th style="text-align: right;">File 6</th>
+<th style="text-align: right;"><strong>Total</strong></th>
 </tr>
 </thead>
 <tbody>
@@ -340,6 +342,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td style="text-align: right;">145.97</td>
 <td style="text-align: right;">62.59</td>
 <td style="text-align: right;">247.95</td>
+<td style="text-align: right;"><strong>960.10</strong></td>
 </tr>
 <tr class="even">
 <td><strong>parquet-linter</strong></td>
@@ -350,6 +353,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td style="text-align: right;">141.41 (-3.12%)</td>
 <td style="text-align: right;">58.08 (-7.21%)</td>
 <td style="text-align: right;">244.73 (-1.30%)</td>
+<td style="text-align: right;"><strong>905.68 (-5.67%)</strong></td>
 </tr>
 </tbody>
 </table>
@@ -358,14 +362,15 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h4 class="anchored" data-anchor-id="decode-time-leaderboard-ms-lower-is-better">Decode Time Leaderboard (ms, lower is better)</h4>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 9%">
-<col style="width: 12%">
-<col style="width: 12%">
-<col style="width: 12%">
-<col style="width: 12%">
-<col style="width: 12%">
-<col style="width: 12%">
-<col style="width: 12%">
+<col style="width: 8%">
+<col style="width: 11%">
+<col style="width: 11%">
+<col style="width: 11%">
+<col style="width: 11%">
+<col style="width: 11%">
+<col style="width: 11%">
+<col style="width: 11%">
+<col style="width: 11%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -377,28 +382,31 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <th style="text-align: right;">File 4</th>
 <th style="text-align: right;">File 5</th>
 <th style="text-align: right;">File 6</th>
+<th style="text-align: right;"><strong>Total</strong></th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
 <td>HuggingFace default</td>
-<td style="text-align: right;">243.87</td>
-<td style="text-align: right;">3291.04</td>
-<td style="text-align: right;">2393.66</td>
-<td style="text-align: right;">159.81</td>
-<td style="text-align: right;">2652.84</td>
-<td style="text-align: right;">1220.01</td>
-<td style="text-align: right;">8262.75</td>
+<td style="text-align: right;">243.59</td>
+<td style="text-align: right;">302.44</td>
+<td style="text-align: right;">272.20</td>
+<td style="text-align: right;">27.34</td>
+<td style="text-align: right;">285.08</td>
+<td style="text-align: right;">84.62</td>
+<td style="text-align: right;">377.25</td>
+<td style="text-align: right;"><strong>1592.53</strong></td>
 </tr>
 <tr class="even">
 <td><strong>parquet-linter</strong></td>
-<td style="text-align: right;">240.18 (-1.51%)</td>
-<td style="text-align: right;">2533.81 (-23.01%)</td>
-<td style="text-align: right;">1959.87 (-18.12%)</td>
-<td style="text-align: right;">22.52 (-85.91%)</td>
-<td style="text-align: right;">1887.88 (-28.84%)</td>
-<td style="text-align: right;">951.93 (-21.97%)</td>
-<td style="text-align: right;">7576.31 (-8.31%)</td>
+<td style="text-align: right;">237.92 (-2.33%)</td>
+<td style="text-align: right;">212.03 (-29.89%)</td>
+<td style="text-align: right;">213.47 (-21.58%)</td>
+<td style="text-align: right;">38.43 (+40.56%)</td>
+<td style="text-align: right;">205.84 (-27.80%)</td>
+<td style="text-align: right;">51.36 (-39.31%)</td>
+<td style="text-align: right;">322.11 (-14.61%)</td>
+<td style="text-align: right;"><strong>1281.15 (-19.55%)</strong></td>
 </tr>
 </tbody>
 </table>
