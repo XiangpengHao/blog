@@ -110,22 +110,22 @@ We track two metrics separately:
 - `decode time (ms)`: time to convert a Parquet file into Arrow `RecordBatch`es
 - `file size (MB)`: size of the Parquet file on disk
 
-Even with just simple heuristics from Level 1, Parquet Linter can achieve significant reduction in both file size (up to -19.2%) and decode time (up to -85.9%).
+Even with just simple heuristics from Level 1, Parquet Linter can achieve significant reduction in both file size (up to -19.2%) and decode time (up to -29.8%).
 Level 2 and 3 are currently on the roadmap. With the collective wisdom of the community, I'm sure we can do much better.
 
 #### File Size Leaderboard (MB, lower is better)
 
-| | File 0 | File 1 | File 2 | File 3 | File 4 | File 5 | File 6 
-|---|---:|---:|---:|---:|---:|---:|---:|
-| HuggingFace default | 171.38 | 137.88 | 105.55 | 88.78 | 145.97 | 62.59 | 247.95 
-| **parquet-linter** | 171.35 (-0.02%) | 128.31 (-6.94%) | 90.10 (-14.64%) | 71.70 (-19.24%) | 141.41 (-3.12%) | 58.08 (-7.21%) | 244.73 (-1.30%) 
+| | File 0 | File 1 | File 2 | File 3 | File 4 | File 5 | File 6 | **Total** |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| HuggingFace default | 171.38 | 137.88 | 105.55 | 88.78 | 145.97 | 62.59 | 247.95 | **960.10** |
+| **parquet-linter** | 171.35 (-0.02%) | 128.31 (-6.94%) | 90.10 (-14.64%) | 71.70 (-19.24%) | 141.41 (-3.12%) | 58.08 (-7.21%) | 244.73 (-1.30%) | **905.68 (-5.67%)** |
 
 #### Decode Time Leaderboard (ms, lower is better)
 
-| | File 0 | File 1 | File 2 | File 3 | File 4 | File 5 | File 6 
-|---|---:|---:|---:|---:|---:|---:|---:|
-| HuggingFace default | 243.87 | 3291.04 | 2393.66 | 159.81 | 2652.84 | 1220.01 | 8262.75 
-| **parquet-linter** | 240.18 (-1.51%) | 2533.81 (-23.01%) | 1959.87 (-18.12%) | 22.52 (-85.91%) | 1887.88 (-28.84%) | 951.93 (-21.97%) | 7576.31 (-8.31%) 
+| | File 0 | File 1 | File 2 | File 3 | File 4 | File 5 | File 6 | **Total** |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| HuggingFace default | 243.59 | 302.44 | 272.20 | 27.34 | 285.08 | 84.62 | 377.25 | **1592.53** |
+| **parquet-linter** | 237.92 (-2.33%) | 212.03 (-29.89%) | 213.47 (-21.58%) | 38.43 (+40.56%) | 205.84 (-27.80%) | 51.36 (-39.31%) | 322.11 (-14.61%) | **1281.15 (-19.55%)** | 
 
 #### Benchmark `parquet-linter`
 
