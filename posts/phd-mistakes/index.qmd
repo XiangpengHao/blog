@@ -1,0 +1,120 @@
+---
+title: "Four mistakes in my PhD"
+date: "2026-04-23"
+categories: []
+toc: true
+reference-location: margin
+citation-location: margin
+---
+
+I'm currently having an end-of-PhD crisis, where I keep thinking about what to do next. It's a good time to slow down and reflect, to avoid repeating the same mistakes. I have made many mistakes during my PhD. Here, I list four major ones I'm currently aware of.
+
+## Mistake 1: Giving up too late
+
+Since childhood, I was told to never give up, stick to it, and I would eventually win. Maybe that's true, but I definitely took it too far.
+
+It took me a while to learn that never giving up is easy; giving up at the right time is hard.
+
+I have two examples.
+
+My first advisor was definitely not a fit for me, and I knew it after three months of working with him. But it took me almost three years to finally make the decision to switch. It has been one of the most important decisions I have made in my life, and I wish I had made it much earlier.
+
+Why did it take so long? Because I wasn’t sure if it was my problem or my advisor’s problem. I wasn’t sure if a new advisor would actually be better, and I wasn’t sure if it was worth the disruption. I was told that a PhD is about suffering, so maybe it was just a normal part of the process.
+
+My first paper was submitted six times and rejected six times over three years until it was finally abandoned. 
+It was clearly a failed project, and I know it's not worth publishing very early on.
+
+Why did it take so long to abandon it? I had invested so much time and energy into the project. Every resubmission required more physical and mental effort.
+The more I resubmitted, the harder it was to give up.
+
+It was also an ego issue: I felt that if I gave up, I would be admitting that I wasted so much time on a failed project. Is this a skill issue? What if this happens again with the next project?
+
+In both examples, I always knew the right thing to do. But I was held back by the momentum of keeping the same direction. It was very hard to make a change. 
+
+Lessons learned: practice **low ego**; build the **courage** to give up.
+
+## Mistake 2: Getting real too late
+
+As a junior PhD student, it’s very tempting to work on simple topics like key-value stores, indexes, graph processing, and concurrency control. Here, "simple" means well-defined, classic, and narrowly scoped problems. It's not that these topics are unimportant, but they are often the lazy way to do research: 1. Someone has already defined the problem exceptionally well, and the research community easily understands and appreciates it. 2. They have well-defined interfaces, meaning you don’t have to work on a real codebase; you can just benchmark an isolated component. 3. There are always ways to improve them by combining them with new workloads, new hardware, or AI.
+
+My biased observation is that almost nobody outside academia cares about these topics, and the resulting papers are largely products of an academic echo chamber. Ironically, the more detached a project is from real-world use, the more it creates the illusion that you’re working on something profound that "only academia can do."
+
+Unfortunately, I wasted way too much time on these feel-good projects. I fooled myself by thinking, "neural networks were ignored for decades before changing the world, so maybe my project will be useful someday too." I could find infinite amount of examples where "forward-looking" research eventually pays off, and that my project is like one of them. **It's beyond logical to argue whether a research project is worth doing** (see [mistake 4](#mistake-4-lost-in-the-church-of-reason)), the key is not to find more examples but to **be honest** with yourself.
+
+Getting real is painful. It involves very complex systems, diverse use cases, and energy-consuming interactions with real people. It also doesn't seem immediately rewarding: you invest a massive amount of time without a guaranteed return.
+But not getting real is an existential threat to the entire academic system. Tax payers cut the funding, industry ignores research work, and fewer and fewer students want to be in the field. 
+
+Getting real means to optimize from keyboard to screen, rather than to optimize the layer you like. 
+There's a stupid culture in academia that people categorize themselves as "database" person, "filesystem" person, or "networking" person, they align themselves to topics, not problems. This self-constraint makes paper publishing easy but great work hard (see [mistake 3](#mistake-3-care-too-much-about-paperresearch-community)). 
+
+Lessons learned: I created a rule for all my future projects. Before starting, I must find three practitioners who are willing to use my system if it succeeds, write down their names, and talk to them regularly.
+
+## Mistake 3: Care too much about paper/research community
+
+Every PhD student needs to graduate with a few papers, usually three. That’s the single most important metric. Once you have three papers, everything else can be worked out.
+Similarly, the achievements of a professor are often measured by the number of publications in top-tier conferences; everything else is just a footnote on their CV.
+
+This is how we benchmark the community, nobody should be blamed for optimizing for this metric.
+
+But it's dangerous for a community to optimize for a goal that is only indirectly connected to the rest of the world. I’m sure many publications will eventually translate to real-world impact, but in my humble opinion, the conversion loss is surprisingly high.
+
+I was "smart enough" to adopt a paper-centric approach. Before I have anything, I first need to have a recipe for top tier conference papers. First, I needed a novel idea. That goes into the abstract, and but be novel enough so it justifies a paper. Then, I would frame a convincing story about why it is important, and that goes into the introduction. Finally, I would show that my design is better than existing systems, and that goes into the evaluation.
+
+This paper-centric research approach works surprisingly well for publishing papers. Because no effort is wasted, every minute of research goes directly toward the final manuscript.
+
+But this is a dangerous paradigm because it distorts your judgment and misaligns with how novel ideas actually emerge. What if your novel idea doesn't actually work, and you only realize this when the paper is already written up to the evaluation section? What should you do then? Find a new workload? Find a new hardware setup? Change your storyline a little bit? The absolute last thing you want to do is change the idea itself. Your idea is so beautiful, clean, and elegant; it fits perfectly into a paper and provides an amazing storyline. Except that it doesn’t work.
+
+Naturally, you are incentivized to "make it work." This doesn't necessarily mean cheating, but rather finding logically correct, yet practically nonsensical, approaches to cover up the flaws (see [mistake 4](#mistake-4-lost-in-the-church-of-reason)). And it feels perfectly fine to do this because it's completely logical and everyone else does it. 
+
+
+I believe the true nature of research is to **"go and see."** You start with a general direction, keep an open mind, explore, break things, learn enough to get into the deep details, and see if you find anything valuable, and then generalize.
+
+This is difficult because it takes a tremendous amount of time to "learn enough to get into the details." [^1] When you aren't close enough to the details, it’s very tempting to superficially conclude that "A is essentially B," leading you to miss interesting problems to work on.
+
+Lessons learned: do the right thing from first principles; don’t worry about what others are doing, competition is for losers.
+
+I’d like to conclude this mistake with a quote from Steve Jobs:
+
+> It's the disease of thinking that a really great idea is 90% of the work. And if you just tell all these other people, 'Here's this great idea,' then of course they can go off and make it happen… As you evolve that great idea, it changes and grows. It never comes out like it starts because you learn a lot more as you get into the subtleties of it.
+
+
+
+[^1]: [How to Do Great Work](https://paulgraham.com/greatwork.html).
+
+<!-- 
+## Mistake 4: Not ambitious enough
+
+Everyone has their favorite topics to work on: machine learning, systems, security, etc. This interest is a major source of motivation; you can achieve nothing without it.
+
+But sometimes that level of interest goes too far. I would sometimes think: "I like transactional databases, not analytical databases; I like filesystems, not database storage; I prefer B-Trees over LSM trees." Usually, these preferences aren't based on true interest; they are ego issues. We tend to like the things we already know, and we avoid the things that might make us look foolish or inexperienced.
+
+There is an infinite amount of interesting things, but only a few of them are truly important. -->
+
+## Mistake 4: Lost in the Church of Reason
+
+This might be the most controversial, yet perhaps the biggest mistake I made.
+
+One of the primary goals of PhD training is developing the ability of critical thinking and logical reasoning. I liked this so much. I enjoyed wielding the analytical knife to make my thoughts crystal clear. I enjoyed understanding everything I wanted to understand, and I enjoyed learning from great minds who interpret the world through simple, effective rules.
+
+But after the initial excitement, it soon became boring. The sharp analytical knife quickly turned into muscle memory that we consciously or unconsciously apply to everything. It became a template that regulated my thinking, shielding me from the fear of truly free thinking. Using this framework always felt like the "correct" way to do things, and was a satisfying indicator of being well-educated. 
+
+Over time, I learned enough intellectual tools to be able to argue for anything. The power of logical reasoning is that you can always find an angle to frame your work as useful, novel, and important. The more deeply I understood a topic, the easier it was to invent arguments supporting my perspective. Academic research devolved into a purely intellectual exercise of crafting arguments, and I lost in the church of reason [^2].
+
+I soon fell into logical and moral nihilism, losing the ability to judge what is truly right and wrong. Furthermore, I learned that pure logic itself is fundamentally unsound, incomplete, and undecidable[^3]. This mindset had profound consequences on my life. I lost interest in doing anything, because, from a strictly logical standpoint, doing "great" research was entirely indistinguishable from doing "bad" research.
+
+
+The cure was finding my leap of faith[^4]—the boundary of logical reasoning where you must unconditionally accept something as true. That final leap of faith boils down to a single question: what is good, and what is not good? 
+
+My leap of faith, after many revisions, is this: to add something unique to humanity. I don’t necessarily know exactly what that thing is yet, but I know what it *isn’t*. **If I don’t do a project, but someone else will, then it’s not a true addition to humanity**. In those cases, I will just let other people do it, and I will focus on creating value that only I can do.
+
+## Conclusion
+I'd like to conclude with my fifth mistake: **not being ambitious enough**.
+I wasted too much time stuck in local minima—trying to satisfy my ego, maintain a sense of security, and avoid being seen as a failure. 
+
+I haven't yet found the wisdom and courage to navigate my way out, but I hope to eventually leave something valuable to humanity.
+
+[^2]: The Church of Reason is a metaphor from the book [Zen and the Art of Motorcycle Maintenance](https://en.wikipedia.org/wiki/Zen_and_the_Art_of_Motorcycle_Maintenance)
+
+[^3]: [Math's Fundamental Flaw](https://www.youtube.com/watch?v=HeQX2HjkcNo)
+
+[^4]: [Leap of Faith](https://en.wikipedia.org/wiki/Leap_of_faith)
