@@ -1,5 +1,5 @@
 ---
-title: "Four mistakes in my PhD"
+title: "Four mistakes during my PhD"
 date: "2026-04-23"
 categories: []
 toc: true
@@ -22,7 +22,7 @@ My first advisor was definitely not a fit for me, and I knew it after three mont
 Why did it take so long? Because I wasn’t sure if it was my problem or my advisor’s problem. I wasn’t sure if a new advisor would actually be better, and I wasn’t sure if it was worth the disruption. I was told that a PhD is about suffering, so maybe it was just a normal part of the process.
 
 My first paper was submitted six times and rejected six times over three years until it was finally abandoned. 
-It was clearly a failed project, and I know it's not worth publishing very early on.
+It was clearly a failed project, and I knew early on that it wasn't worth publishing.
 
 Why did it take so long to abandon it? I had invested so much time and energy into the project. Every resubmission required more physical and mental effort.
 The more I resubmitted, the harder it was to give up.
@@ -39,13 +39,13 @@ As a junior PhD student, it’s very tempting to work on simple topics like key-
 
 My biased observation is that almost nobody outside academia cares about these topics, and the resulting papers are largely products of an academic echo chamber. Ironically, the more detached a project is from real-world use, the more it creates the illusion that you’re working on something profound that "only academia can do."
 
-Unfortunately, I wasted way too much time on these feel-good projects. I fooled myself by thinking, "neural networks were ignored for decades before changing the world, so maybe my project will be useful someday too." I could find infinite amount of examples where "forward-looking" research eventually pays off, and that my project is like one of them. **It's beyond logical to argue whether a research project is worth doing** (see [mistake 4](#mistake-4-lost-in-the-church-of-reason)), the key is not to find more examples but to **be honest** with yourself.
+Unfortunately, I wasted way too much time on these feel-good projects. I fooled myself by thinking, "neural networks were ignored for decades before changing the world, so maybe my project will be useful someday too." I could find an infinite number of examples where "forward-looking" research eventually pays off, and that my project is like one of them. **It's beyond logical to argue whether a research project is worth doing** (see [mistake 4](#mistake-4-lost-in-the-church-of-reason)), the key is not to find more examples but to **be honest** with yourself.
 
 Getting real is painful. It involves very complex systems, diverse use cases, and energy-consuming interactions with real people. It also doesn't seem immediately rewarding: you invest a massive amount of time without a guaranteed return.
 But not getting real is an existential threat to the entire academic system. Tax payers cut the funding, industry ignores research work, and fewer and fewer students want to be in the field. 
 
 Getting real means to optimize from keyboard to screen, rather than to optimize the layer you like. 
-There's a stupid culture in academia that people categorize themselves as "database" person, "filesystem" person, or "networking" person, they align themselves to topics, not problems. This self-constraint makes paper publishing easy but great work hard (see [mistake 3](#mistake-3-care-too-much-about-paperresearch-community)). 
+There's a stupid culture in academia that people categorize themselves as a "database" person, a "filesystem" person, or a "networking" person; they align themselves with topics, not problems. This self-constraint makes paper publishing easy but great work hard (see [mistake 3](#mistake-3-care-too-much-about-paperresearch-community)). 
 
 Lessons learned: I created a rule for all my future projects. Before starting, I must find three practitioners who are willing to use my system if it succeeds, write down their names, and talk to them regularly.
 
@@ -58,7 +58,7 @@ This is how we benchmark the community, nobody should be blamed for optimizing f
 
 But it's dangerous for a community to optimize for a goal that is only indirectly connected to the rest of the world. I’m sure many publications will eventually translate to real-world impact, but in my humble opinion, the conversion loss is surprisingly high.
 
-I was "smart enough" to adopt a paper-centric approach. Before I have anything, I first need to have a recipe for top tier conference papers. First, I needed a novel idea. That goes into the abstract, and but be novel enough so it justifies a paper. Then, I would frame a convincing story about why it is important, and that goes into the introduction. Finally, I would show that my design is better than existing systems, and that goes into the evaluation.
+I was "smart enough" to adopt a paper-centric approach. Before I had anything, I first needed to have a recipe for top-tier conference papers. First, I needed a novel idea. That goes into the abstract, and it must be novel enough to justify a paper. Then, I would frame a convincing story about why it is important, and that goes into the introduction. Finally, I would show that my design is better than existing systems, and that goes into the evaluation.
 
 This paper-centric research approach works surprisingly well for publishing papers. Because no effort is wasted, every minute of research goes directly toward the final manuscript.
 
@@ -98,7 +98,7 @@ One of the primary goals of PhD training is developing the ability of critical t
 
 But after the initial excitement, it soon became boring. The sharp analytical knife quickly turned into muscle memory that we consciously or unconsciously apply to everything. It became a template that regulated my thinking, shielding me from the fear of truly free thinking. Using this framework always felt like the "correct" way to do things, and was a satisfying indicator of being well-educated. 
 
-Over time, I learned enough intellectual tools to be able to argue for anything. The power of logical reasoning is that you can always find an angle to frame your work as useful, novel, and important. The more deeply I understood a topic, the easier it was to invent arguments supporting my perspective. Academic research devolved into a purely intellectual exercise of crafting arguments, and I lost in the church of reason [^2].
+Over time, I learned enough intellectual tools to be able to argue for anything. The power of logical reasoning is that you can always find an angle to frame your work as useful, novel, and important. The more deeply I understood a topic, the easier it was to invent arguments supporting my perspective. Academic research devolved into a purely intellectual exercise of crafting arguments, and I became lost in the church of reason [^2].
 
 I soon fell into logical and moral nihilism, losing the ability to judge what is truly right and wrong. Furthermore, I learned that pure logic itself is fundamentally unsound, incomplete, and undecidable[^3]. This mindset had profound consequences on my life. I lost interest in doing anything, because, from a strictly logical standpoint, doing "great" research was entirely indistinguishable from doing "bad" research.
 
