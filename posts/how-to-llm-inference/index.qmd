@@ -112,33 +112,66 @@ Table below shows the more detailed weights distribution:
 ```
 
 MoE blocks are the biggest player here, it occupies 89.4% of the model size, and each MoE block is 469.2 MB.
-However, each MoE block only activates 1/32 of the parameters, while rest of the parameters are activated all the time, so each token needs to activate 0.508M + 1.01B + 272.66M + 32.36B/32 + 0.508M ~= 3B parameters.
+However, each MoE block only activates 1/32 of the parameters, while rest of the parameters are activated all the time, so each token needs to activate 0.508M + 1.01B + 272.66M + **32.36B/32** + 0.508M ~= 3B parameters, where the 3B in the name "A3B" comes from.
 
 There're two stages of a LLM inference: prefill and decode.
 Prefill loads the model once, and initialize the states (e.g., the KV cache), potentially thousands of tokens, which is often compute bound.
 Decode generates tokens one by one, each time it needs to load the model again, which is often memory bound.
 We will discuss them in detail later.
 
-## From strings to tokens
+## Token <--> String
 
-1. Pre-processing a string to setences.
-2. Vocabulary lookup.
-3. Merge rules
-4. Special token handling, space, non-safe ascii values.
+Token is a LLM-specific representation of a string, it's not foundamentally different from other representations like ASCII or UTF-8, where `42` means `*` (in ASCII) and `U+1F3D4` means `🏔️` (in Unicode). 
+
+The first thing to look at is the vocabulary table, which is stored in `tokenizer.ggml.tokens` metadata, which is a list of strings.
+The first 8 tokens of this model are: [`!`, `\`, `#`, `$`, `%`, `&`, `'`, `(`].
+This means that 0 refers to `!`, and 7 refers to `(`, and vise versa.
+
+Note that different models may have different vocabulary tables.
+Smaller vocabulary means more tokens are needed to represent the same set of strings.
+Modern LLM tends to have a larger vocabulary, this model has 248,320 vocabulary tokens, which means it needs u32 to represent the token index (u16::MAX is 65,535).[^2]
+
+[^2]: Anthropic changed their tokenizer in Opus 4.7, which caused [1.46x more tokens](https://simonwillison.net/2026/Apr/20/claude-token-counts/) with the same input.
+
+#### From token to string
+
+From token to string is easy. Given a list of tokens, we simply lookup the strings from the vocabulary and concatenate them.
+
+One caveat in streaming output is that one token may be just a partial symbol, which requires a buffer to store multiple tokens before a symbol can be displayed, this happens to unicode symboles more often. 
+
+#### From string to token
+
+From string to token is more complicated, but not foundamentally different from how string compression works. We start with each byte in the input string will correspond to one token, this is by design, and avoids unrepresentable characters.
+
+Then we apply a few rules to merge tokens, the goal is to pioritize tokens with longer squences, which reduces the total number of tokens. 
 
 
-## From token to embeddings
+<details>
+<summary>Actually there's more details to consider</summary>
+1. Pre-processing a string to setences. There's a thing called pre-tokenizer, which tries to split a long string into multiple smaller chunks, so that we don't have tokens that have werid split patterns, e.g., a token that span across two Chinese characters.
+2. It runs a bpe merge of adjacent tokens, which is quite expensive, but reduces the total number of tokens.
+3. Chat templates requires some special tokens like <|system|>, <|user|>, <|assistant|>, etc. When model sees these tokens, it has better semantics of the conversation.
+</details>
 
-## Read our first tensor
+Roughly speaking, an LLM is a function that 
+
+```rust
+fn inference(&mut self, input: Vec<u32>) -> u32
+```
+
+## The life of a tensor 
+
+Once we have the input tokens, the next step is to predict the next token. 
+
+There're lots of algorithms and math invovled in this step, but honestly, you don't have to know much about it, you can think of it as a chain of matrix multiplications. 
+It's great that you know what is RoPE, QKV, softmax, RMSNorm, etc., but from inference perspective, we don't really care, knowing them also doesn't help. 
+
+What really matters is the shape of the tensors, because that determines the compute and memory requirements.
 
 As discussed above, the model has six types of tensors, here we only discuss two representative ones: `Q8_0` and `Q4_K`.
 
 `Q8_0` is the simplest tensor, each element is 8-bit.
 
-<details>
-<summary>Click to expand</summary>
-Hidden content goes here.
-</details>
 todo:
 
 
