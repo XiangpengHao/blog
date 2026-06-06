@@ -1,0 +1,145 @@
+---
+title: "Build a LLM inference engine without dependencies"
+date: "2026-06-05"
+categories: []
+toc: true
+reference-location: margin
+citation-location: margin
+draft: true
+---
+
+LLM has become so important that I need to know more about it.
+The best way to learn more is to build it.
+
+In this blog post, I'll build a tiny LLM inference engine without any dependencies in Rust.
+
+We pick the model [`Qwen3.6-35B-A3B-UD-Q4_K_M.gguf`](https://huggingface.co/unsloth/Qwen3.6-35B-A3B-MTP-GGUF) so that it runs on most machines but also complex enough to be "modern llm" [^1].
+This is also the only model we support here.
+The end result is that we will be able to run the prefill at 100 tokens/s and the decode at 15 tokens/s, both saturating the hardware limit.
+
+[^1]: the model was released in April 2026.
+
+I don't like to write the code in minimal lines of code, because it's LLM write them anyway, who cares about lines of code? 
+But we do care about the code structure and the beauty of the design.
+
+This blog covers most of the important parts of a local LLM inference engine:
+
+1. The LLM architecture 
+1. Quantization
+2. Fast matrix multiplication
+3. KV cache
+
+This blog does not cover:
+
+1. GPU acceleration, this is a pure CPU inference engine. GPU is planned for future work.
+2. No MTP (speculative decoding), because we are not GPU yet.
+3. I don't like {vendor-specific | closed-source} stuff.
+
+## How to read the name? Qwen3.6-35B-A3B-UD-Q4_K_M.gguf
+
+**Qwen** (pronounced /kwen/) is the model family name, it is from Alibaba, a not so popular Chinease company (in tech world).
+
+**3.6** is the version number, before it was 3.5, then 3, so it has been around for a while.
+
+**35B** is the model size. 35 **B**illion is the number of parameters, if each parameter is 8 bits (fp8, or int8), then the model size is about 35GB.
+
+**A3B** means the model **a**ctivates **3** billion parameters to generate a token. It also means the model is an MoE (Mixture of Experts) model, which is different from dense models where all parameters are activated all the time.
+
+**UD-Q4_K_M** means the model is **q**uantized to **4** bits (Q4), and K_M are quantization schemes (as you may guess there're many ways to quantize a model). UD means the model is [unsloth dynamic quantization](https://unsloth.ai/docs/basics/unsloth-dynamic-2.0-ggufs). Unsloth is a company that does the quantization work.
+
+**gguf** is the model file format. Unlike formats like [`safetensors`](https://huggingface.co/docs/safetensors/index), [`gguf`](https://github.com/ggml-org/ggml/blob/master/docs/gguf.md) is a self-sufficient format that a single file contains all you need to run the model, but really, it's just some metadata and the model weights.
+
+## What's inside the file?
+
+The file format is pretty boring (as intended), it's basically a metadata to say what the model is, and pairs of tensor info and tensor data. 
+
+![The GGUF file layout](./gguf-layout.excalidraw.png){width=50%}
+
+The tensor info is stored at the begining of the file, and it points to the actual tensor data through the `offset` and `len` fields:
+```rust
+struct TensorInfo {
+    name: String, // e.g., `blk.3.attn_norm_weight`
+    shape: Vec<u64>,
+    dtype: u32,
+    offset: u64,
+    len: u64,
+}
+```
+Note that `dtype` is a per-tensor field, which implies that two tensors in the same file may have different data types (i.e., how to quantize the tensor). 
+This allows some important tensors (e.g., the weights of the embedding) to be stored with more bits (so higher precision), while the rest can be quantized more aggressively.
+As you may guess, per-tensor quantization is a fine art.
+
+A closer look at the quantization schemes shows that the model has 6 different types of tensors, more than half of the bytes are quantized to Q4_K:
+```
+  BF16      2 tensors         1.00 MB
+  F32     368 tensors        99.78 MB
+  Q4_K     82 tensors     11808.00 MB
+  Q5_K     38 tensors      6688.00 MB
+  Q6_K      4 tensors      1027.85 MB
+  Q8_0    259 tensors      1978.38 MB
+  ------ ---- ---------    ----------
+  total   753 tensors     21603.01 MB
+```
+
+
+The metadata says a few other things about the model, such as the number of layers, the model family, etc, which is used to describe the model architecture.
+
+## The model architecture
+
+The model metadata describes architecture details, and it belongs to the Qwen3 next family of models, its architecture and the history can be found [here](https://magazine.sebastianraschka.com/p/the-big-llm-architecture-comparison#§121-expert-size-and-number-of-attention-heads).
+
+Figure below is a simplified version of the model architecture and its weights distribution.
+For every token, the model has to find a way to convert it into a embedding vector (with dimension 2048 for this model), and it needs to go through a few layers of computation to get the final output.
+
+Qwen3.6 is not a typical transformer, it mixes the so called `DeltaNet` with the conventional `Attention` layers with 3:1 ratio. We will get to the details later, the high level intuition is that attention layer's state (i.e., the KV cache) is quadratic in the number of tokens, while delta net's state is linear, this helps the model to scale to longer context.
+
+All qwen3.6 family models follow the same architecture, except that larger models have more layers (e.g., 20 layers instead of 10) and deeper model dimensions (e.g., 5120 instead of 2048).
+
+![The Qwen3.6-35B-A3B model architecture and its weights distribution](./model-arch.png){width=100%}
+
+Table below shows the more detailed weights distribution:
+
+```
+  Group                            Params         Stored    Share
+-----------------------------------------------------------------
+  Token embedding                508.56 M     515.31 MiB    2.44%
+  DeltaNet layers                  1.01 B       1.01 GiB    4.92%
+  Attention layers               272.66 M     276.35 MiB    1.31%
+  MoE blocks                      32.36 B      18.43 GiB   89.44%
+  Final output                   508.56 M     397.86 MiB    1.89%
+-----------------------------------------------------------------
+  Reported total                  34.66 B      20.60 GiB  100.00%
+```
+
+MoE blocks are the biggest player here, it occupies 89.4% of the model size, and each MoE block is 469.2 MB.
+However, each MoE block only activates 1/32 of the parameters, while rest of the parameters are activated all the time, so each token needs to activate 0.508M + 1.01B + 272.66M + 32.36B/32 + 0.508M ~= 3B parameters.
+
+There're two stages of a LLM inference: prefill and decode.
+Prefill loads the model once, and initialize the states (e.g., the KV cache), potentially thousands of tokens, which is often compute bound.
+Decode generates tokens one by one, each time it needs to load the model again, which is often memory bound.
+We will discuss them in detail later.
+
+## From strings to tokens
+
+1. Pre-processing a string to setences.
+2. Vocabulary lookup.
+3. Merge rules
+4. Special token handling, space, non-safe ascii values.
+
+
+## From token to embeddings
+
+## Read our first tensor
+
+As discussed above, the model has six types of tensors, here we only discuss two representative ones: `Q8_0` and `Q4_K`.
+
+`Q8_0` is the simplest tensor, each element is 8-bit.
+
+<details>
+<summary>Click to expand</summary>
+Hidden content goes here.
+</details>
+todo:
+
+
+## 
