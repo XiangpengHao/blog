@@ -1,5 +1,5 @@
 ---
-title: "Build a LLM inference engine without dependencies"
+title: "A system programmer's guide to LLM inference"
 date: "2026-06-05"
 categories: []
 toc: true
@@ -33,7 +33,7 @@ This blog does not cover:
 
 1. GPU acceleration, this is a pure CPU inference engine. GPU is planned for future work.
 2. No MTP (speculative decoding), because we are not GPU yet.
-3. I don't like {vendor-specific | closed-source} stuff.
+3. Things that are {vendor-specific | closed-source}, e.g., CUDA.
 
 ## How to read the name? Qwen3.6-35B-A3B-UD-Q4_K_M.gguf
 
@@ -168,11 +168,50 @@ It's great that you know what is RoPE, QKV, softmax, RMSNorm, etc., but from inf
 
 What really matters is the shape of the tensors, because that determines the compute and memory requirements.
 
+The first we need to care is the embedding table, which is a 2D tensor of shape [vocabulary_size, embedding_dim], in this case, it's [248320, 2048].
+Converting a token to an embedding is a simple lookup to slice a [1, 2048] tensor.
+
+This [1, 2048], usually called the activation tensor, is the input and also the output of the rest of the layers.
+
+The final output convert the [1, 2048] tensor to a [1, 248320] tensor, giving a weight to each token in the vocabulary. We can pick the token with the highest weight as the next token.
+
+The middle blocks, i.e., attention, delta net, and the moe blocks, all take [1, 2048] as input and [1, 2048] as output, internally it's a chain of matrix multiplications.
+
+The above case discuss a single token, which is the case of decode, for prefill, it's really the same, except that it's not [1, 2048], but [n, 2048]. The rest of the math is the same.
+
+Note that a matrix muliplicate with [1, 2048] (as in the decode case) is usually called "GEM**V**" (General Matrix **Vector** Multiplication), while a matrix muliplicate with [n, 2048] (as in the prefill case) is usually called "GEM**M**" (General Matrix **Matrix** Multiplication), their math are the same, but the implementation is completely different, because shape matters.
+GEMV is completely memory bounded, because the matrix is streamed row by row, and the computation is a simple dot product.
+GEMM is often compute bounded, because...
+
+## Reading the first tensor
+
+In an ideal world, every tensor is a simple f32 tensor, and matrix multiplication is simple and well optimized.
+
+But f32 is too expensive, for our 35B model, if everything is f32, we need 35B * 4 = 140GB of memory.
+Additionally, it turns out that f32 is quite overkill for practical LLM inference, we can downscale the precision to 8 bits with almost no loss of accuracy, and it turns out that even 4 bits can retain most of the information.
+
+Using smaller bits to represent weights not only reduces the memory footprint, but often makes the compute faster, especially for GEMV, where the memory bandwidth is the bottleneck, less memory to load means faster.
+
+But this makes the computation more complicated, especially that the file contains a mix of different quantization schemes, but we will get to that later.
+
 As discussed above, the model has six types of tensors, here we only discuss two representative ones: `Q8_0` and `Q4_K`.
 
 `Q8_0` is the simplest tensor, each element is 8-bit.
 
-todo:
+`Q4_K` is a bit more complicated.
 
+## Quantized matrix multiplication
 
-## 
+### Quantize the activation tensor
+
+todo: talk about bf16.
+
+## KV Cache
+
+## Important optimizations
+
+### Flash attention
+
+### SIMD
+
+### Multi-threading
