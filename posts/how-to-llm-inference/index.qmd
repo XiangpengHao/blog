@@ -5,7 +5,7 @@ categories: []
 toc: true
 reference-location: margin
 citation-location: margin
-draft: true
+draft: true 
 ---
 
 LLM has become so important that I need to know more about it.
@@ -51,9 +51,9 @@ This blog does not cover:
 
 ## What's inside the file?
 
-The file format is pretty boring (as intended), it's basically a metadata to say what the model is, and pairs of tensor info and tensor data. 
+The file format is pretty boring (as intended), it's basically a metadata to say what the model is, and pairs of tensor info and tensor data, as shown in @fig-gguf-layout.
 
-![The GGUF file layout](./gguf-layout.excalidraw.png){width=50%}
+![The GGUF file layout](./gguf-layout.excalidraw.png){#fig-gguf-layout width=50%}
 
 The tensor info is stored at the begining of the file, and it points to the actual tensor data through the `offset` and `len` fields:
 ```rust
@@ -88,14 +88,14 @@ The metadata says a few other things about the model, such as the number of laye
 
 The model metadata describes architecture details, and it belongs to the Qwen3 next family of models, its architecture and the history can be found [here](https://magazine.sebastianraschka.com/p/the-big-llm-architecture-comparison#§121-expert-size-and-number-of-attention-heads).
 
-Figure below is a simplified version of the model architecture and its weights distribution.
+@fig-model-arch is a simplified version of the model architecture and its weights distribution.
 For every token, the model has to find a way to convert it into a embedding vector (with dimension 2048 for this model), and it needs to go through a few layers of computation to get the final output.
 
 Qwen3.6 is not a typical transformer, it mixes the so called `DeltaNet` with the conventional `Attention` layers with 3:1 ratio. We will get to the details later, the high level intuition is that attention layer's state (i.e., the KV cache) is quadratic in the number of tokens, while delta net's state is linear, this helps the model to scale to longer context.
 
 All qwen3.6 family models follow the same architecture, except that larger models have more layers (e.g., 20 layers instead of 10) and deeper model dimensions (e.g., 5120 instead of 2048).
 
-![The Qwen3.6-35B-A3B model architecture and its weights distribution](./model-arch.png){width=100%}
+![The Qwen3.6-35B-A3B model architecture and its weights distribution](./model-arch.png){#fig-model-arch width=100%}
 
 Table below shows the more detailed weights distribution:
 
@@ -156,7 +156,7 @@ Then we apply a few rules to merge tokens, the goal is to pioritize tokens with 
 Roughly speaking, an LLM is a function that 
 
 ```rust
-fn inference(&mut self, input: Vec<u32>) -> u32
+fn inference(input: Vec<u32>) -> u32
 ```
 
 ## The life of a tensor 
@@ -168,14 +168,17 @@ It's great that you know what is RoPE, QKV, softmax, RMSNorm, etc., but from inf
 
 What really matters is the shape of the tensors, because that determines the compute and memory requirements.
 
+![The life of a tensor, show shape of the tensors only, blue arrow shows the matrix multiplication.](tensor-life.png){#fig-tensor-life width=90%}
+
+@fig-tensor-life shows the life of a tensor, the blue arrow shows the matrix multiplication, grey arrow shows other math, like normalization, softmax, etc.
+
 The first we need to care is the embedding table, which is a 2D tensor of shape [vocabulary_size, embedding_dim], in this case, it's [248320, 2048].
 Converting a token to an embedding is a simple lookup to slice a [1, 2048] tensor.
-
 This [1, 2048], usually called the activation tensor, is the input and also the output of the rest of the layers.
 
-The final output convert the [1, 2048] tensor to a [1, 248320] tensor, giving a weight to each token in the vocabulary. We can pick the token with the highest weight as the next token.
+The final output convert the [1, 2048] tensor to a [1, 248320] tensor, giving a weight to each token in the vocabulary. We can pick the token with the highest weight as the next token, or use a sampling algorithm like top-k to get variations.
 
-The middle blocks, i.e., attention, delta net, and the moe blocks, all take [1, 2048] as input and [1, 2048] as output, internally it's a chain of matrix multiplications.
+The rest of the blocks, i.e., attention, delta net, and the moe blocks, all take [1, 2048] as input and [1, 2048] as output, internally it's a chain of matrix multiplications with some supplementary math like normalization, softmax, etc.
 
 The above case discuss a single token, which is the case of decode, for prefill, it's really the same, except that it's not [1, 2048], but [n, 2048]. The rest of the math is the same.
 
@@ -196,9 +199,16 @@ But this makes the computation more complicated, especially that the file contai
 
 As discussed above, the model has six types of tensors, here we only discuss two representative ones: `Q8_0` and `Q4_K`.
 
-`Q8_0` is the simplest tensor, each element is 8-bit.
+@fig-q8-0 shows a `Q8_0` block, it's the simplest quantization scheme, we take a f32 precision value, and devide by a scale value, then round to the nearest integer. Dequantization is the reverse, we simply multiply the quantized value by the scale value.
+The scale is calculated to be the maximum absolute value divided by 127, so that the quantized values are in the range [-127, 127].
 
-`Q4_K` is a bit more complicated.
+![A `Q8_0` block: 32 weights stored in 34 bytes (8.5 bits / weight).](q8_0.png){#fig-q8-0 width=80%}
+
+
+
+@fig-q4-k shows a `Q4_K` super-block, which is more complicated than `Q8_0`.
+
+![A `Q4_K` super-block: 256 weights stored in 144 bytes (4.5 bits / weight).](q4_k.excalidraw.png){#fig-q4-k width=100%}
 
 ## Quantized matrix multiplication
 
