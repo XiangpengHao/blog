@@ -2,6 +2,7 @@
   {
     "listing": "/index.html",
     "items": [
+      "/posts/how-to-llm-inference/index.html",
       "/posts/phd-mistakes/index.html",
       "/posts/parquet-linter/index.html",
       "/posts/vector-search-with-parquet-datafusion/index.html",

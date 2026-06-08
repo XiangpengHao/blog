@@ -1,0 +1,1052 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.9.38">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="dcterms.date" content="2026-06-08">
+
+<title>A system programmer’s guide to LLM inference – Xiangpeng's blog</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../">
+<script src="../../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../site_libs/quarto-html/quarto-syntax-highlighting-15634bcf2e68342d4ad2dfa704d543f6.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../site_libs/bootstrap/bootstrap-94b323657c735dfe3b1bf6ebb2c33a55.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "/"
+  ],
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<!-- Cloudflare Web Analytics -->
+<script defer="" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon="{&quot;token&quot;: &quot;eb43fd3c2c574a2590aae63c67009129&quot;}"></script><!-- End Cloudflare Web Analytics -->
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script defer="" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+<link rel="stylesheet" href="../../styles.css">
+<meta property="og:title" content="A system programmer’s guide to LLM inference – Xiangpeng’s blog">
+<meta property="og:description" content="">
+<meta property="og:image" content="https://blog.xiangpeng.systems/posts/how-to-llm-inference/gguf-layout.excalidraw.png">
+<meta property="og:site_name" content="Xiangpeng’s blog">
+<meta property="og:image:height" content="359">
+<meta property="og:image:width" content="561">
+<meta name="twitter:title" content="A system programmer’s guide to LLM inference – Xiangpeng’s blog">
+<meta name="twitter:description" content="">
+<meta name="twitter:image" content="https://blog.xiangpeng.systems/posts/how-to-llm-inference/gguf-layout.excalidraw.png">
+<meta name="twitter:image-height" content="359">
+<meta name="twitter:image-width" content="561">
+<meta name="twitter:card" content="summary_large_image">
+</head>
+
+<body class="nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top quarto-banner">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../../index.html">
+    <span class="navbar-title">Xiangpeng’s blog</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://xiangpeng.systems"> <i class="bi bi-person-circle" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/XiangpengHao"> <i class="bi bi-github" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://www.linkedin.com/in/hao-xiangpeng/"> <i class="bi bi-linkedin" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="../../index.xml"> <i class="bi bi-rss" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<header id="title-block-header" class="quarto-title-block default page-columns page-full">
+  <div class="quarto-title-banner page-columns page-full">
+    <div class="quarto-title column-body">
+      <h1 class="title">A system programmer’s guide to LLM inference</h1>
+                      </div>
+  </div>
+    
+  
+  <div class="quarto-title-meta">
+
+      
+      <div>
+      <div class="quarto-title-meta-heading">Published</div>
+      <div class="quarto-title-meta-contents">
+        <p class="date">June 8, 2026</p>
+      </div>
+    </div>
+    
+      
+    </div>
+    
+  
+  </header><div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#how-to-read-the-name-qwen3.6-35b-a3b-ud-q4_k_m.gguf" id="toc-how-to-read-the-name-qwen3.6-35b-a3b-ud-q4_k_m.gguf" class="nav-link active" data-scroll-target="#how-to-read-the-name-qwen3.6-35b-a3b-ud-q4_k_m.gguf">How to read the name? Qwen3.6-35B-A3B-UD-Q4_K_M.gguf</a></li>
+  <li><a href="#whats-inside-the-file" id="toc-whats-inside-the-file" class="nav-link" data-scroll-target="#whats-inside-the-file">What’s inside the file?</a></li>
+  <li><a href="#the-model-architecture" id="toc-the-model-architecture" class="nav-link" data-scroll-target="#the-model-architecture">The model architecture</a></li>
+  <li><a href="#token-string" id="toc-token-string" class="nav-link" data-scroll-target="#token-string">Token &lt;–&gt; String</a></li>
+  <li><a href="#the-life-of-a-tensor" id="toc-the-life-of-a-tensor" class="nav-link" data-scroll-target="#the-life-of-a-tensor">The life of a tensor</a></li>
+  <li><a href="#reading-the-first-tensor" id="toc-reading-the-first-tensor" class="nav-link" data-scroll-target="#reading-the-first-tensor">Reading the first tensor</a>
+  <ul class="collapse">
+  <li><a href="#q8_0-block" id="toc-q8_0-block" class="nav-link" data-scroll-target="#q8_0-block">Q8_0 block</a></li>
+  <li><a href="#q4_k-block" id="toc-q4_k-block" class="nav-link" data-scroll-target="#q4_k-block">Q4_K block</a></li>
+  <li><a href="#fp32-vs-fp16-vs-bf16-vs-fp8" id="toc-fp32-vs-fp16-vs-bf16-vs-fp8" class="nav-link" data-scroll-target="#fp32-vs-fp16-vs-bf16-vs-fp8">fp32 vs fp16 vs bf16 vs fp8?</a></li>
+  <li><a href="#how-to-structure-the-code" id="toc-how-to-structure-the-code" class="nav-link" data-scroll-target="#how-to-structure-the-code">How to structure the code?</a></li>
+  </ul></li>
+  <li><a href="#matrix-multiplication" id="toc-matrix-multiplication" class="nav-link" data-scroll-target="#matrix-multiplication">Matrix multiplication</a>
+  <ul class="collapse">
+  <li><a href="#naive-dequant-then-multiply-is-bad" id="toc-naive-dequant-then-multiply-is-bad" class="nav-link" data-scroll-target="#naive-dequant-then-multiply-is-bad">Naive dequant-then-multiply is bad</a></li>
+  <li><a href="#picking-the-activation-format" id="toc-picking-the-activation-format" class="nav-link" data-scroll-target="#picking-the-activation-format">Picking the activation format</a></li>
+  <li><a href="#the-smart" id="toc-the-smart" class="nav-link" data-scroll-target="#the-smart">The smart</a></li>
+  <li><a href="#putting-it-together" id="toc-putting-it-together" class="nav-link" data-scroll-target="#putting-it-together">Putting it together</a></li>
+  </ul></li>
+  <li><a href="#the-state-kv-cache-and-deltanet-state" id="toc-the-state-kv-cache-and-deltanet-state" class="nav-link" data-scroll-target="#the-state-kv-cache-and-deltanet-state">The state: KV cache and DeltaNet state</a></li>
+  <li><a href="#performance" id="toc-performance" class="nav-link" data-scroll-target="#performance">Performance</a>
+  <ul class="collapse">
+  <li><a href="#fuse-kernels" id="toc-fuse-kernels" class="nav-link" data-scroll-target="#fuse-kernels">Fuse kernels</a></li>
+  <li><a href="#simd-instructions" id="toc-simd-instructions" class="nav-link" data-scroll-target="#simd-instructions">SIMD instructions</a></li>
+  <li><a href="#multi-threading" id="toc-multi-threading" class="nav-link" data-scroll-target="#multi-threading">Multi-threading</a></li>
+  <li><a href="#how-did-we-do" id="toc-how-did-we-do" class="nav-link" data-scroll-target="#how-did-we-do">How did we do?</a></li>
+  </ul></li>
+  <li><a href="#source-code" id="toc-source-code" class="nav-link" data-scroll-target="#source-code">Source code</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content quarto-banner-title-block page-columns page-full" id="quarto-document-content">
+
+
+
+
+
+<div class="callout callout-style-simple callout-warning no-icon callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon no-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Warning</span>Acknowledgments
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Let’s take a moment to thank my PhD sponsors: <a href="https://influxdata.com">InfluxData</a>, <a href="https://www.bauplanlabs.com">Bauplan</a>, <a href="https://spiraldb.com">SpiralDB</a>, and the taxpayers of the State of Wisconsin and the federal government.</p>
+</div>
+</div>
+<p>LLMs have become so important that I (probably you as well) want to understand them better, and the best way to learn is to build one.</p>
+<p>In this blog post, I’ll share what I’ve learned about LLM inference, from the perspective of a systems programmer.</p>
+<p>I pick the model <a href="https://huggingface.co/unsloth/Qwen3.6-35B-A3B-MTP-GGUF"><code>Qwen3.6-35B-A3B-UD-Q4_K_M.gguf</code></a> so that it runs on most machines but is also complex enough to count as a “modern LLM” <a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a>. This is the only model to support here. By the end, we’ll be able to run prefill at 100 tokens/s and decode at 15 tokens/s, not so bad on a CPU-only machine.</p>
+<div class="no-row-height column-margin column-container"><div id="fn1"><p><sup>1</sup>&nbsp;The model was released <a href="https://www.marktechpost.com/2026/04/16/qwen-team-open-sources-qwen3-6-35b-a3b-a-sparse-moe-vision-language-model-with-3b-active-parameters-and-agentic-coding-capabilities/">in April 2026</a>.</p></div></div><p>This blog covers most of the important parts of a local LLM inference engine:</p>
+<ol type="1">
+<li>The LLM architecture</li>
+<li>Quantization</li>
+<li>Fast matrix multiplication</li>
+<li>KV cache</li>
+</ol>
+<p>But does not cover:</p>
+<ol type="1">
+<li>GPU acceleration, this is a pure CPU inference engine. I’ll probably do a GPU follow up later.</li>
+<li>No MTP (speculative decoding), because we are not GPU yet.</li>
+<li>Things that are {vendor-specific | closed-source}, e.g., CUDA, are not covered</li>
+</ol>
+<section id="how-to-read-the-name-qwen3.6-35b-a3b-ud-q4_k_m.gguf" class="level2">
+<h2 class="anchored" data-anchor-id="how-to-read-the-name-qwen3.6-35b-a3b-ud-q4_k_m.gguf">How to read the name? Qwen3.6-35B-A3B-UD-Q4_K_M.gguf</h2>
+<p><strong>Qwen</strong> (<a href="https://en.wikipedia.org/wiki/Qwen">pronounced /kwɛn/</a>, like “when” with a “kw”) is the model family name; it comes from Alibaba, a not so popular Chinese company (in tech world).</p>
+<p><strong>3.6</strong> is the version number; previous versions were 3.5 and 3, so the family has been around for a while.</p>
+<p><strong>35B</strong> is the model size. 35 <strong>B</strong>illion is the number of parameters; if each parameter were 8 bits (fp8 or int8), the model would be about 35 GB.</p>
+<p><strong>A3B</strong> means the model <strong>a</strong>ctivates <strong>3</strong> <strong>B</strong>illion parameters to generate a token. It also implies the model is an MoE (Mixture of Experts) model — unlike dense models where all parameters are activated for every token.</p>
+<p><strong>UD-Q4_K_M</strong> means the model is <strong>q</strong>uantized to <strong>4</strong> bits (Q4), and <code>K_M</code> is the quantization scheme (there are <a href="https://github.com/ggml-org/llama.cpp/wiki/Tensor-Encoding-Schemes">many ways to quantize</a> a model). <code>UD</code> stands for <a href="https://unsloth.ai/docs/basics/unsloth-dynamic-2.0-ggufs">Unsloth Dynamic quantization</a>; Unsloth is a company that produces these quantized variants.</p>
+<p><strong>gguf</strong> is the model file format. Unlike <a href="https://huggingface.co/docs/safetensors/index"><code>safetensors</code></a>, <a href="https://github.com/ggml-org/ggml/blob/master/docs/gguf.md"><code>gguf</code></a> is a self-contained format: a single file holds everything you need to run the model. In practice, it’s just metadata plus the model weights.</p>
+</section>
+<section id="whats-inside-the-file" class="level2">
+<h2 class="anchored" data-anchor-id="whats-inside-the-file">What’s inside the file?</h2>
+<p>The file format is pretty boring (as intended): some metadata describing the model, followed by pairs of tensor info and tensor data, as shown in <a href="#fig-gguf-layout" class="quarto-xref">Figure&nbsp;1</a>.</p>
+<div id="fig-gguf-layout" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-gguf-layout-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="./gguf-layout.excalidraw.png" class="img-fluid figure-img" style="width:50.0%">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-gguf-layout-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;1: The GGUF file layout
+</figcaption>
+</figure>
+</div>
+<p>The tensor info is stored at the beginning of the file, and points to the actual tensor data through the <code>offset</code> and <code>len</code> fields:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode rust code-with-copy"><code class="sourceCode rust"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">struct</span> TensorInfo <span class="op">{</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    name<span class="op">:</span> <span class="dt">String</span><span class="op">,</span> <span class="co">// e.g., `blk.3.attn_norm_weight`</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    shape<span class="op">:</span> <span class="dt">Vec</span><span class="op">&lt;</span><span class="dt">u64</span><span class="op">&gt;,</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    dtype<span class="op">:</span> <span class="dt">u32</span><span class="op">,</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    offset<span class="op">:</span> <span class="dt">u64</span><span class="op">,</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    len<span class="op">:</span> <span class="dt">u64</span><span class="op">,</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Note that <code>dtype</code> is a per-tensor field, which means two tensors in the same file may use different data types (i.e., different quantization schemes). This lets us store important tensors (e.g., the embedding weights) with more bits for higher precision, while quantizing the rest more aggressively. As you might guess, per-tensor quantization is a fine art.</p>
+<p>A closer look at the quantization schemes shows that the model has 6 different types of tensors, more than half of the bytes are quantized to Q4_K:</p>
+<pre><code>  BF16      2 tensors         1.00 MB
+  F32     368 tensors        99.78 MB
+  Q4_K     82 tensors     11808.00 MB
+  Q5_K     38 tensors      6688.00 MB
+  Q6_K      4 tensors      1027.85 MB
+  Q8_0    259 tensors      1978.38 MB
+  ------ ---- ---------    ----------
+  total   753 tensors     21603.01 MB</code></pre>
+<p>The metadata also encodes the model architecture: the number of layers, the model family, and so on.</p>
+</section>
+<section id="the-model-architecture" class="level2 page-columns page-full">
+<h2 class="anchored" data-anchor-id="the-model-architecture">The model architecture</h2>
+<p>The model belongs to the <a href="https://huggingface.co/Qwen/Qwen3-Next-80B-A3B-Instruct">Qwen3-Next family</a>; for background on the architecture lineage, see <a href="https://magazine.sebastianraschka.com/p/the-big-llm-architecture-comparison">Sebastian Raschka’s “Big LLM Architecture Comparison”</a>.</p>
+<p><a href="#fig-model-arch" class="quarto-xref">Figure&nbsp;2</a> is a simplified view of the architecture and its weight distribution. For every input token, the model first converts it into an embedding vector (with dimension 2048 for this model), then runs it through several layers of computation to produce the final output.</p>
+<p>Qwen3.6 is not a typical transformer: it mixes the so-called <code>DeltaNet</code> layers with conventional <code>Attention</code> layers at a <a href="https://vllm.ai/blog/2025-09-11-qwen3-next">3:1 ratio</a>. We will get to the details later; the high-level intuition is that attention’s per-token state (the KV cache) grows linearly with sequence length and its compute is quadratic, while DeltaNet’s state is fixed-size — this helps the model scale to longer context.</p>
+<p>All Qwen3.6 family models share this architecture; larger members of the family scale by adding more layers and using a wider hidden dimension (e.g., the Qwen3-Next-80B variant has 48 layers and a 2048 hidden dim).<a href="#fn2" class="footnote-ref" id="fnref2" role="doc-noteref"><sup>2</sup></a></p>
+<div class="no-row-height column-margin column-container"><div id="fn2"><p><sup>2</sup>&nbsp;Qwen3.6-35B-A3B has 40 layers organized as 10 repetitions of (3 DeltaNet + 1 Attention) blocks, so 30 DeltaNet layers and 10 Attention layers. See <a href="https://apxml.com/models/qwen36-35b-a3b">the apxml spec page</a>.</p></div></div><div id="fig-model-arch" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-model-arch-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="./model-arch.png" class="img-fluid figure-img" style="width:100.0%">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-model-arch-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;2: The Qwen3.6-35B-A3B model architecture and its weights distribution
+</figcaption>
+</figure>
+</div>
+<p>Table below shows the more detailed weights distribution:</p>
+<pre><code>  Group                            Params         Stored    Share
+-----------------------------------------------------------------
+  Token embedding                508.56 M     515.31 MiB    2.44%
+  DeltaNet layers                  1.01 B       1.01 GiB    4.92%
+  Attention layers               272.66 M     276.35 MiB    1.31%
+  MoE blocks                      32.36 B      18.43 GiB   89.44%
+  Final output                   508.56 M     397.86 MiB    1.89%
+-----------------------------------------------------------------
+  Reported total                  34.66 B      20.60 GiB  100.00%</code></pre>
+<p>MoE blocks dominate: they account for 89.4% of model size, and each MoE block is roughly 469 MB. However, each MoE block only activates 1/32 of its parameters (8 of 256 experts per token), while the other components fire for every token. So each token activates approximately 0.508B + 1.01B + 273M + <strong>32.36B / 32</strong> + 0.508B ≈ 3.3B parameters, which rounds to the “3B” in “A3B”.<a href="#fn3" class="footnote-ref" id="fnref3" role="doc-noteref"><sup>3</sup></a></p>
+<div class="no-row-height column-margin column-container"><div id="fn3"><p><sup>3</sup>&nbsp;The official “3B active” figure is computed slightly differently — see the <a href="https://huggingface.co/Qwen/Qwen3.6-35B-A3B">Qwen3.6 model card</a>. The ballpark is the same.</p></div></div><p>There are two stages of LLM inference: prefill and decode. Prefill processes the input prompt (potentially thousands of tokens) in a single forward pass and populates the per-layer state (KV cache, DeltaNet state). It is usually compute-bound. Decode generates tokens one at a time, and on each step the full weight matrix must be streamed through the FPUs again, so it is usually memory-bound. We’ll come back to this distinction later.</p>
+</section>
+<section id="token-string" class="level2 page-columns page-full">
+<h2 class="anchored" data-anchor-id="token-string">Token &lt;–&gt; String</h2>
+<p>A token is an LLM-specific representation of a string. It isn’t fundamentally different from other representations like ASCII or Unicode, where <code>42</code> means <code>*</code> (in ASCII) and <code>U+1F3D4</code> means <code>🏔</code> (in Unicode).</p>
+<p>The first thing to look at is the vocabulary table, stored in the <code>tokenizer.ggml.tokens</code> metadata field as a list of strings. The first 8 tokens of this model are: [<code>!</code>, <code>\</code>, <code>#</code>, <code>$</code>, <code>%</code>, <code>&amp;</code>, <code>'</code>, <code>(</code>]. So token id 0 refers to <code>!</code>, id 7 refers to <code>(</code>, and so on.</p>
+<p>Note that different models may have different vocabulary tables. A smaller vocabulary means more tokens are needed to represent the same string. Modern LLMs tend to have larger vocabularies — this model has 151,936 vocabulary tokens, which exceeds <code>u16::MAX</code> (65,535), so the token index must be <code>u32</code>.<a href="#fn4" class="footnote-ref" id="fnref4" role="doc-noteref"><sup>4</sup></a></p>
+<div class="no-row-height column-margin column-container"><div id="fn4"><p><sup>4</sup>&nbsp;Anthropic changed their tokenizer in Opus 4.7, which produces <a href="https://simonwillison.net/2026/Apr/20/claude-token-counts/">1.46× more tokens</a> on the same text input — a hidden ~46% price hike at the same per-token rate.</p></div></div><section id="from-token-to-string" class="level4">
+<h4 class="anchored" data-anchor-id="from-token-to-string">From token to string</h4>
+<p>Token-to-string is easy: look up each token in the vocabulary and concatenate the strings.</p>
+<p>The one caveat is streaming output: a single token may represent only a partial UTF-8 sequence, so the decoder needs to buffer bytes until a complete codepoint can be emitted. This is especially common with non-ASCII scripts and emoji.</p>
+</section>
+<section id="from-string-to-token" class="level4">
+<h4 class="anchored" data-anchor-id="from-string-to-token">From string to token</h4>
+<p>String-to-token is more involved, but conceptually similar to how dictionary-based compression works. We start with the property that every byte in the input string has a single-token representation — by design — which guarantees that any input is representable.</p>
+<p>Then we apply <a href="https://en.wikipedia.org/wiki/Byte_pair_encoding">byte-pair encoding (BPE)</a> merge rules; the goal is to greedily merge adjacent tokens into the longest sequences the vocabulary supports, which reduces the total token count.</p>
+<details>
+<summary>
+Actually there are more details to consider
+</summary>
+<ol type="1">
+<li><strong>Pre-tokenization.</strong> A pre-tokenizer first splits the input into smaller chunks (along whitespace, punctuation, digits, etc.) so that downstream BPE merges don’t span boundaries we’d prefer to keep separate — e.g., a single token that straddles two Chinese characters.</li>
+<li><strong>BPE merge.</strong> We then run a BPE merge over adjacent tokens. It is comparatively expensive but reduces the total token count substantially.</li>
+<li><strong>Chat templates.</strong> Special tokens like <code>&lt;|im_start|&gt;</code>, <code>&lt;|im_end|&gt;</code>, etc., delimit roles in a conversation; the model uses these to recognize turn structure.</li>
+</ol>
+</details>
+<p>Roughly speaking, an LLM is a function:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode rust code-with-copy"><code class="sourceCode rust"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">fn</span> inference(input<span class="op">:</span> <span class="dt">Vec</span><span class="op">&lt;</span><span class="dt">u32</span><span class="op">&gt;</span>) <span class="op">-&gt;</span> <span class="dt">u32</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+</section>
+<section id="the-life-of-a-tensor" class="level2">
+<h2 class="anchored" data-anchor-id="the-life-of-a-tensor">The life of a tensor</h2>
+<p>Once we have the input tokens, the next step is to predict the next token.</p>
+<p>There are lots of algorithms and math involved, but honestly, you don’t need to know most of it — you can think of inference as a chain of matrix multiplications. Knowing what RoPE, QKV, softmax, RMSNorm, etc. <em>do</em> is cool to talk about, but from an system programmer’s perspective it doesn’t really matter.</p>
+<p>What matters is the <strong>shape of the tensors</strong>, because that determines the compute and memory requirements.</p>
+<div id="fig-tensor-life" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-tensor-life-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="tensor-life.png" class="img-fluid figure-img" style="width:90.0%">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-tensor-life-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;3: The life of a tensor — shapes only. Blue arrows are matrix multiplications, grey arrows are everything else.
+</figcaption>
+</figure>
+</div>
+<p><a href="#fig-tensor-life" class="quarto-xref">Figure&nbsp;3</a> shows the life of a tensor; blue arrows are matrix multiplications, grey arrows are auxiliary math like normalization and softmax.</p>
+<p>The first thing to care about is the embedding table, a 2D tensor of shape <code>[vocabulary_size, embedding_dim]</code>, in this case <code>[151936, 2048]</code>. Converting a token to an embedding is a simple lookup: slice out one row to get a <code>[1, 2048]</code> tensor. This <code>[1, 2048]</code>, usually called the activation tensor, is both the input and the output of every subsequent layer.</p>
+<p>The final output projection converts the <code>[1, 2048]</code> activation into a <code>[1, 151936]</code> tensor, assigning a logit to each token in the vocabulary. We can pick the token with the highest logit as the next token, or use a sampling algorithm like top-k / top-p / temperature sampling to get variation.</p>
+<p>The rest of the blocks — attention, DeltaNet, and the MoE blocks — all take <code>[1, 2048]</code> as input and produce <code>[1, 2048]</code> as output; internally each is a chain of matrix multiplications with some supplementary math like normalization and softmax.</p>
+<p>The above describes a single token (the decode case); prefill is the same except the activation is <code>[n, 2048]</code> rather than <code>[1, 2048]</code>. The math is unchanged.</p>
+</section>
+<section id="reading-the-first-tensor" class="level2 page-columns page-full">
+<h2 class="anchored" data-anchor-id="reading-the-first-tensor">Reading the first tensor</h2>
+<p>In an ideal world, every tensor would be a simple f32 tensor, and matrix multiplication would be simple and well-optimized.</p>
+<p>But f32 is too expensive: for our 35B model, going all-f32 would require 35B × 4 = 140 GB of memory. On top of that, f32 is overkill for practical LLM inference — we can drop to 8 bits with almost no loss of accuracy, and even 4 bits retains most of the information.<a href="#fn5" class="footnote-ref" id="fnref5" role="doc-noteref"><sup>5</sup></a></p>
+<div class="no-row-height column-margin column-container"><div id="fn5"><p><sup>5</sup>&nbsp;Q4_K_M typically <a href="https://vucense.com/dev-corner/gguf-quantization-explained-q4-k-m-vs-q8-0-vs-f16-2026/">retains ~92% of the original FP16 model’s quality</a> at roughly 25% of the bytes; Q8_0 is “essentially lossless” with perplexity drift around 0.01.</p></div></div><p>Using fewer bits per weight not only reduces the memory footprint but often makes compute <em>faster</em>, especially for GEMV, where memory bandwidth is the bottleneck — less data to load means a shorter critical path.</p>
+<p>The flip side is that the matmul itself gets more complicated, especially since the file contains a mix of quantization schemes. We’ll come back to that.</p>
+<p>As listed earlier, the model has six tensor types; here we only discuss two representative ones: <code>Q8_0</code> and <code>Q4_K</code>.</p>
+<section id="q8_0-block" class="level3">
+<h3 class="anchored" data-anchor-id="q8_0-block">Q8_0 block</h3>
+<p><a href="#fig-q8-0" class="quarto-xref">Figure&nbsp;4</a> shows a <code>Q8_0</code> block. It’s the simplest quantization scheme: take an fp32 value, divide by a scale, and round to the nearest integer. Dequantization is the reverse — multiply the quantized value by the scale. The scale is chosen as <code>max(|w|) / 127</code>, so the quantized values land in <code>[-127, 127]</code>. Each block holds 32 weights plus a single fp16 scale, packed into 2 + 32 = 34 bytes (<a href="https://github.com/ggml-org/llama.cpp/wiki/Tensor-Encoding-Schemes">source: llama.cpp <code>block_q8_0</code> definition</a>).</p>
+<div id="fig-q8-0" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-q8-0-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="q8_0.png" class="img-fluid figure-img" style="width:80.0%">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-q8-0-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;4: A <code>Q8_0</code> block: 32 weights stored in 34 bytes (8.5 bits / weight).
+</figcaption>
+</figure>
+</div>
+</section>
+<section id="q4_k-block" class="level3">
+<h3 class="anchored" data-anchor-id="q4_k-block">Q4_K block</h3>
+<p><code>Q4_0</code> is similar to <code>Q8_0</code>, except it uses 4 bits per weight; in fact <code>Q4_0</code> is also widely used. But it has two problems.</p>
+<p>The first problem is that it assumes weights are symmetrically distributed around 0, which is not always the case. If, for example, all weights in a block are positive and we still use a signed <code>int4</code> representation, we waste half of the representable range. To fix this, we shift the weights by their minimum, so that the shifted weights are all non-negative, and use an unsigned integer to represent them.</p>
+<p>But now we need to store <em>two</em> fp16 values per block — the scale and the min. If only 32 weights share these two parameters, the overhead is large; if many more weights share them, a single outlier can dominate the scale and produce unbalanced quantization.</p>
+<p><a href="#fig-q4-k" class="quarto-xref">Figure&nbsp;5</a> shows the key idea behind <code>Q4_K</code>: each group of 32 weights (a sub-block) has its own scale and min, and a 256-weight super-block re-quantizes those sub-block scales and mins to 6 bits each (packed into 12 bytes for 8 pairs), with the super-block storing a pair of fp16 values (<code>d</code> and <code>dmin</code>) to decode them. See the <a href="https://github.com/ggml-org/llama.cpp/wiki/Tensor-Encoding-Schemes">llama.cpp tensor encoding wiki</a> for the exact layout.</p>
+<div id="fig-q4-k" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-q4-k-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="q4_k.png" class="img-fluid figure-img" style="width:90.0%">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-q4-k-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;5: A <code>Q4_K</code> super-block: 256 weights stored in 144 bytes (4.5 bits / weight).
+</figcaption>
+</figure>
+</div>
+</section>
+<section id="fp32-vs-fp16-vs-bf16-vs-fp8" class="level3 page-columns page-full">
+<h3 class="anchored" data-anchor-id="fp32-vs-fp16-vs-bf16-vs-fp8">fp32 vs fp16 vs bf16 vs fp8?</h3>
+<p>Now is a good time to talk about fp16<a href="#fn6" class="footnote-ref" id="fnref6" role="doc-noteref"><sup>6</sup></a> and bf16.</p>
+<div class="no-row-height column-margin column-container"><div id="fn6"><p><sup>6</sup>&nbsp;fp16 is sometimes called f16.</p></div></div><p>As <a href="#fig-float-formats" class="quarto-xref">Figure&nbsp;6</a> shows, they’re really simple: every floating-point number has three parts — sign, exponent, and mantissa. The exponent controls the range of representable values; the mantissa controls the precision.</p>
+<p><code>bf16</code> and <code>fp16</code> are two different ways to cut <code>fp32</code> in half: <code>bf16</code> keeps the 8-bit exponent (so the same range as fp32, but loses mantissa precision), while <code>fp16</code> shrinks the exponent to 5 bits (smaller range, but more mantissa bits). Similarly, <code>fp8 E5M2</code> keeps a 5-bit exponent, while <code>fp8 E4M3</code> trades one exponent bit for more precision.</p>
+<div id="fig-float-formats" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-float-formats-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="float-formats.png" class="img-fluid figure-img" style="width:80.0%">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-float-formats-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;6: Float formats: just different recipes for combining sign, exponent, and mantissa.
+</figcaption>
+</figure>
+</div>
+<p>Use <code>fp16</code> when you need more precision, as in the per-super-block scale of our <code>Q4_K</code>; use <code>bf16</code> when you want to match fp32’s range and not worry about overflow — that’s why it’s popular for LLM training.</p>
+<p>There’s something special about <code>bf16</code>: <a href="https://en.wikipedia.org/wiki/Bfloat16_floating-point_format">converting between <code>bf16</code> and <code>fp32</code> is almost trivial</a>. bf16 → fp32 is a 16-bit left shift (zero-pad the low mantissa bits); fp32 → bf16 is a 16-bit right shift (truncate or round-to-nearest the low 16 bits).</p>
+</section>
+<section id="how-to-structure-the-code" class="level3">
+<h3 class="anchored" data-anchor-id="how-to-structure-the-code">How to structure the code?</h3>
+<p>As we’ve discussed, we don’t care about the exact math here, but we do care about the shape of the matrices—and it’s better to encode what we care about directly into the type system.</p>
+<p>So instead of writing code like this, which is very much like Python and makes me nervous: it’s unclear about the shape of the tensors, and whether their quantization scheme and shape matches.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode rust code-with-copy"><code class="sourceCode rust"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">fn</span> matmul(x<span class="op">:</span> Tensor<span class="op">,</span> w<span class="op">:</span> Tensor) <span class="op">-&gt;</span> Tensor</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>This is the interface I liked:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode rust code-with-copy"><code class="sourceCode rust"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">fn</span> matmul<span class="op">&lt;</span><span class="kw">const</span> IN<span class="op">:</span> <span class="dt">usize</span><span class="op">,</span> <span class="kw">const</span> OUT<span class="op">:</span> <span class="dt">usize</span><span class="op">,</span> N<span class="op">&gt;</span>(</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>      x<span class="op">:</span> <span class="op">&amp;</span>Act<span class="op">&lt;</span><span class="dt">Self</span><span class="op">,</span> N<span class="op">,</span> IN<span class="op">&gt;,</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>      w<span class="op">:</span> <span class="op">&amp;</span>QWeight<span class="op">&lt;</span><span class="dt">Self</span><span class="op">,</span> IN<span class="op">,</span> OUT<span class="op">&gt;,</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>) <span class="op">-&gt;</span> Act<span class="op">&lt;</span><span class="dt">Self</span><span class="op">,</span> N<span class="op">,</span> OUT<span class="op">&gt;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Each tensor is strongly typed with its shape and quantization scheme. If the shapes of two tensors don’t match, the code won’t even compile!</p>
+<p>We can similarly encode shapes into our layer and model definitions:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode rust code-with-copy"><code class="sourceCode rust"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="kw">pub</span> <span class="kw">struct</span> GatedAttentionBlock<span class="op">&lt;</span>B<span class="op">:</span> Backend<span class="op">&gt;</span> <span class="op">{</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    k_weight<span class="op">:</span> QWeight<span class="op">&lt;</span>B<span class="op">,</span> D_MODEL<span class="op">,</span> KV_DIM<span class="op">&gt;,</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    v_weight<span class="op">:</span> QWeight<span class="op">&lt;</span>B<span class="op">,</span> D_MODEL<span class="op">,</span> KV_DIM<span class="op">&gt;,</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">...</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>    q_norm_gamma<span class="op">:</span> Dense<span class="op">&lt;</span>B<span class="op">,</span> <span class="dv">1</span><span class="op">,</span> HEAD_DIM<span class="op">&gt;,</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>    k_norm_gamma<span class="op">:</span> Dense<span class="op">&lt;</span>B<span class="op">,</span> <span class="dv">1</span><span class="op">,</span> HEAD_DIM<span class="op">&gt;,</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>The rest of the code follows the same philosophy: encode the constraints we care about directly into the type system!</p>
+</section>
+</section>
+<section id="matrix-multiplication" class="level2">
+<h2 class="anchored" data-anchor-id="matrix-multiplication">Matrix multiplication</h2>
+<p>Now comes the elephant in the room: matrix multiplication.</p>
+<p>Before judging any approach, let’s first build a mental model of what performance we should expect. For two matrices <code>[a, b]</code> and <code>[b, c]</code>, it’s not too hard to see that:</p>
+<pre class="text"><code>Optimal compute: 2 * a * b * c = 2abc FLOPs
+Optimal memory: ab + bc + ac</code></pre>
+<p>We have to read both inputs once, write the output once, and do <code>b</code> multiply-adds for each of the <code>a*c</code> output entries. Anything more is overhead.</p>
+<p>Note: A matrix multiply with <code>[1, 2048]</code> (the decode case) is usually called “GEM<strong>V</strong>” (General Matrix-<strong>V</strong>ector Multiplication), while a multiply with <code>[n, 2048]</code> (the prefill case) is “GEM<strong>M</strong>” (General Matrix-<strong>M</strong>atrix Multiplication). The math is identical but the implementation is completely different, because shape matters. GEMV is memory-bound: each weight is loaded from RAM, multiplied with one activation, and never reused — the weight matrix is streamed row by row. GEMM is often compute-bound: each weight is now reused across <code>n</code> activation columns. Once <code>n</code> is large enough that we can keep a weight tile in registers / L1 and sweep it across multiple output columns, arithmetic intensity rises above the machine’s compute-to-bandwidth ratio, and the FPU becomes the bottleneck.</p>
+<section id="naive-dequant-then-multiply-is-bad" class="level3">
+<h3 class="anchored" data-anchor-id="naive-dequant-then-multiply-is-bad">Naive dequant-then-multiply is bad</h3>
+<p>The simplest approach is to dequantize both sides to fp32, run the good old GEMM, and quantize the result back. This works, but it throws away most of what we got from quantization. Every 0.5-byte <code>Q4_K</code> weight expands to 4 bytes of fp32 traffic before we even start multiplying — an 8× blowup of the memory we worked so hard to compress. On top of that, we pay <code>~2 * (ab + bc)</code> extra FLOPs for the dequantization itself.</p>
+<p>For GEMV this is catastrophic, because GEMV is memory-bound. If we expand weights to fp32, we’re back to where we started before quantizing anything. So we want to multiply directly on the quantized weights, without ever materializing fp32 in between.</p>
+</section>
+<section id="picking-the-activation-format" class="level3">
+<h3 class="anchored" data-anchor-id="picking-the-activation-format">Picking the activation format</h3>
+<p>The weights are pre-quantized in the file, but the activation tensor (<code>[1, 2048]</code> for decode, <code>[n, 2048]</code> for prefill) is computed at runtime, so we get to choose its format.</p>
+<p><code>bf16</code> is the natural carrier between layers: same range as fp32, half the size, and softmax/norm are happy with it. But it’s not the right format <em>inside</em> the matmul itself, because no CPU has a native <code>bf16 × q4</code> multiplier.</p>
+<p>The instruction we <em>do</em> have, on both <a href="https://en.wikichip.org/wiki/x86/avx512_vnni">AVX-VNNI (<code>VPDPBUSD</code>)</a> and ARM (<a href="https://developer.arm.com/architectures/instruction-sets/intrinsics/vusdotq_s32"><code>USDOT</code>, available via <code>i8mm</code></a>), is the integer dot product: <code>u8 × i8 → i32</code>, accumulating 4 byte-products into each 32-bit lane. On AVX-512 VNNI a single <code>VPDPBUSD</code> produces 16 <code>i32</code> lanes per 512-bit register; on AVX-VNNI (256-bit) it produces 8 lanes; on Neon with <code>USDOT</code> it produces 4 lanes per 128-bit register. So inside the matmul we want both operands as 8-bit integers:</p>
+<ul>
+<li><code>Q4_K</code> weights are 4-bit unsigned; unpacking each nibble into a <code>u8</code> is essentially free.</li>
+<li>Activations need to be <code>i8</code>, so we quantize bf16 to <code>Q8_K</code>. Its 256-weight super-block lines up exactly with <code>Q4_K</code>, and <code>Q8_K</code> also caches per-sub-block sums of the activation, which — as we’ll see in a moment — is exactly what we need.</li>
+</ul>
+</section>
+<section id="the-smart" class="level3">
+<h3 class="anchored" data-anchor-id="the-smart">The smart</h3>
+<p>We can now narrow the problem down to this: <strong>we have a 32-weight sub-block of <code>Q4_K</code> and the matching sub-block of <code>Q8_K</code>. How do we efficiently dot-product them?</strong></p>
+<p>For <code>Q4_K</code>, each dequantized weight is <span class="math inline">\(w_l = q_l \cdot s_l - m_l\)</span>, where <span class="math inline">\(q_l\)</span> is <code>u8</code> (range 0–15) and <span class="math inline">\(s_l, m_l\)</span> are fp32 sub-block scale and min reconstructed from the 6-bit packed values and the super-block’s fp16 <code>d</code> and <code>dmin</code>. For <code>Q8_K</code> each activation is <span class="math inline">\(w_r = q_r \cdot s_r\)</span> — Q8_K is symmetric, so there’s no min term.</p>
+<p>The dot product over the sub-block expands as:</p>
+<p><span class="math display">\[
+\sum_{i=0}^{31} w_l[i] \cdot w_r[i]
+\;=\; s_l \cdot s_r \cdot \underbrace{\sum_i q_l[i] \cdot q_r[i]}_{\text{u8 × i8 integer dot}}
+\;-\; m_l \cdot s_r \cdot \underbrace{\sum_i q_r[i]}_{\text{i8 sum, precomputed by Q8\_K}}
+\]</span></p>
+<p>Two integer reductions, then two multiply-adds in fp32. The expensive part — the 32-term dot product — never leaves integer land, which is exactly what the SIMD instruction is good at. The second term, <span class="math inline">\(\sum q_r\)</span>, is already cached inside the <code>Q8_K</code> block (the <a href="https://deepwiki.com/ggml-org/llama.cpp/6.3-quantization-techniques"><code>bsums</code> field</a>) when we quantized the activation, so it’s just a load, not a runtime reduction. This is the whole reason <code>Q8_K</code> exists.</p>
+</section>
+<section id="putting-it-together" class="level3">
+<h3 class="anchored" data-anchor-id="putting-it-together">Putting it together</h3>
+<p>You don’t need to understand every detail here. The key idea is that there’s a storage reality — weights are quantized to save memory — and there’s a compute reality — hardware can only do certain operations on certain shapes.</p>
+<p>The goal of everything above is a delicate balance: nudge both sides a bit, pick a good instruction and move the formats a little bit.</p>
+<div id="fig-matrix-mat" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-matrix-mat-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="matrix-mat.png" class="img-fluid figure-img" style="width:80.0%">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-matrix-mat-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;7: The key to efficient matrix multiplication: pick a fast instruction, then nudge the operand formats to match its requirements.
+</figcaption>
+</figure>
+</div>
+</section>
+</section>
+<section id="the-state-kv-cache-and-deltanet-state" class="level2">
+<h2 class="anchored" data-anchor-id="the-state-kv-cache-and-deltanet-state">The state: KV cache and DeltaNet state</h2>
+<p>As a systems programmer, I don’t love the name “KV cache” — it sounds like a key-value store (e.g., Redis), but it’s neither a key nor a value in that sense. Here, <code>K</code> and <code>V</code> are the names of two matrices in the attention layer.</p>
+<p>Recall that LLM inference is a function:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9"><pre class="sourceCode rust code-with-copy"><code class="sourceCode rust"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="kw">fn</span> inference(input<span class="op">:</span> <span class="dt">Vec</span><span class="op">&lt;</span><span class="dt">u32</span><span class="op">&gt;</span>) <span class="op">-&gt;</span> <span class="dt">u32</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>which is stateless — so where does the state come from? Well, because we’re not generating a single token but a sequence of them, the real loop looks more like this:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb10"><pre class="sourceCode rust code-with-copy"><code class="sourceCode rust"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="cf">loop</span> <span class="op">{</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">let</span> token <span class="op">=</span> inference(<span class="op">&amp;</span>input)<span class="op">;</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  input<span class="op">.</span>push(token)<span class="op">;</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> token <span class="op">==</span> EOS <span class="op">{</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">break</span><span class="op">;</span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>  <span class="op">}</span></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Each inference appends one token to the input, so the next call processes a longer input. The observation is that most of the per-token state from prior inferences can be reused — recomputing it on every step is wasted work. KV cache is the most well-known such state; DeltaNet state is specific to the Qwen3-Next family.</p>
+<p><a href="#fig-kv-cache" class="quarto-xref">Figure&nbsp;8</a> shows the state of the Qwen model: KV cache and DeltaNet state. Note that both states are per-layer, not per model. For each attention layer, the KV cache stores a <code>K</code> matrix of shape <code>[n, 512]</code> and a <code>V</code> matrix of shape <code>[n, 512]</code>, where <code>n</code> is the number of tokens seen so far (Qwen3.6-35B-A3B uses 2 KV heads × 256 head dim = 512). The KV cache grows linearly with the number of tokens, so at bf16 each new token adds 2 × 512 × 2 bytes = 2 KB per attention layer. With 10 attention layers (out of 40 total layers), each token costs 20 KB of KV-cache memory.</p>
+<p>The DeltaNet state is a fixed-shape matrix <code>[4096, 128]</code> of fp32 values, so 4096 × 128 × 4 = 2 MB per layer regardless of context length. That’s the whole point of DeltaNet: its state has a fixed size, so memory and compute stay bounded even on long-context workloads.</p>
+<div id="fig-kv-cache" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-kv-cache-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="kv-cache.png" class="img-fluid figure-img" style="width:50.0%">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-kv-cache-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;8: The state of the LLM model: KV cache and DeltaNet state. Both states are per-layer, not per-model.
+</figcaption>
+</figure>
+</div>
+<p>Note that each token adds exactly one row to the KV cache, and that row depends only on the preceding tokens. This means “java” and “javascript” share the same first four KV-cache rows (assuming each character is a token), which is very convenient: we can save the KV cache for “javascript” and slice off the first four rows to get the KV cache for “java”. This is what powers prefix caching in production serving systems.</p>
+</section>
+<section id="performance" class="level2">
+<h2 class="anchored" data-anchor-id="performance">Performance</h2>
+<section id="fuse-kernels" class="level3">
+<h3 class="anchored" data-anchor-id="fuse-kernels">Fuse kernels</h3>
+<p>Kernel fusion combines two operations into one, either to reduce memory traffic or to use a better instruction. For example, multiply-then-add can be fused into a single FMA (fused multiply-add) instruction, which both halves the instruction count and avoids rounding the intermediate product.</p>
+</section>
+<section id="simd-instructions" class="level3">
+<h3 class="anchored" data-anchor-id="simd-instructions">SIMD instructions</h3>
+<p>In the matrix multiplication section, we already used SIMD instructions to vectorize the inner loop.</p>
+<p>Broadly, there are two ways to leverage SIMD:</p>
+<ol type="1">
+<li>Auto-vectorization by the compiler. LLVM does a pretty good job here.</li>
+<li>Explicit SIMD intrinsics. Auto-vectorization is a black box; it can fail to fire for two reasons: (1) the compiler is conservative and may not pick the instruction we want, or (2) we wrote the loop in a pattern the compiler doesn’t recognize. For performance-critical code I tend to prefer explicit intrinsics, because you want to know exactly what is being emitted.</li>
+</ol>
+<p>An explicit SIMD kernel looks like the following. It looks intimidating at first, but it’s really just a sequence of load / multiply / add / reduce instructions, and you don’t need to hand-write it — ask Codex or Claude to draft it for you and then verify.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb11"><pre class="sourceCode rust code-with-copy"><code class="sourceCode rust"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> n <span class="kw">in</span> <span class="dv">0</span><span class="op">..</span>n_rows <span class="op">{</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">let</span> x <span class="op">=</span> <span class="op">&amp;</span>act[base <span class="op">+</span> n]<span class="op">;</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">let</span> <span class="kw">mut</span> av <span class="op">=</span> _mm512_setzero_si512()<span class="op">;</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> p <span class="kw">in</span> <span class="dv">0</span><span class="op">..</span><span class="dv">4</span> <span class="op">{</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>        <span class="kw">let</span> xv <span class="op">=</span> _mm512_loadu_si512(x<span class="op">.</span>qs<span class="op">.</span>as_ptr()<span class="op">.</span>add(p <span class="op">*</span> <span class="dv">64</span>) <span class="kw">as</span> <span class="op">*</span><span class="kw">const</span> __m512i)<span class="op">;</span></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>        <span class="kw">let</span> dp <span class="op">=</span> _mm512_dpbusd_epi32(_mm512_setzero_si512()<span class="op">,</span> w[p]<span class="op">,</span> xv)<span class="op">;</span></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>        av <span class="op">=</span> _mm512_add_epi32(av<span class="op">,</span> _mm512_mullo_epi32(dp<span class="op">,</span> s16[p]))<span class="op">;</span></span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">let</span> acc_scaled <span class="op">=</span> _mm512_reduce_add_epi32(av)<span class="op">;</span></span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">let</span> pairs <span class="op">=</span></span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>        _mm256_madd_epi16(_mm256_loadu_si256(x<span class="op">.</span>bsums<span class="op">.</span>as_ptr() <span class="kw">as</span> <span class="op">*</span><span class="kw">const</span> __m256i)<span class="op">,</span> ones)<span class="op">;</span></span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a>    <span class="kw">let</span> acc_min <span class="op">=</span> hsum_i32_256(_mm256_mullo_epi32(pairs<span class="op">,</span> mnv))<span class="op">;</span></span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a>    acc[n] <span class="op">+=</span> x<span class="op">.</span>d <span class="op">*</span> (d <span class="op">*</span> acc_scaled <span class="kw">as</span> <span class="dt">f32</span> <span class="op">-</span> dmin <span class="op">*</span> acc_min <span class="kw">as</span> <span class="dt">f32</span>)<span class="op">;</span></span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="multi-threading" class="level3">
+<h3 class="anchored" data-anchor-id="multi-threading">Multi-threading</h3>
+<p>Multi-threading here is not very different from other systems; the first question is how to partition the work. The simplest scheme is to partition by user: each request gets a thread that runs the entire inference end-to-end.</p>
+<p>A more interesting question is what the lowest single-user latency (time-to-first-token) we can achieve looks like. To optimize that, we need to parallelize <em>within</em> a single inference.</p>
+<p>The cost model: thread creation is expensive (microseconds, sometimes more), so we use a thread pool to avoid creating and destroying threads on each call. Contention on shared memory hurts, so we want to partition work so each thread owns its own working set.</p>
+</section>
+<section id="how-did-we-do" class="level3">
+<h3 class="anchored" data-anchor-id="how-did-we-do">How did we do?</h3>
+<p>My machine has roughly 55 GB/s of usable memory bandwidth, which is the ceiling we should aim for in memory-bound kernels.</p>
+<p>The table below shows end-to-end performance and per-kernel performance. The two biggest kernels are <code>qmatmul</code> and <code>moe_routed_experts</code>, and their effective bandwidth is already close to the hardware limit — we’ve done a good job.</p>
+<pre class="text"><code>bench: model/Qwen3.6-MTP-35B-A3B-UD-Q4_K_M.gguf
+cpu:
+  load:    3.46s
+  prefill: 256 tok in 2.176s — 117.7 tok/s
+  decode:  64 tok in 4.234s — 15.1 tok/s (66.1 ms/tok)
+
+------------------------------------------------------------------------------
+  kernel                    count        total          bytes       eff bw
+------------------------------------------------------------------------------
+  qmatmul                    9024    2282.582ms   113837932544      49.87 GB/s
+  moe_routed_experts         2560     815.111ms    39158022144      48.04 GB/s
+  moe_shared_expert          2560     309.055ms     8577351680      27.75 GB/s
+  attention                   640     272.661ms     3040870400      11.15 GB/s
+  delta_rule_scan            1920     172.020ms    24238080000     140.90 GB/s
+  moe_router                 5120     168.570ms     5413283840      32.11 GB/s
+  causal_conv1d_silu         1920      82.260ms      660602880       8.03 GB/s
+  gdn_gates                  1920      65.658ms      755466240      11.51 GB/s
+  add_rmsnorm                5120      21.565ms      104857600       4.86 GB/s
+  qk_norm_rope               1280       5.234ms       17694720       3.38 GB/s
+  embed_rmsnorm                64       0.297ms         663552       2.23 GB/s
+  append_kv                   640       0.216ms        2621440      12.11 GB/s
+  slice_last_row               64       0.021ms         524288      25.26 GB/s</code></pre>
+</section>
+</section>
+<section id="source-code" class="level2">
+<h2 class="anchored" data-anchor-id="source-code">Source code</h2>
+<p>Honestly, no one is going to read and reuse this source code. Just send Codex (or Claude) this blog post and ask it to write an inference engine for you.</p>
+<p>The point of this post is to help <em>you</em> — as a human — understand the layer beneath the LLM inference engine, so you’re a little less afraid of the code Codex generates for you.</p>
+
+
+</section>
+
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/blog\.xiangpeng\.systems");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>
