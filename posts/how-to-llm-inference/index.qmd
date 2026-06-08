@@ -312,4 +312,37 @@ loop {
 ```
 This means that each inference adds one token to the input, as we generate more tokens, the inference has to process longer input.
 
+todo.
+
+## Performance 
+
+### Fuse kernels
+
+Fusing kernels is basically to combine two operations into one, this either reduces memory traffic or use better instructions.
+For example, multiply-then-add can be fused into a single instruction.
+
+### SIMD instructions
+
+In the matrix multiplication, we already used SIMD instructions to vectorize the computation.
+
+
+
 ### Multi-threading
+
+Multi-threading here is not different from other systems, and the first thing to consider is how to partition the work.
+The simplest way is to partition the work by number of users, i.e., each user has a thread which runs the entire inference from start to end.
+
+A more interesting question to ask is what is the lowest inference latency we can achieve, from the perspective of a user, i.e., time-to-first-token.
+To optimize this, we need to parallelize within a single inference.
+
+The cost model here: creating a thread costs (?) time, so we want to have a thread pool to avoid creating and destroying threads too often.
+Contention on the same memory is bad, so we want to partition our work so that each thread works on their own working set.
+
+
+## Source code
+
+Honestly, nobody is going to read and use this source code, just send codex this blog post and ask it to write a inference engine for you. 
+
+The goal of this blog post is to help _you_ (as a human being) to understand the key ideas and trade-offs of building a LLM inference engine, and be not so afraid of the code codex/claude generated.
+
+
