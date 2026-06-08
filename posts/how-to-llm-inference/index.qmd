@@ -199,22 +199,81 @@ But this makes the computation more complicated, especially that the file contai
 
 As discussed above, the model has six types of tensors, here we only discuss two representative ones: `Q8_0` and `Q4_K`.
 
+### Q8_0 block
+
 @fig-q8-0 shows a `Q8_0` block, it's the simplest quantization scheme, we take a f32 precision value, and devide by a scale value, then round to the nearest integer. Dequantization is the reverse, we simply multiply the quantized value by the scale value.
 The scale is calculated to be the maximum absolute value divided by 127, so that the quantized values are in the range [-127, 127].
 
 ![A `Q8_0` block: 32 weights stored in 34 bytes (8.5 bits / weight).](q8_0.png){#fig-q8-0 width=80%}
 
+### Q4_K block
 
+`Q4_0` is similar to `Q8_0`, except that it uses 4 bits as the weight precision, and in fact `Q4_0` is also widely used in practice. But there're two problems with `Q4_0`.
 
-@fig-q4-k shows a `Q4_K` super-block, which is more complicated than `Q8_0`.
+The first problem is that it assumes the weights are symmetrically distributed around 0, which is not always the case. Consider if all weights are positive, and we still use `int8` to represent them, we then waste half of the precision.
+Consider when all weights are positive, and we still use `int8` to represent them, we then waste half of the precision.
+To fix this, we simply shift the weights by the minimum value, so that the weights are all non-negative, and use unsigned integer to represent them.
 
-![A `Q4_K` super-block: 256 weights stored in 144 bytes (4.5 bits / weight).](q4_k.excalidraw.png){#fig-q4-k width=100%}
+But this means that we need to store two f16 values: the scale and the min, and if only 32 weights share the same scale and min, it's wasteful; if more weight share the same scale and min, we can easily have one outlier that dominates the scale, causing inbalanced quantization.
 
-## Quantized matrix multiplication
+@fig-q4-k shows the key idea behind `Q4_K`: each 32 weights (sub-block) has a pair of scale and min, it then uses a super block to quantize the scale and the min, so that each scale and min only costs 6 bits (instead of 16 bits), and we can pack 8 pairs of them into 12 bytes, and finally have f16 precision for the super-block's scale and min.
 
-### Quantize the activation tensor
+![A `Q4_K` super-block: 256 weights stored in 144 bytes (4.5 bits / weight).](q4_k.png){#fig-q4-k width=90%}
 
-todo: talk about bf16.
+### fp32 vs fp16 vs bf16 vs fp8?
+
+Now it's a good time to talk about fp16 [^3] and bf16.
+
+[^3]: fp16 is sometimes called f16.
+
+As @fig-float-formats shows, they are really simple: every floating number has three parts: sign, exponent, and mantissa.
+The exponent controls the range of the value, the mantissa controls the precision.
+
+`bf16` and `fp16` are two different ways to cut `fp32` in half: `bf16` keeps 8-bit exponent (so it has the same range, but loses precision), but `fp16` shrinks the exponent to 5 bits (so it has a smaller range, but keeps more precision).
+Similarly, `fp8 E5M2` keeps 5-bit exponent, while `fp8 E4M3` gives up another exponent bit to save precision.
+
+![Float formats: they are just different recipes to combine sign, exponent, and mantissa.](float-formats.png){#fig-float-formats width=80%}
+
+Use `fp16` when you need more precision, like the case in our `Q4_K` block; use `bf16` when you don't want to worry about overflow, popular for LLM training.
+
+There's something special about `bf16`: it's almost trivial to convert between `bf16` and `fp32`: just shift the bits left/right by 16 bits.
+
+## Matrix multiplication
+
+Now comes the elephant in the room: matrix multiplication.
+
+The simplest way to do matrix multiplication is to dequantize the weights of both sides to fp32, then do the good old multiplication, and quantize the result back to the target format.
+
+Before we judge the performance of this naive approach, let's first build a mental model of what performance we should expect. For two matrix [a, b] and [b, c], it's not too hard to see that:
+```text
+Optimal compute: 2 * a * b * c = 2abc
+Optimal memory: ab + bc + ac
+```
+
+For our naive approach, since we need to first dequantize both sides to fp32, we need to read ab + bc bytes of memory, then write 8x that many bytes of memory, ac also needs to be dequantized, causing 5x ac bytes of memory, so the total memory is 9x(ab + bc) + 5xac.
+The dequantization requires 2 flops per element, so the total flops is 2x(ab + bc + ac) + 2abc.
+Clearly the naive approach is very wasteful, and we need a way to directly perform the matrix multiplication using the quantized weights. 
+
+Before we perform the mutliplication, there's one more thing to consider: the format of the activation tensor, i.e., the `[1, 2048]` tensor (or `[n, 2048]` for prefill).
+Unlike weights, which is pre-quantized in the file, we have the freedom to choose how to represent the activation tensor, we can do any of the floating point formats in @fig-float-formats as we wish.
+A common choice is to use bf16, a format with good range.
+
+Now we can narrow the porblem down to this challenges: **we have a block of `Q4_K` and a block of `bf16`, How do to efficiently dot product?**
+
+The math is simple: $x = l[0] * r[0] + l[1] * r[1] + ... + l[i-1] * r[i-1]$, where `l` is the `Q4_K` block and `r` is the `bf16` block.
+
+No hardware can directly manipulate the bits like this, so we need to nudge the format to match with the hardware.
+One common efficient instruction is to use u8*i8->f32.
+So we first need to convert the `bf16` to a i8 representation, i.e., quantize it to Q8. Since the left block has 256 weight, we'd also want right block to have 256 weights, so we choose `Q8_K`. 
+Now that we know each r_i = q_r[i] * scale_r, and l_i = (q_l[i] * scale_l - min_l), so their mutiplication x_i = (q_l[i] * scale_l - min_l) * q_r[i] * scale_r = q_l[i] * q_r[i] * scale_l * scale_r - min_l * q_r[i] * scale_r.
+This means that we can directly perform the mutiplication on the raw weights without any intermediate representation.
+
+To summarize, here're the steps:
+
+1. Quantize the `bf16` block to `Q8_K`.
+2. Unpack `Q4_K` block to `u8` for alignment.
+3. Perform the vectorized multiplication on the raw weights.
+4. Accumulate the results.
 
 ## KV Cache
 
