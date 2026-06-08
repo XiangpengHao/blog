@@ -182,9 +182,9 @@ The rest of the blocks, i.e., attention, delta net, and the moe blocks, all take
 
 The above case discuss a single token, which is the case of decode, for prefill, it's really the same, except that it's not [1, 2048], but [n, 2048]. The rest of the math is the same.
 
-Note that a matrix muliplicate with [1, 2048] (as in the decode case) is usually called "GEM**V**" (General Matrix **Vector** Multiplication), while a matrix muliplicate with [n, 2048] (as in the prefill case) is usually called "GEM**M**" (General Matrix **Matrix** Multiplication), their math are the same, but the implementation is completely different, because shape matters.
-GEMV is completely memory bounded, because the matrix is streamed row by row, and the computation is a simple dot product.
-GEMM is often compute bounded, because...
+Note that a matrix multiply with `[1, 2048]` (as in the decode case) is usually called "GEM**V**" (General Matrix **Vector** Multiplication), while a matrix multiply with `[n, 2048]` (as in the prefill case) is usually called "GEM**M**" (General Matrix **Matrix** Multiplication). The math is identical but the implementation is completely different, because shape matters.
+GEMV is memory bound, because each weight is loaded once, multiplied with one activation, and never reused, the matrix is streamed row by row from RAM.
+GEMM is often compute bound, because each weight is now reused across `n` activation columns. Once `n` is large enough that we can keep a weight tile in registers / L1 and sweep it across multiple output columns, the arithmetic intensity goes above the machine's compute-to-bandwidth ratio, and the FPU becomes the bottleneck.
 
 ## Reading the first tensor
 
@@ -242,45 +242,74 @@ There's something special about `bf16`: it's almost trivial to convert between `
 
 Now comes the elephant in the room: matrix multiplication.
 
-The simplest way to do matrix multiplication is to dequantize the weights of both sides to fp32, then do the good old multiplication, and quantize the result back to the target format.
-
-Before we judge the performance of this naive approach, let's first build a mental model of what performance we should expect. For two matrix [a, b] and [b, c], it's not too hard to see that:
+Before we judge any approach, let's first build a mental model of what performance we should expect. For two matrices `[a, b]` and `[b, c]`, it's not too hard to see that:
 ```text
-Optimal compute: 2 * a * b * c = 2abc
+Optimal compute: 2 * a * b * c = 2abc FLOPs
 Optimal memory: ab + bc + ac
 ```
+We have to read both inputs once, write the output once, and do `b` multiply-adds for each of the `a*c` output entries. Anything more than this is overhead.
 
-For our naive approach, since we need to first dequantize both sides to fp32, we need to read ab + bc bytes of memory, then write 8x that many bytes of memory, ac also needs to be dequantized, causing 5x ac bytes of memory, so the total memory is 9x(ab + bc) + 5xac.
-The dequantization requires 2 flops per element, so the total flops is 2x(ab + bc + ac) + 2abc.
-Clearly the naive approach is very wasteful, and we need a way to directly perform the matrix multiplication using the quantized weights. 
+### Naive dequant-then-multiply is bad
 
-Before we perform the mutliplication, there's one more thing to consider: the format of the activation tensor, i.e., the `[1, 2048]` tensor (or `[n, 2048]` for prefill).
-Unlike weights, which is pre-quantized in the file, we have the freedom to choose how to represent the activation tensor, we can do any of the floating point formats in @fig-float-formats as we wish.
-A common choice is to use bf16, a format with good range.
+The simplest way is to dequantize both sides to fp32, run the good old GEMM, and quantize the result back. This works, but it throws away most of what we got from quantization. Every 0.5-byte `Q4_K` weight expands to 4 bytes of fp32 traffic before we even start multiplying, that's an 8x blowup of the memory we worked so hard to compress. On top of that we pay `~2 * (ab + bc)` extra FLOPs for the dequantization itself.
 
-Now we can narrow the porblem down to this challenges: **we have a block of `Q4_K` and a block of `bf16`, How do to efficiently dot product?**
+For GEMV this is catastrophic, because GEMV is memory bound. If we expand weights to fp32 we're back to where we started before quantizing anything. So we want to multiply directly on the quantized weights, without ever materializing fp32 in between.
 
-The math is simple: $x = l[0] * r[0] + l[1] * r[1] + ... + l[i-1] * r[i-1]$, where `l` is the `Q4_K` block and `r` is the `bf16` block.
+### Picking the activation format
 
-No hardware can directly manipulate the bits like this, so we need to nudge the format to match with the hardware.
-One common efficient instruction is to use u8*i8->f32.
-So we first need to convert the `bf16` to a i8 representation, i.e., quantize it to Q8. Since the left block has 256 weight, we'd also want right block to have 256 weights, so we choose `Q8_K`. 
-Now that we know each r_i = q_r[i] * scale_r, and l_i = (q_l[i] * scale_l - min_l), so their mutiplication x_i = (q_l[i] * scale_l - min_l) * q_r[i] * scale_r = q_l[i] * q_r[i] * scale_l * scale_r - min_l * q_r[i] * scale_r.
-This means that we can directly perform the mutiplication on the raw weights without any intermediate representation.
+The weights are pre-quantized in the file, but the activation tensor (`[1, 2048]` for decode, `[n, 2048]` for prefill) is computed at runtime, so we get to choose its format.
 
-To summarize, here're the steps:
+`bf16` is the natural carrier between layers: same range as fp32, half the size, and softmax/norm are happy with it. But it's not the right format inside the matmul itself, because no CPU has a native `bf16 × q4` multiplier.
 
-1. Quantize the `bf16` block to `Q8_K`.
-2. Unpack `Q4_K` block to `u8` for alignment.
-3. Perform the vectorized multiplication on the raw weights.
-4. Accumulate the results.
+The instruction we do have, on both AVX-VNNI (`vpdpbusd`) and ARM (`vdotq_s32` / `i8mm`), is the **integer dot product**: `u8 × i8 → i32`, vectorized over 16 lanes at a time. So inside the matmul we want both operands as 8-bit integers:
 
-## KV Cache
+- `Q4_K` weights are 4-bit unsigned, unpacking each nibble into a `u8` is basically free.
+- Activations need to be `i8`, so we quantize bf16 to `Q8_K`. Its 256-weight super-block lines up exactly with `Q4_K`, and `Q8_K` also caches per-sub-block sums of the activation, which we'll see in a moment is exactly what we need.
 
-## Important optimizations
+### The smart 
 
-### Flash attention
+Now we can narrow the problem down to this: **we have a 32-weight sub-block of `Q4_K` and the matching sub-block of `Q8_K`, how do we efficiently dot product?**
 
-### SIMD
+For `Q4_K` each dequantized weight is $w_l = q_l \cdot s_l - m_l$, where $q_l$ is `u8` and $s_l, m_l$ are fp32 scales reconstructed from the 6-bit packed sub-block scales and the super-block's fp16 `d` and `dmin`. For `Q8_K` each activation is $w_r = q_r \cdot s_r$, Q8 is symmetric so there's no min term.
+
+The dot product over the sub-block expands as:
+
+$$
+\sum_{i=0}^{31} w_l[i] \cdot w_r[i]
+\;=\; s_l \cdot s_r \cdot \underbrace{\sum_i q_l[i] \cdot q_r[i]}_{\text{u8 × i8 integer dot}}
+\;-\; m_l \cdot s_r \cdot \underbrace{\sum_i q_r[i]}_{\text{i8 sum, precomputed by Q8\_K}}
+$$
+
+Two integer reductions, then two multiply-adds in fp32. The expensive part, the 32-term dot product, never leaves integer land, exactly what the SIMD instruction is good at. The second term, $\sum q_r$, is already cached inside the `Q8_K` block (the `bsums` field) when we quantized the activation, so it's just a load, not a runtime reduction. This is the whole reason `Q8_K` exists.
+
+### Putting it together
+
+Honestly you don't need to understand every details here, the key is to know that there's a storage reality -- weights are quantized to save memory, and there's a compute reality -- hardware can only do certain operations in certain shapes.
+
+The goal of everything we talked about is to make a delicate balance: nudge the both sides of formats a bit, choose a right instruction set to be both efficient and without too much overhead.
+
+![The key of efficient matrix multiplication is to choose an efficient instruction and nudge the formats to match the requirements of the instruction.](matrix-mat.png){#fig-matrix-mat width=80%}
+
+## The state: KV Cache and DeltaNet states
+
+As a system programmer, I don't like the name "KV Cache", it sounds like a KV store (e.g., Redis) but it's not key or value; here the K and V are the name of two matrices.
+
+Remember we said llm inference is a function that looks like this:
+```rust
+fn inference(input: Vec<u32>) -> u32
+```
+Meaning that the inference function is stateless, where does the state come from?
+Well, because we're not just generating a single token, but a sequence of tokens, it looks more like this:
+
+```rust
+loop {
+  token = inference(input);
+  input.push(token);
+  if token == EOF {
+    break;
+  }
+}
+```
+This means that each inference adds one token to the input, as we generate more tokens, the inference has to process longer input.
 
 ### Multi-threading
