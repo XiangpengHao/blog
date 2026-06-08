@@ -261,7 +261,7 @@ The weights are pre-quantized in the file, but the activation tensor (`[1, 2048]
 
 `bf16` is the natural carrier between layers: same range as fp32, half the size, and softmax/norm are happy with it. But it's not the right format inside the matmul itself, because no CPU has a native `bf16 × q4` multiplier.
 
-The instruction we do have, on both AVX-VNNI (`vpdpbusd`) and ARM (`vdotq_s32` / `i8mm`), is the **integer dot product**: `u8 × i8 → i32`, vectorized over 16 lanes at a time. So inside the matmul we want both operands as 8-bit integers:
+The instruction we do have, on both AVX-VNNI (`vpdpbusd`) and ARM (`vdotq_s32` / `i8mm`), is the integer dot product: `u8 × i8 → i32`, vectorized over 16 lanes at a time. So inside the matmul we want both operands as 8-bit integers:
 
 - `Q4_K` weights are 4-bit unsigned, unpacking each nibble into a `u8` is basically free.
 - Activations need to be `i8`, so we quantize bf16 to `Q8_K`. Its 256-weight super-block lines up exactly with `Q4_K`, and `Q8_K` also caches per-sub-block sums of the activation, which we'll see in a moment is exactly what we need.
@@ -311,8 +311,17 @@ loop {
 }
 ```
 This means that each inference adds one token to the input, as we generate more tokens, the inference has to process longer input.
+The observation here is that there's quite a bit redundant computation in the model's state, which can be avoided by caching them. 
+KV cache is the most well known, and delta net is specific to Qwen models.
 
-todo.
+@fig-kv-cache shows the state of the Qwen model: KV Cache and DeltaNet states. Note that both state are per-layer, not per model.
+The KV cache is a matrix of shape [n, 512] for each token, and for both k and v respectively. This means that the KV cache grows linearly with the number of tokens. This means that each token adds about 2KB of memory to the layer. Since we have 40 layers, and 10 attention layers, the cost of a token is 20KB.
+The DeltaNet state is a fixed-shape matrix [4096, 128], but each of the element is a fp32 value, so the total size is 4096 * 128 * 4 = 2MB.
+This is the reason we have DeltaNet, it's a fixed-size state and doesn't grow with context length, which keep the memory and compute cost low over long context workloads.
+
+![The state of the LLM model: KV Cache and DeltaNet states. Note that both state are per-layer, not per model.](kv-cache.png){#fig-kv-cache width=50%}
+
+Note that each token add one row to the KV cache. This row depends and only depends on all previous tokens, this means that "java" and "javascript" will have the same KV cache row for the first 4 tokens (assuming each charater is a token), this is very convinent because we can save the kv cache for "javascript" and slice the first 4 rows to get the kv cache for "java".
 
 ## Performance 
 
