@@ -2,6 +2,7 @@
 title: "A system programmer's guide to LLM inference"
 date: "2026-06-08"
 categories: []
+description: "Let's build a local LLM inference engine in Rust with no dependencies."
 toc: true
 reference-location: margin
 citation-location: margin
