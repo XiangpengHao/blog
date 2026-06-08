@@ -1,61 +1,63 @@
 ---
 title: "A system programmer's guide to LLM inference"
-date: "2026-06-05"
+date: "2026-06-08"
 categories: []
 toc: true
 reference-location: margin
 citation-location: margin
-draft: true 
 ---
 
-LLM has become so important that I need to know more about it.
-The best way to learn more is to build it.
+::: {.callout-warning appearance="simple" icon=false}
+## Acknowledgments
 
-In this blog post, I'll build a tiny LLM inference engine without any dependencies in Rust.
+Let's take a moment to thank my PhD sponsors: [InfluxData](https://influxdata.com), [Bauplan](https://www.bauplanlabs.com), [SpiralDB](https://spiraldb.com), and the taxpayers of the State of Wisconsin and the federal government.
+:::
 
-We pick the model [`Qwen3.6-35B-A3B-UD-Q4_K_M.gguf`](https://huggingface.co/unsloth/Qwen3.6-35B-A3B-MTP-GGUF) so that it runs on most machines but also complex enough to be "modern llm" [^1].
-This is also the only model we support here.
-The end result is that we will be able to run the prefill at 100 tokens/s and the decode at 15 tokens/s, both saturating the hardware limit.
 
-[^1]: the model was released in April 2026.
+LLMs have become so important that I (probably you as well) want to understand them better, and the best way to learn is to build one.
 
-I don't like to write the code in minimal lines of code, because it's LLM write them anyway, who cares about lines of code? 
-But we do care about the code structure and the beauty of the design.
+In this blog post, I'll share what I've learned about LLM inference, from the perspective of a systems programmer.
+
+I pick the model [`Qwen3.6-35B-A3B-UD-Q4_K_M.gguf`](https://huggingface.co/unsloth/Qwen3.6-35B-A3B-MTP-GGUF) so that it runs on most machines but is also complex enough to count as a "modern LLM" [^1].
+This is the only model to support here.
+By the end, we'll be able to run prefill at 100 tokens/s and decode at 15 tokens/s, not so bad on a CPU-only machine.
+
+[^1]: The model was released [in April 2026](https://www.marktechpost.com/2026/04/16/qwen-team-open-sources-qwen3-6-35b-a3b-a-sparse-moe-vision-language-model-with-3b-active-parameters-and-agentic-coding-capabilities/).
 
 This blog covers most of the important parts of a local LLM inference engine:
 
-1. The LLM architecture 
-1. Quantization
-2. Fast matrix multiplication
-3. KV cache
+1. The LLM architecture
+2. Quantization
+3. Fast matrix multiplication
+4. KV cache
 
-This blog does not cover:
+But does not cover:
 
-1. GPU acceleration, this is a pure CPU inference engine. GPU is planned for future work.
+1. GPU acceleration, this is a pure CPU inference engine. I'll probably do a GPU follow up later. 
 2. No MTP (speculative decoding), because we are not GPU yet.
-3. Things that are {vendor-specific | closed-source}, e.g., CUDA.
+3. Things that are {vendor-specific | closed-source}, e.g., CUDA, are not covered
 
 ## How to read the name? Qwen3.6-35B-A3B-UD-Q4_K_M.gguf
 
-**Qwen** (pronounced /kwen/) is the model family name, it is from Alibaba, a not so popular Chinease company (in tech world).
+**Qwen** ([pronounced /kwɛn/](https://en.wikipedia.org/wiki/Qwen), like "when" with a "kw") is the model family name; it comes from Alibaba,  a not so popular Chinese company (in tech world).
 
-**3.6** is the version number, before it was 3.5, then 3, so it has been around for a while.
+**3.6** is the version number; previous versions were 3.5 and 3, so the family has been around for a while.
 
-**35B** is the model size. 35 **B**illion is the number of parameters, if each parameter is 8 bits (fp8, or int8), then the model size is about 35GB.
+**35B** is the model size. 35 **B**illion is the number of parameters; if each parameter were 8 bits (fp8 or int8), the model would be about 35 GB.
 
-**A3B** means the model **a**ctivates **3** billion parameters to generate a token. It also means the model is an MoE (Mixture of Experts) model, which is different from dense models where all parameters are activated all the time.
+**A3B** means the model **a**ctivates **3** **B**illion parameters to generate a token. It also implies the model is an MoE (Mixture of Experts) model — unlike dense models where all parameters are activated for every token.
 
-**UD-Q4_K_M** means the model is **q**uantized to **4** bits (Q4), and K_M are quantization schemes (as you may guess there're many ways to quantize a model). UD means the model is [unsloth dynamic quantization](https://unsloth.ai/docs/basics/unsloth-dynamic-2.0-ggufs). Unsloth is a company that does the quantization work.
+**UD-Q4_K_M** means the model is **q**uantized to **4** bits (Q4), and `K_M` is the quantization scheme (there are [many ways to quantize](https://github.com/ggml-org/llama.cpp/wiki/Tensor-Encoding-Schemes) a model). `UD` stands for [Unsloth Dynamic quantization](https://unsloth.ai/docs/basics/unsloth-dynamic-2.0-ggufs); Unsloth is a company that produces these quantized variants.
 
-**gguf** is the model file format. Unlike formats like [`safetensors`](https://huggingface.co/docs/safetensors/index), [`gguf`](https://github.com/ggml-org/ggml/blob/master/docs/gguf.md) is a self-sufficient format that a single file contains all you need to run the model, but really, it's just some metadata and the model weights.
+**gguf** is the model file format. Unlike [`safetensors`](https://huggingface.co/docs/safetensors/index), [`gguf`](https://github.com/ggml-org/ggml/blob/master/docs/gguf.md) is a self-contained format: a single file holds everything you need to run the model. In practice, it's just metadata plus the model weights.
 
 ## What's inside the file?
 
-The file format is pretty boring (as intended), it's basically a metadata to say what the model is, and pairs of tensor info and tensor data, as shown in @fig-gguf-layout.
+The file format is pretty boring (as intended): some metadata describing the model, followed by pairs of tensor info and tensor data, as shown in @fig-gguf-layout.
 
 ![The GGUF file layout](./gguf-layout.excalidraw.png){#fig-gguf-layout width=50%}
 
-The tensor info is stored at the begining of the file, and it points to the actual tensor data through the `offset` and `len` fields:
+The tensor info is stored at the beginning of the file, and points to the actual tensor data through the `offset` and `len` fields:
 ```rust
 struct TensorInfo {
     name: String, // e.g., `blk.3.attn_norm_weight`
@@ -65,9 +67,9 @@ struct TensorInfo {
     len: u64,
 }
 ```
-Note that `dtype` is a per-tensor field, which implies that two tensors in the same file may have different data types (i.e., how to quantize the tensor). 
-This allows some important tensors (e.g., the weights of the embedding) to be stored with more bits (so higher precision), while the rest can be quantized more aggressively.
-As you may guess, per-tensor quantization is a fine art.
+Note that `dtype` is a per-tensor field, which means two tensors in the same file may use different data types (i.e., different quantization schemes).
+This lets us store important tensors (e.g., the embedding weights) with more bits for higher precision, while quantizing the rest more aggressively.
+As you might guess, per-tensor quantization is a fine art.
 
 A closer look at the quantization schemes shows that the model has 6 different types of tensors, more than half of the bytes are quantized to Q4_K:
 ```
@@ -82,18 +84,20 @@ A closer look at the quantization schemes shows that the model has 6 different t
 ```
 
 
-The metadata says a few other things about the model, such as the number of layers, the model family, etc, which is used to describe the model architecture.
+The metadata also encodes the model architecture: the number of layers, the model family, and so on.
 
 ## The model architecture
 
-The model metadata describes architecture details, and it belongs to the Qwen3 next family of models, its architecture and the history can be found [here](https://magazine.sebastianraschka.com/p/the-big-llm-architecture-comparison#§121-expert-size-and-number-of-attention-heads).
+The model belongs to the [Qwen3-Next family](https://huggingface.co/Qwen/Qwen3-Next-80B-A3B-Instruct); for background on the architecture lineage, see [Sebastian Raschka's "Big LLM Architecture Comparison"](https://magazine.sebastianraschka.com/p/the-big-llm-architecture-comparison).
 
-@fig-model-arch is a simplified version of the model architecture and its weights distribution.
-For every token, the model has to find a way to convert it into a embedding vector (with dimension 2048 for this model), and it needs to go through a few layers of computation to get the final output.
+@fig-model-arch is a simplified view of the architecture and its weight distribution.
+For every input token, the model first converts it into an embedding vector (with dimension 2048 for this model), then runs it through several layers of computation to produce the final output.
 
-Qwen3.6 is not a typical transformer, it mixes the so called `DeltaNet` with the conventional `Attention` layers with 3:1 ratio. We will get to the details later, the high level intuition is that attention layer's state (i.e., the KV cache) is quadratic in the number of tokens, while delta net's state is linear, this helps the model to scale to longer context.
+Qwen3.6 is not a typical transformer: it mixes the so-called `DeltaNet` layers with conventional `Attention` layers at a [3:1 ratio](https://vllm.ai/blog/2025-09-11-qwen3-next). We will get to the details later; the high-level intuition is that attention's per-token state (the KV cache) grows linearly with sequence length and its compute is quadratic, while DeltaNet's state is fixed-size — this helps the model scale to longer context.
 
-All qwen3.6 family models follow the same architecture, except that larger models have more layers (e.g., 20 layers instead of 10) and deeper model dimensions (e.g., 5120 instead of 2048).
+All Qwen3.6 family models share this architecture; larger members of the family scale by adding more layers and using a wider hidden dimension (e.g., the Qwen3-Next-80B variant has 48 layers and a 2048 hidden dim).[^arch-note]
+
+[^arch-note]: Qwen3.6-35B-A3B has 40 layers organized as 10 repetitions of (3 DeltaNet + 1 Attention) blocks, so 30 DeltaNet layers and 10 Attention layers. See [the apxml spec page](https://apxml.com/models/qwen36-35b-a3b).
 
 ![The Qwen3.6-35B-A3B model architecture and its weights distribution](./model-arch.png){#fig-model-arch width=100%}
 
@@ -111,166 +115,204 @@ Table below shows the more detailed weights distribution:
   Reported total                  34.66 B      20.60 GiB  100.00%
 ```
 
-MoE blocks are the biggest player here, it occupies 89.4% of the model size, and each MoE block is 469.2 MB.
-However, each MoE block only activates 1/32 of the parameters, while rest of the parameters are activated all the time, so each token needs to activate 0.508M + 1.01B + 272.66M + **32.36B/32** + 0.508M ~= 3B parameters, where the 3B in the name "A3B" comes from.
+MoE blocks dominate: they account for 89.4% of model size, and each MoE block is roughly 469 MB.
+However, each MoE block only activates 1/32 of its parameters (8 of 256 experts per token), while the other components fire for every token. So each token activates approximately 0.508B + 1.01B + 273M + **32.36B / 32** + 0.508B ≈ 3.3B parameters, which rounds to the "3B" in "A3B".[^a3b-count]
 
-There're two stages of a LLM inference: prefill and decode.
-Prefill loads the model once, and initialize the states (e.g., the KV cache), potentially thousands of tokens, which is often compute bound.
-Decode generates tokens one by one, each time it needs to load the model again, which is often memory bound.
-We will discuss them in detail later.
+[^a3b-count]: The official "3B active" figure is computed slightly differently — see the [Qwen3.6 model card](https://huggingface.co/Qwen/Qwen3.6-35B-A3B). The ballpark is the same.
+
+There are two stages of LLM inference: prefill and decode.
+Prefill processes the input prompt (potentially thousands of tokens) in a single forward pass and populates the per-layer state (KV cache, DeltaNet state). It is usually compute-bound.
+Decode generates tokens one at a time, and on each step the full weight matrix must be streamed through the FPUs again, so it is usually memory-bound.
+We'll come back to this distinction later.
 
 ## Token <--> String
 
-Token is a LLM-specific representation of a string, it's not foundamentally different from other representations like ASCII or UTF-8, where `42` means `*` (in ASCII) and `U+1F3D4` means `🏔️` (in Unicode). 
+A token is an LLM-specific representation of a string. It isn't fundamentally different from other representations like ASCII or Unicode, where `42` means `*` (in ASCII) and `U+1F3D4` means `🏔` (in Unicode).
 
-The first thing to look at is the vocabulary table, which is stored in `tokenizer.ggml.tokens` metadata, which is a list of strings.
+The first thing to look at is the vocabulary table, stored in the `tokenizer.ggml.tokens` metadata field as a list of strings.
 The first 8 tokens of this model are: [`!`, `\`, `#`, `$`, `%`, `&`, `'`, `(`].
-This means that 0 refers to `!`, and 7 refers to `(`, and vise versa.
+So token id 0 refers to `!`, id 7 refers to `(`, and so on.
 
 Note that different models may have different vocabulary tables.
-Smaller vocabulary means more tokens are needed to represent the same set of strings.
-Modern LLM tends to have a larger vocabulary, this model has 248,320 vocabulary tokens, which means it needs u32 to represent the token index (u16::MAX is 65,535).[^2]
+A smaller vocabulary means more tokens are needed to represent the same string.
+Modern LLMs tend to have larger vocabularies — this model has 151,936 vocabulary tokens, which exceeds `u16::MAX` (65,535), so the token index must be `u32`.[^2]
 
-[^2]: Anthropic changed their tokenizer in Opus 4.7, which caused [1.46x more tokens](https://simonwillison.net/2026/Apr/20/claude-token-counts/) with the same input.
+[^2]: Anthropic changed their tokenizer in Opus 4.7, which produces [1.46× more tokens](https://simonwillison.net/2026/Apr/20/claude-token-counts/) on the same text input — a hidden ~46% price hike at the same per-token rate.
 
 #### From token to string
 
-From token to string is easy. Given a list of tokens, we simply lookup the strings from the vocabulary and concatenate them.
+Token-to-string is easy: look up each token in the vocabulary and concatenate the strings.
 
-One caveat in streaming output is that one token may be just a partial symbol, which requires a buffer to store multiple tokens before a symbol can be displayed, this happens to unicode symboles more often. 
+The one caveat is streaming output: a single token may represent only a partial UTF-8 sequence, so the decoder needs to buffer bytes until a complete codepoint can be emitted. This is especially common with non-ASCII scripts and emoji.
 
 #### From string to token
 
-From string to token is more complicated, but not foundamentally different from how string compression works. We start with each byte in the input string will correspond to one token, this is by design, and avoids unrepresentable characters.
+String-to-token is more involved, but conceptually similar to how dictionary-based compression works. We start with the property that every byte in the input string has a single-token representation — by design — which guarantees that any input is representable.
 
-Then we apply a few rules to merge tokens, the goal is to pioritize tokens with longer squences, which reduces the total number of tokens. 
+Then we apply [byte-pair encoding (BPE)](https://en.wikipedia.org/wiki/Byte_pair_encoding) merge rules; the goal is to greedily merge adjacent tokens into the longest sequences the vocabulary supports, which reduces the total token count.
 
 
 <details>
-<summary>Actually there's more details to consider</summary>
-1. Pre-processing a string to setences. There's a thing called pre-tokenizer, which tries to split a long string into multiple smaller chunks, so that we don't have tokens that have werid split patterns, e.g., a token that span across two Chinese characters.
-2. It runs a bpe merge of adjacent tokens, which is quite expensive, but reduces the total number of tokens.
-3. Chat templates requires some special tokens like <|system|>, <|user|>, <|assistant|>, etc. When model sees these tokens, it has better semantics of the conversation.
+<summary>Actually there are more details to consider</summary>
+1. **Pre-tokenization.** A pre-tokenizer first splits the input into smaller chunks (along whitespace, punctuation, digits, etc.) so that downstream BPE merges don't span boundaries we'd prefer to keep separate — e.g., a single token that straddles two Chinese characters.
+2. **BPE merge.** We then run a BPE merge over adjacent tokens. It is comparatively expensive but reduces the total token count substantially.
+3. **Chat templates.** Special tokens like `<|im_start|>`, `<|im_end|>`, etc., delimit roles in a conversation; the model uses these to recognize turn structure.
 </details>
 
-Roughly speaking, an LLM is a function that 
+Roughly speaking, an LLM is a function:
 
 ```rust
 fn inference(input: Vec<u32>) -> u32
 ```
 
-## The life of a tensor 
+## The life of a tensor
 
-Once we have the input tokens, the next step is to predict the next token. 
+Once we have the input tokens, the next step is to predict the next token.
 
-There're lots of algorithms and math invovled in this step, but honestly, you don't have to know much about it, you can think of it as a chain of matrix multiplications. 
-It's great that you know what is RoPE, QKV, softmax, RMSNorm, etc., but from inference perspective, we don't really care, knowing them also doesn't help. 
+There are lots of algorithms and math involved, but honestly, you don't need to know most of it — you can think of inference as a chain of matrix multiplications.
+Knowing what RoPE, QKV, softmax, RMSNorm, etc. *do* is cool to talk about, but from an system programmer's perspective it doesn't really matter.
 
-What really matters is the shape of the tensors, because that determines the compute and memory requirements.
+What matters is the **shape of the tensors**, because that determines the compute and memory requirements.
 
-![The life of a tensor, show shape of the tensors only, blue arrow shows the matrix multiplication.](tensor-life.png){#fig-tensor-life width=90%}
+![The life of a tensor — shapes only. Blue arrows are matrix multiplications, grey arrows are everything else.](tensor-life.png){#fig-tensor-life width=90%}
 
-@fig-tensor-life shows the life of a tensor, the blue arrow shows the matrix multiplication, grey arrow shows other math, like normalization, softmax, etc.
+@fig-tensor-life shows the life of a tensor; blue arrows are matrix multiplications, grey arrows are auxiliary math like normalization and softmax.
 
-The first we need to care is the embedding table, which is a 2D tensor of shape [vocabulary_size, embedding_dim], in this case, it's [248320, 2048].
-Converting a token to an embedding is a simple lookup to slice a [1, 2048] tensor.
-This [1, 2048], usually called the activation tensor, is the input and also the output of the rest of the layers.
+The first thing to care about is the embedding table, a 2D tensor of shape `[vocabulary_size, embedding_dim]`, in this case `[151936, 2048]`.
+Converting a token to an embedding is a simple lookup: slice out one row to get a `[1, 2048]` tensor.
+This `[1, 2048]`, usually called the activation tensor, is both the input and the output of every subsequent layer.
 
-The final output convert the [1, 2048] tensor to a [1, 248320] tensor, giving a weight to each token in the vocabulary. We can pick the token with the highest weight as the next token, or use a sampling algorithm like top-k to get variations.
+The final output projection converts the `[1, 2048]` activation into a `[1, 151936]` tensor, assigning a logit to each token in the vocabulary. We can pick the token with the highest logit as the next token, or use a sampling algorithm like top-k / top-p / temperature sampling to get variation.
 
-The rest of the blocks, i.e., attention, delta net, and the moe blocks, all take [1, 2048] as input and [1, 2048] as output, internally it's a chain of matrix multiplications with some supplementary math like normalization, softmax, etc.
+The rest of the blocks — attention, DeltaNet, and the MoE blocks — all take `[1, 2048]` as input and produce `[1, 2048]` as output; internally each is a chain of matrix multiplications with some supplementary math like normalization and softmax.
 
-The above case discuss a single token, which is the case of decode, for prefill, it's really the same, except that it's not [1, 2048], but [n, 2048]. The rest of the math is the same.
-
-Note that a matrix multiply with `[1, 2048]` (as in the decode case) is usually called "GEM**V**" (General Matrix **Vector** Multiplication), while a matrix multiply with `[n, 2048]` (as in the prefill case) is usually called "GEM**M**" (General Matrix **Matrix** Multiplication). The math is identical but the implementation is completely different, because shape matters.
-GEMV is memory bound, because each weight is loaded once, multiplied with one activation, and never reused, the matrix is streamed row by row from RAM.
-GEMM is often compute bound, because each weight is now reused across `n` activation columns. Once `n` is large enough that we can keep a weight tile in registers / L1 and sweep it across multiple output columns, the arithmetic intensity goes above the machine's compute-to-bandwidth ratio, and the FPU becomes the bottleneck.
+The above describes a single token (the decode case); prefill is the same except the activation is `[n, 2048]` rather than `[1, 2048]`. The math is unchanged.
 
 ## Reading the first tensor
 
-In an ideal world, every tensor is a simple f32 tensor, and matrix multiplication is simple and well optimized.
+In an ideal world, every tensor would be a simple f32 tensor, and matrix multiplication would be simple and well-optimized.
 
-But f32 is too expensive, for our 35B model, if everything is f32, we need 35B * 4 = 140GB of memory.
-Additionally, it turns out that f32 is quite overkill for practical LLM inference, we can downscale the precision to 8 bits with almost no loss of accuracy, and it turns out that even 4 bits can retain most of the information.
+But f32 is too expensive: for our 35B model, going all-f32 would require 35B × 4 = 140 GB of memory.
+On top of that, f32 is overkill for practical LLM inference — we can drop to 8 bits with almost no loss of accuracy, and even 4 bits retains most of the information.[^quant-quality]
 
-Using smaller bits to represent weights not only reduces the memory footprint, but often makes the compute faster, especially for GEMV, where the memory bandwidth is the bottleneck, less memory to load means faster.
+[^quant-quality]: Q4_K_M typically [retains ~92% of the original FP16 model's quality](https://vucense.com/dev-corner/gguf-quantization-explained-q4-k-m-vs-q8-0-vs-f16-2026/) at roughly 25% of the bytes; Q8_0 is "essentially lossless" with perplexity drift around 0.01.
 
-But this makes the computation more complicated, especially that the file contains a mix of different quantization schemes, but we will get to that later.
+Using fewer bits per weight not only reduces the memory footprint but often makes compute *faster*, especially for GEMV, where memory bandwidth is the bottleneck — less data to load means a shorter critical path.
 
-As discussed above, the model has six types of tensors, here we only discuss two representative ones: `Q8_0` and `Q4_K`.
+The flip side is that the matmul itself gets more complicated, especially since the file contains a mix of quantization schemes. We'll come back to that.
+
+As listed earlier, the model has six tensor types; here we only discuss two representative ones: `Q8_0` and `Q4_K`.
 
 ### Q8_0 block
 
-@fig-q8-0 shows a `Q8_0` block, it's the simplest quantization scheme, we take a f32 precision value, and devide by a scale value, then round to the nearest integer. Dequantization is the reverse, we simply multiply the quantized value by the scale value.
-The scale is calculated to be the maximum absolute value divided by 127, so that the quantized values are in the range [-127, 127].
+@fig-q8-0 shows a `Q8_0` block. It's the simplest quantization scheme: take an fp32 value, divide by a scale, and round to the nearest integer. Dequantization is the reverse — multiply the quantized value by the scale.
+The scale is chosen as `max(|w|) / 127`, so the quantized values land in `[-127, 127]`.
+Each block holds 32 weights plus a single fp16 scale, packed into 2 + 32 = 34 bytes ([source: llama.cpp `block_q8_0` definition](https://github.com/ggml-org/llama.cpp/wiki/Tensor-Encoding-Schemes)).
 
 ![A `Q8_0` block: 32 weights stored in 34 bytes (8.5 bits / weight).](q8_0.png){#fig-q8-0 width=80%}
 
 ### Q4_K block
 
-`Q4_0` is similar to `Q8_0`, except that it uses 4 bits as the weight precision, and in fact `Q4_0` is also widely used in practice. But there're two problems with `Q4_0`.
+`Q4_0` is similar to `Q8_0`, except it uses 4 bits per weight; in fact `Q4_0` is also widely used. But it has two problems.
 
-The first problem is that it assumes the weights are symmetrically distributed around 0, which is not always the case. Consider if all weights are positive, and we still use `int8` to represent them, we then waste half of the precision.
-Consider when all weights are positive, and we still use `int8` to represent them, we then waste half of the precision.
-To fix this, we simply shift the weights by the minimum value, so that the weights are all non-negative, and use unsigned integer to represent them.
+The first problem is that it assumes weights are symmetrically distributed around 0, which is not always the case. If, for example, all weights in a block are positive and we still use a signed `int4` representation, we waste half of the representable range.
+To fix this, we shift the weights by their minimum, so that the shifted weights are all non-negative, and use an unsigned integer to represent them.
 
-But this means that we need to store two f16 values: the scale and the min, and if only 32 weights share the same scale and min, it's wasteful; if more weight share the same scale and min, we can easily have one outlier that dominates the scale, causing inbalanced quantization.
+But now we need to store *two* fp16 values per block — the scale and the min. If only 32 weights share these two parameters, the overhead is large; if many more weights share them, a single outlier can dominate the scale and produce unbalanced quantization.
 
-@fig-q4-k shows the key idea behind `Q4_K`: each 32 weights (sub-block) has a pair of scale and min, it then uses a super block to quantize the scale and the min, so that each scale and min only costs 6 bits (instead of 16 bits), and we can pack 8 pairs of them into 12 bytes, and finally have f16 precision for the super-block's scale and min.
+@fig-q4-k shows the key idea behind `Q4_K`: each group of 32 weights (a sub-block) has its own scale and min, and a 256-weight super-block re-quantizes those sub-block scales and mins to 6 bits each (packed into 12 bytes for 8 pairs), with the super-block storing a pair of fp16 values (`d` and `dmin`) to decode them. See the [llama.cpp tensor encoding wiki](https://github.com/ggml-org/llama.cpp/wiki/Tensor-Encoding-Schemes) for the exact layout.
 
 ![A `Q4_K` super-block: 256 weights stored in 144 bytes (4.5 bits / weight).](q4_k.png){#fig-q4-k width=90%}
 
 ### fp32 vs fp16 vs bf16 vs fp8?
 
-Now it's a good time to talk about fp16 [^3] and bf16.
+Now is a good time to talk about fp16[^3] and bf16.
 
 [^3]: fp16 is sometimes called f16.
 
-As @fig-float-formats shows, they are really simple: every floating number has three parts: sign, exponent, and mantissa.
-The exponent controls the range of the value, the mantissa controls the precision.
+As @fig-float-formats shows, they're really simple: every floating-point number has three parts — sign, exponent, and mantissa.
+The exponent controls the range of representable values; the mantissa controls the precision.
 
-`bf16` and `fp16` are two different ways to cut `fp32` in half: `bf16` keeps 8-bit exponent (so it has the same range, but loses precision), but `fp16` shrinks the exponent to 5 bits (so it has a smaller range, but keeps more precision).
-Similarly, `fp8 E5M2` keeps 5-bit exponent, while `fp8 E4M3` gives up another exponent bit to save precision.
+`bf16` and `fp16` are two different ways to cut `fp32` in half: `bf16` keeps the 8-bit exponent (so the same range as fp32, but loses mantissa precision), while `fp16` shrinks the exponent to 5 bits (smaller range, but more mantissa bits).
+Similarly, `fp8 E5M2` keeps a 5-bit exponent, while `fp8 E4M3` trades one exponent bit for more precision.
 
-![Float formats: they are just different recipes to combine sign, exponent, and mantissa.](float-formats.png){#fig-float-formats width=80%}
+![Float formats: just different recipes for combining sign, exponent, and mantissa.](float-formats.png){#fig-float-formats width=80%}
 
-Use `fp16` when you need more precision, like the case in our `Q4_K` block; use `bf16` when you don't want to worry about overflow, popular for LLM training.
+Use `fp16` when you need more precision, as in the per-super-block scale of our `Q4_K`; use `bf16` when you want to match fp32's range and not worry about overflow — that's why it's popular for LLM training.
 
-There's something special about `bf16`: it's almost trivial to convert between `bf16` and `fp32`: just shift the bits left/right by 16 bits.
+There's something special about `bf16`: [converting between `bf16` and `fp32` is almost trivial](https://en.wikipedia.org/wiki/Bfloat16_floating-point_format). bf16 → fp32 is a 16-bit left shift (zero-pad the low mantissa bits); fp32 → bf16 is a 16-bit right shift (truncate or round-to-nearest the low 16 bits).
+
+### How to structure the code?
+
+As we've discussed, we don't care about the exact math here, but we do care about the shape of the matrices—and it's better to encode what we care about directly into the type system.
+
+So instead of writing code like this, which is very much like Python and makes me nervous: it's unclear about the shape of the tensors, and whether their quantization scheme and shape matches.
+
+```rust
+fn matmul(x: Tensor, w: Tensor) -> Tensor
+```
+
+This is the interface I liked: 
+```rust
+fn matmul<const IN: usize, const OUT: usize, N>(
+      x: &Act<Self, N, IN>,
+      w: &QWeight<Self, IN, OUT>,
+) -> Act<Self, N, OUT>
+```
+
+Each tensor is strongly typed with its shape and quantization scheme. If the shapes of two tensors don't match, the code won't even compile!
+
+We can similarly encode shapes into our layer and model definitions:
+
+```rust
+pub struct GatedAttentionBlock<B: Backend> {
+    k_weight: QWeight<B, D_MODEL, KV_DIM>,
+    v_weight: QWeight<B, D_MODEL, KV_DIM>,
+    ...
+    q_norm_gamma: Dense<B, 1, HEAD_DIM>,
+    k_norm_gamma: Dense<B, 1, HEAD_DIM>,
+}
+```
+
+The rest of the code follows the same philosophy: encode the constraints we care about directly into the type system! 
 
 ## Matrix multiplication
 
 Now comes the elephant in the room: matrix multiplication.
 
-Before we judge any approach, let's first build a mental model of what performance we should expect. For two matrices `[a, b]` and `[b, c]`, it's not too hard to see that:
+Before judging any approach, let's first build a mental model of what performance we should expect. For two matrices `[a, b]` and `[b, c]`, it's not too hard to see that:
 ```text
 Optimal compute: 2 * a * b * c = 2abc FLOPs
 Optimal memory: ab + bc + ac
 ```
-We have to read both inputs once, write the output once, and do `b` multiply-adds for each of the `a*c` output entries. Anything more than this is overhead.
+We have to read both inputs once, write the output once, and do `b` multiply-adds for each of the `a*c` output entries. Anything more is overhead.
+
+Note: A matrix multiply with `[1, 2048]` (the decode case) is usually called "GEM**V**" (General Matrix-**V**ector Multiplication), while a multiply with `[n, 2048]` (the prefill case) is "GEM**M**" (General Matrix-**M**atrix Multiplication). The math is identical but the implementation is completely different, because shape matters.
+GEMV is memory-bound: each weight is loaded from RAM, multiplied with one activation, and never reused — the weight matrix is streamed row by row.
+GEMM is often compute-bound: each weight is now reused across `n` activation columns. Once `n` is large enough that we can keep a weight tile in registers / L1 and sweep it across multiple output columns, arithmetic intensity rises above the machine's compute-to-bandwidth ratio, and the FPU becomes the bottleneck.
 
 ### Naive dequant-then-multiply is bad
 
-The simplest way is to dequantize both sides to fp32, run the good old GEMM, and quantize the result back. This works, but it throws away most of what we got from quantization. Every 0.5-byte `Q4_K` weight expands to 4 bytes of fp32 traffic before we even start multiplying, that's an 8x blowup of the memory we worked so hard to compress. On top of that we pay `~2 * (ab + bc)` extra FLOPs for the dequantization itself.
+The simplest approach is to dequantize both sides to fp32, run the good old GEMM, and quantize the result back. This works, but it throws away most of what we got from quantization. Every 0.5-byte `Q4_K` weight expands to 4 bytes of fp32 traffic before we even start multiplying — an 8× blowup of the memory we worked so hard to compress. On top of that, we pay `~2 * (ab + bc)` extra FLOPs for the dequantization itself.
 
-For GEMV this is catastrophic, because GEMV is memory bound. If we expand weights to fp32 we're back to where we started before quantizing anything. So we want to multiply directly on the quantized weights, without ever materializing fp32 in between.
+For GEMV this is catastrophic, because GEMV is memory-bound. If we expand weights to fp32, we're back to where we started before quantizing anything. So we want to multiply directly on the quantized weights, without ever materializing fp32 in between.
 
 ### Picking the activation format
 
 The weights are pre-quantized in the file, but the activation tensor (`[1, 2048]` for decode, `[n, 2048]` for prefill) is computed at runtime, so we get to choose its format.
 
-`bf16` is the natural carrier between layers: same range as fp32, half the size, and softmax/norm are happy with it. But it's not the right format inside the matmul itself, because no CPU has a native `bf16 × q4` multiplier.
+`bf16` is the natural carrier between layers: same range as fp32, half the size, and softmax/norm are happy with it. But it's not the right format *inside* the matmul itself, because no CPU has a native `bf16 × q4` multiplier.
 
-The instruction we do have, on both AVX-VNNI (`vpdpbusd`) and ARM (`vdotq_s32` / `i8mm`), is the integer dot product: `u8 × i8 → i32`, vectorized over 16 lanes at a time. So inside the matmul we want both operands as 8-bit integers:
+The instruction we *do* have, on both [AVX-VNNI (`VPDPBUSD`)](https://en.wikichip.org/wiki/x86/avx512_vnni) and ARM ([`USDOT`, available via `i8mm`](https://developer.arm.com/architectures/instruction-sets/intrinsics/vusdotq_s32)), is the integer dot product: `u8 × i8 → i32`, accumulating 4 byte-products into each 32-bit lane. On AVX-512 VNNI a single `VPDPBUSD` produces 16 `i32` lanes per 512-bit register; on AVX-VNNI (256-bit) it produces 8 lanes; on Neon with `USDOT` it produces 4 lanes per 128-bit register. So inside the matmul we want both operands as 8-bit integers:
 
-- `Q4_K` weights are 4-bit unsigned, unpacking each nibble into a `u8` is basically free.
-- Activations need to be `i8`, so we quantize bf16 to `Q8_K`. Its 256-weight super-block lines up exactly with `Q4_K`, and `Q8_K` also caches per-sub-block sums of the activation, which we'll see in a moment is exactly what we need.
+- `Q4_K` weights are 4-bit unsigned; unpacking each nibble into a `u8` is essentially free.
+- Activations need to be `i8`, so we quantize bf16 to `Q8_K`. Its 256-weight super-block lines up exactly with `Q4_K`, and `Q8_K` also caches per-sub-block sums of the activation, which — as we'll see in a moment — is exactly what we need.
 
 ### The smart 
 
-Now we can narrow the problem down to this: **we have a 32-weight sub-block of `Q4_K` and the matching sub-block of `Q8_K`, how do we efficiently dot product?**
+We can now narrow the problem down to this: **we have a 32-weight sub-block of `Q4_K` and the matching sub-block of `Q8_K`. How do we efficiently dot-product them?**
 
-For `Q4_K` each dequantized weight is $w_l = q_l \cdot s_l - m_l$, where $q_l$ is `u8` and $s_l, m_l$ are fp32 scales reconstructed from the 6-bit packed sub-block scales and the super-block's fp16 `d` and `dmin`. For `Q8_K` each activation is $w_r = q_r \cdot s_r$, Q8 is symmetric so there's no min term.
+For `Q4_K`, each dequantized weight is $w_l = q_l \cdot s_l - m_l$, where $q_l$ is `u8` (range 0–15) and $s_l, m_l$ are fp32 sub-block scale and min reconstructed from the 6-bit packed values and the super-block's fp16 `d` and `dmin`. For `Q8_K` each activation is $w_r = q_r \cdot s_r$ — Q8_K is symmetric, so there's no min term.
 
 The dot product over the sub-block expands as:
 
@@ -280,65 +322,67 @@ $$
 \;-\; m_l \cdot s_r \cdot \underbrace{\sum_i q_r[i]}_{\text{i8 sum, precomputed by Q8\_K}}
 $$
 
-Two integer reductions, then two multiply-adds in fp32. The expensive part, the 32-term dot product, never leaves integer land, exactly what the SIMD instruction is good at. The second term, $\sum q_r$, is already cached inside the `Q8_K` block (the `bsums` field) when we quantized the activation, so it's just a load, not a runtime reduction. This is the whole reason `Q8_K` exists.
+Two integer reductions, then two multiply-adds in fp32. The expensive part — the 32-term dot product — never leaves integer land, which is exactly what the SIMD instruction is good at. The second term, $\sum q_r$, is already cached inside the `Q8_K` block (the [`bsums` field](https://deepwiki.com/ggml-org/llama.cpp/6.3-quantization-techniques)) when we quantized the activation, so it's just a load, not a runtime reduction. This is the whole reason `Q8_K` exists.
 
 ### Putting it together
 
-Honestly you don't need to understand every details here, the key is to know that there's a storage reality -- weights are quantized to save memory, and there's a compute reality -- hardware can only do certain operations in certain shapes.
+You don't need to understand every detail here. The key idea is that there's a storage reality — weights are quantized to save memory — and there's a compute reality — hardware can only do certain operations on certain shapes.
 
-The goal of everything we talked about is to make a delicate balance: nudge the both sides of formats a bit, choose a right instruction set to be both efficient and without too much overhead.
+The goal of everything above is a delicate balance: nudge both sides a bit, pick a good instruction and move the formats a little bit.
 
-![The key of efficient matrix multiplication is to choose an efficient instruction and nudge the formats to match the requirements of the instruction.](matrix-mat.png){#fig-matrix-mat width=80%}
+![The key to efficient matrix multiplication: pick a fast instruction, then nudge the operand formats to match its requirements.](matrix-mat.png){#fig-matrix-mat width=80%}
 
-## The state: KV Cache and DeltaNet states
+## The state: KV cache and DeltaNet state
 
-As a system programmer, I don't like the name "KV Cache", it sounds like a KV store (e.g., Redis) but it's not key or value; here the K and V are the name of two matrices.
+As a systems programmer, I don't love the name "KV cache" — it sounds like a key-value store (e.g., Redis), but it's neither a key nor a value in that sense. Here, `K` and `V` are the names of two matrices in the attention layer.
 
-Remember we said llm inference is a function that looks like this:
+Recall that LLM inference is a function:
 ```rust
 fn inference(input: Vec<u32>) -> u32
 ```
-Meaning that the inference function is stateless, where does the state come from?
-Well, because we're not just generating a single token, but a sequence of tokens, it looks more like this:
+which is stateless — so where does the state come from?
+Well, because we're not generating a single token but a sequence of them, the real loop looks more like this:
 
 ```rust
 loop {
-  token = inference(input);
+  let token = inference(&input);
   input.push(token);
-  if token == EOF {
+  if token == EOS {
     break;
   }
 }
 ```
-This means that each inference adds one token to the input, as we generate more tokens, the inference has to process longer input.
-The observation here is that there's quite a bit redundant computation in the model's state, which can be avoided by caching them. 
-KV cache is the most well known, and delta net is specific to Qwen models.
+Each inference appends one token to the input, so the next call processes a longer input.
+The observation is that most of the per-token state from prior inferences can be reused — recomputing it on every step is wasted work.
+KV cache is the most well-known such state; DeltaNet state is specific to the Qwen3-Next family.
 
-@fig-kv-cache shows the state of the Qwen model: KV Cache and DeltaNet states. Note that both state are per-layer, not per model.
-The KV cache is a matrix of shape [n, 512] for each token, and for both k and v respectively. This means that the KV cache grows linearly with the number of tokens. This means that each token adds about 2KB of memory to the layer. Since we have 40 layers, and 10 attention layers, the cost of a token is 20KB.
-The DeltaNet state is a fixed-shape matrix [4096, 128], but each of the element is a fp32 value, so the total size is 4096 * 128 * 4 = 2MB.
-This is the reason we have DeltaNet, it's a fixed-size state and doesn't grow with context length, which keep the memory and compute cost low over long context workloads.
+@fig-kv-cache shows the state of the Qwen model: KV cache and DeltaNet state. Note that both states are per-layer, not per model.
+For each attention layer, the KV cache stores a `K` matrix of shape `[n, 512]` and a `V` matrix of shape `[n, 512]`, where `n` is the number of tokens seen so far (Qwen3.6-35B-A3B uses 2 KV heads × 256 head dim = 512). The KV cache grows linearly with the number of tokens, so at bf16 each new token adds 2 × 512 × 2 bytes = 2 KB per attention layer. With 10 attention layers (out of 40 total layers), each token costs 20 KB of KV-cache memory.
 
-![The state of the LLM model: KV Cache and DeltaNet states. Note that both state are per-layer, not per model.](kv-cache.png){#fig-kv-cache width=50%}
+The DeltaNet state is a fixed-shape matrix `[4096, 128]` of fp32 values, so 4096 × 128 × 4 = 2 MB per layer regardless of context length.
+That's the whole point of DeltaNet: its state has a fixed size, so memory and compute stay bounded even on long-context workloads.
 
-Note that each token add one row to the KV cache. This row depends and only depends on all previous tokens, this means that "java" and "javascript" will have the same KV cache row for the first 4 tokens (assuming each charater is a token), this is very convinent because we can save the kv cache for "javascript" and slice the first 4 rows to get the kv cache for "java".
+![The state of the LLM model: KV cache and DeltaNet state. Both states are per-layer, not per-model.](kv-cache.png){#fig-kv-cache width=50%}
 
-## Performance 
+Note that each token adds exactly one row to the KV cache, and that row depends only on the preceding tokens. This means "java" and "javascript" share the same first four KV-cache rows (assuming each character is a token), which is very convenient: we can save the KV cache for "javascript" and slice off the first four rows to get the KV cache for "java". This is what powers prefix caching in production serving systems.
+
+## Performance
 
 ### Fuse kernels
 
-Fusing kernels is basically to combine two operations into one, this either reduces memory traffic or use better instructions.
-For example, multiply-then-add can be fused into a single instruction.
+Kernel fusion combines two operations into one, either to reduce memory traffic or to use a better instruction.
+For example, multiply-then-add can be fused into a single FMA (fused multiply-add) instruction, which both halves the instruction count and avoids rounding the intermediate product.
 
 ### SIMD instructions
 
-In the matrix multiplication, we already used SIMD instructions to vectorize the computation.
+In the matrix multiplication section, we already used SIMD instructions to vectorize the inner loop.
 
-Generally speaking, there're two popular ways to leverage SIMD instructions:
-1. auto vectorization by the compiler. LLVM does a pretty good job here. 
-2. explicit simd instructions. auto vectorization is a black box, there are two reasons it doesn't work: 1. compiler is conservative, it may or may not use the instructions we wanted, 2. we write code in a pattern that the compiler doesn't recognize. I often prefer explicit SIMD instructions, because for performance critical code, you really want to know what's exactly being used.
+Broadly, there are two ways to leverage SIMD:
 
-A explicit SIMD code looks like this. It looks intimidating at first, but it's really just a combination of load, multiply, add, and reduce instructions, and you don't need to write your own, ask codex to do it for you.
+1. Auto-vectorization by the compiler. LLVM does a pretty good job here.
+2. Explicit SIMD intrinsics. Auto-vectorization is a black box; it can fail to fire for two reasons: (1) the compiler is conservative and may not pick the instruction we want, or (2) we wrote the loop in a pattern the compiler doesn't recognize. For performance-critical code I tend to prefer explicit intrinsics, because you want to know exactly what is being emitted.
+
+An explicit SIMD kernel looks like the following. It looks intimidating at first, but it's really just a sequence of load / multiply / add / reduce instructions, and you don't need to hand-write it — ask Codex or Claude to draft it for you and then verify.
 
 ```rust
 for n in 0..n_rows {
@@ -361,21 +405,21 @@ for n in 0..n_rows {
 
 ### Multi-threading
 
-Multi-threading here is not different from other systems, and the first thing to consider is how to partition the work.
-The simplest way is to partition the work by number of users, i.e., each user has a thread which runs the entire inference from start to end.
+Multi-threading here is not very different from other systems; the first question is how to partition the work.
+The simplest scheme is to partition by user: each request gets a thread that runs the entire inference end-to-end.
 
-A more interesting question to ask is what is the lowest inference latency we can achieve, from the perspective of a user, i.e., time-to-first-token.
-To optimize this, we need to parallelize within a single inference.
+A more interesting question is what the lowest single-user latency (time-to-first-token) we can achieve looks like.
+To optimize that, we need to parallelize *within* a single inference.
 
-The cost model here: creating a thread costs (?) time, so we want to have a thread pool to avoid creating and destroying threads too often.
-Contention on the same memory is bad, so we want to partition our work so that each thread works on their own working set.
+The cost model: thread creation is expensive (microseconds, sometimes more), so we use a thread pool to avoid creating and destroying threads on each call.
+Contention on shared memory hurts, so we want to partition work so each thread owns its own working set.
 
 ### How did we do?
 
-My machine can do 55GB/s memory bandwidth, and that's the goal we should strive for.
+My machine has roughly 55 GB/s of usable memory bandwidth, which is the ceiling we should aim for in memory-bound kernels.
 
-Table below shows the overall end to end performance, and per kernel performance.
-The biggest two kernels are `qmatmul` and `moe_routed_experts`, and their effective bandwidth is already close to the hardware limit, we have done a good job.
+The table below shows end-to-end performance and per-kernel performance.
+The two biggest kernels are `qmatmul` and `moe_routed_experts`, and their effective bandwidth is already close to the hardware limit — we've done a good job.
 
 ```text
 bench: model/Qwen3.6-MTP-35B-A3B-UD-Q4_K_M.gguf
@@ -404,8 +448,7 @@ cpu:
 
 ## Source code
 
-Honestly, nobody is going to read and use this source code, just send codex this blog post and ask it to write a inference engine for you. 
+Honestly, no one is going to read and reuse this source code. Just send Codex (or Claude) this blog post and ask it to write an inference engine for you.
 
-The goal of this blog post is to help _you_ (as a human being) to understand one layer below the LLM inference engine, so that you can be not so afraid of the code generated by codex/claude.
-
+The point of this post is to help *you* — as a human — understand the layer beneath the LLM inference engine, so you're a little less afraid of the code Codex generates for you.
 
