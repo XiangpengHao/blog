@@ -17,6 +17,7 @@ Today, software is going through the shift from painting to photography. Almost 
 
 This post records my reasoning about what remains valuable in the age of AI.
 
+### The ultimate value
 The ultimate value of everything is to bring joy to breathing humans. 
 
 I break "joy to breathing humans" down along two independent questions: am I able to do a thing, and am I willing to do it? These two axes give four types of valuable things.
@@ -86,4 +87,4 @@ AI impact:
 
 Almost every company spans all four quadrants; the two axes are just a way to project a complicated world into familiar language.
 
-Again, the ultimate value is to bring joy to human beings. For most things, **humans have always been the bottleneck**. AI changes a few trade-offs, but not many.
+Again, the ultimate value is to bring joy to human beings. At average scale, **humans have always been the bottleneck**. AI changes a few trade-offs, but not many.
