@@ -9,8 +9,90 @@
 <link>https://blog.xiangpeng.systems/</link>
 <atom:link href="https://blog.xiangpeng.systems/index.xml" rel="self" type="application/rss+xml"/>
 <description></description>
-<generator>quarto-1.9.38</generator>
-<lastBuildDate>Mon, 08 Jun 2026 00:00:00 GMT</lastBuildDate>
+<generator>quarto-1.10.18</generator>
+<lastBuildDate>Wed, 30 Sep 2026 00:00:00 GMT</lastBuildDate>
+<item>
+  <title>What is worth doing?</title>
+  <link>https://blog.xiangpeng.systems/posts/what-is-worth-doing/</link>
+  <description><![CDATA[ 
+
+
+
+
+
+<p>Building software used to be like painting: you need a good idea of what to paint, but most importantly, you need the skill to paint it.</p>
+<p>Today, software is going through the shift from painting to photography. Almost everything has changed, and most painting skills are now irrelevant. But some things stay the same: you still need to know what is worth capturing.</p>
+<p>This post records my reasoning about what remains valuable in the age of AI.</p>
+<p>The ultimate value of everything is to bring joy to breathing humans.</p>
+<p>I break “joy to breathing humans” down along two independent questions: am I able to do a thing, and am I willing to do it? These two axes give four types of valuable things.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="https://blog.xiangpeng.systems/posts/what-is-worth-doing/figure.png" class="img-fluid figure-img" style="width:50.0%"></p>
+<figcaption>Four valuable things: Infra, Tools, Services, Entertainment; they fall along two axes: can do, and want to do.</figcaption>
+</figure>
+</div>
+<section id="cant-do-and-unwilling-to-do" class="level3">
+<h3 class="anchored" data-anchor-id="cant-do-and-unwilling-to-do">Can’t do, and unwilling to do</h3>
+<p><strong>Infra</strong> hides the things we’re unable and unwilling to do.</p>
+<p>The value of infra is offloading accountability to another <strong>person</strong>. <a href="../../posts/stop-building-agent-systems/">Machines can never be accountable, so infra must be operated by real humans.</a> The value of infra is measured by how much we trust the people who operate it, not the technology or anything else.</p>
+<p>AI impact:</p>
+<ol type="1">
+<li>It seems everyone can now vibe their own infra, e.g., a custom query engine, table format, or storage engine. But writing the code is one thing; being accountable for it is another. Our ability to write code has grown 100x, but our ability to be accountable for a system has barely changed.</li>
+<li>The moat of infra is reliability. Cheap and fast matter, but everyone will eventually do well enough: they are measurable, so LLMs can optimize for them. Reliability is a complex mix of engineering and human involvement, and no LLM can train on it.</li>
+<li>We will learn these lessons slowly and painfully. It might take long enough to kill infra companies that do the right thing.</li>
+</ol>
+<p>Infra has a small moat, because all it does is make things disappear. Ultimately, all infra providers are the same, and people can easily switch between them. Airlines, SSD vendors, and today’s token providers are critical to our lives, but they are also bad businesses.</p>
+<p>Highly profitable infra companies pivot to tooling.</p>
+</section>
+<section id="cant-do-but-want-to-do" class="level3">
+<h3 class="anchored" data-anchor-id="cant-do-but-want-to-do">Can’t do, but want to do</h3>
+<p><strong>Tools</strong> empower us to do things that would otherwise be hard or impossible.</p>
+<p>Good tools are like infra: they hide complexity. But unlike infra, tools are visible. They interact directly with humans and become part of the workflow, which is why they are sticky (moat).</p>
+<p>Infra is easy to build but hard to maintain. Tools are the opposite: extremely hard to build, but they need almost no human effort once built.</p>
+<p>AI impact:</p>
+<ol type="1">
+<li>Many people think they can vibe their own tools, or cute custom software. This might work at a very small scale, but building tools ultimately demands the scarcest human resource: taste. Taste is not measurable, so it can’t be trained.</li>
+<li>LLMs help most those who have taste, and amplify slop for those who don’t.</li>
+<li>Selling tools is much less viable than before. Tooling is becoming more like art: it’s very hard to come up with a good one, but once you do, everyone just copies or vibes their own.</li>
+<li>Tools have less moat than before, because they are increasingly consumed by LLM agents rather than humans. Agents care about functionality, not ergonomics, and functionality is a much simpler problem than ergonomics.</li>
+</ol>
+<p>Over time, tooling companies pivot to services.</p>
+</section>
+<section id="can-do-but-unwilling-to-do" class="level3">
+<h3 class="anchored" data-anchor-id="can-do-but-unwilling-to-do">Can do, but unwilling to do</h3>
+<p><strong>Service</strong> companies do things on your behalf.</p>
+<p>Services are like tools: they help you achieve a goal. But tools empower you to achieve it, while services achieve it for you and take it off your mind.</p>
+<p>Services are also like infra: they simplify your life by giving you one less thing to pay attention to. But services are customized to each need, often optional, and charge a much higher premium than the underlying infra. Infra is hardcore and generic: something you have to pay for, but not much.</p>
+<p>AI impact:</p>
+<ol type="1">
+<li>It’s much more viable to vibe your own services than your own infra.</li>
+<li>Like infra, the value of services is offloading attention to another person. So services will never go away; instead, they will become more expensive.</li>
+<li>Unlike tools, services will still be consumed by humans. It makes no sense to offload an LLM agent’s attention; agents are cheap and never get tired.</li>
+</ol>
+</section>
+<section id="can-do-and-want-to-do" class="level3">
+<h3 class="anchored" data-anchor-id="can-do-and-want-to-do">Can do, and want to do</h3>
+<p><strong>Entertainment</strong> is the hardest to automate, because it is always human-to-human. Sure, we love many AI videos and AI art, but we know a human made them. We love seeing a human use AI as a tool to express themselves.</p>
+<p>Humans can sense how much human is behind the content. People feel disgusted and disrespected when they find out the content is entirely AI-made.</p>
+<p>AI impact:</p>
+<ol type="1">
+<li>Entertainment has the highest moat: AI alone will never make anything humans appreciate.</li>
+<li>As a tool, AI can empower individuals to make great content that was never possible before.</li>
+<li>Entertainment will become much less capital-heavy, and service companies that help talented individuals will become more important.</li>
+</ol>
+</section>
+<section id="closing-words" class="level3">
+<h3 class="anchored" data-anchor-id="closing-words">Closing words</h3>
+<p>Almost every company spans all four quadrants; the two axes are just a way to project a complicated world into familiar language.</p>
+<p>Again, the ultimate value is to bring joy to human beings. For most things, <strong>humans have always been the bottleneck</strong>. AI changes a few trade-offs, but not many.</p>
+
+
+</section>
+
+ ]]></description>
+  <guid>https://blog.xiangpeng.systems/posts/what-is-worth-doing/</guid>
+  <pubDate>Wed, 30 Sep 2026 00:00:00 GMT</pubDate>
+</item>
 <item>
   <title>A system programmer’s guide to LLM inference</title>
   <link>https://blog.xiangpeng.systems/posts/how-to-llm-inference/</link>

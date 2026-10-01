@@ -2,6 +2,7 @@
   {
     "listing": "/index.html",
     "items": [
+      "/posts/what-is-worth-doing/index.html",
       "/posts/how-to-llm-inference/index.html",
       "/posts/phd-mistakes/index.html",
       "/posts/parquet-linter/index.html",
