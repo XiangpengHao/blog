@@ -2,6 +2,7 @@
   {
     "listing": "/index.html",
     "items": [
+      "/posts/bbtree/index.html",
       "/posts/what-is-worth-doing/index.html",
       "/posts/how-to-llm-inference/index.html",
       "/posts/phd-mistakes/index.html",

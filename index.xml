@@ -9,8 +9,930 @@
 <link>https://blog.xiangpeng.systems/</link>
 <atom:link href="https://blog.xiangpeng.systems/index.xml" rel="self" type="application/rss+xml"/>
 <description></description>
-<generator>quarto-1.10.18</generator>
-<lastBuildDate>Wed, 30 Sep 2026 00:00:00 GMT</lastBuildDate>
+<generator>quarto-1.10.19</generator>
+<lastBuildDate>Fri, 23 Oct 2026 00:00:00 GMT</lastBuildDate>
+<item>
+  <title>bbtree: fastest ordered map</title>
+  <link>https://blog.xiangpeng.systems/posts/bbtree/</link>
+  <description><![CDATA[ 
+
+
+
+
+
+<div class="page-columns page-full"><blockquote class="blockquote">
+<p>B-trees are by far the most important access path structure in database and file systems. — <a href="https://en.wikipedia.org/wiki/Jim_Gray_(computer_scientist)">Jim Gray</a> and Andreas Reuter<sup>1</sup></p>
+</blockquote><div class="no-row-height column-margin column-container"><div id="fn1"><p><sup>1</sup>&nbsp;Jim Gray and Andreas Reuter, <em>Transaction Processing: Concepts and Techniques</em> (1993), as quoted by Goetz Graefe in <a href="https://doi.org/10.1561/1900000028">Modern B-Tree Techniques</a> (2011).</p></div></div></div>
+<p><strong>bbtree</strong> is by far the fastest B-tree (that I’m aware of):</p>
+<ol type="1">
+<li>5× faster than std’s <code>BTreeMap</code> on a single thread, 12× faster than <code>crossbeam-skiplist</code> at 96 threads.</li>
+<li>30% lower memory usage.</li>
+<li>Zero dependencies, <code>no_std</code> compatible.</li>
+<li><code>bbtree::unsync::BBTreeMap</code> is a drop-in replacement for std’s <code>BTreeMap</code>/<code>BTreeSet</code>.</li>
+<li>Production-ready by formal verification, model checking, deterministic simulation, fuzzing, and lots of testing.</li>
+<li>Brought to you by decades of database research and careful curation by <a href="https://xiangpeng.systems">Xiangpeng Hao</a>.</li>
+</ol>
+<div class="tabset-margin-container"></div><div class="panel-tabset column-page-right">
+<ul class="nav nav-tabs"><li class="nav-item"><a class="nav-link active" id="tabset-1-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-1" aria-controls="tabset-1-1" aria-selected="true" href="">Single thread</a></li><li class="nav-item"><a class="nav-link" id="tabset-1-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-2" aria-controls="tabset-1-2" aria-selected="false" href="">Concurrent</a></li><li class="nav-item"><a class="nav-link" id="tabset-1-3-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-3" aria-controls="tabset-1-3" aria-selected="false" href="">End to End</a></li><li class="nav-item"><a class="nav-link" id="tabset-1-4-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-4" aria-controls="tabset-1-4" aria-selected="false" href="">Memory</a></li><li class="nav-item"><a class="nav-link" id="tabset-1-5-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-5" aria-controls="tabset-1-5" aria-selected="false" href="">Architectures</a></li></ul>
+<div class="tab-content">
+<div id="tabset-1-1" class="tab-pane active" aria-labelledby="tabset-1-1-tab">
+<p><img src="https://blog.xiangpeng.systems/posts/bbtree/card-single-thread.png" class="img-fluid" alt="Mean time per get, one thread, 10M entries, on u64, UUID, Wikipedia title and JSON keys: bbtree against std's BTreeMap, scc TreeIndex, concurrent-map, crossbeam SkipMap and std's HashMap."></p>
+</div>
+<div id="tabset-1-2" class="tab-pane" aria-labelledby="tabset-1-2-tab">
+<p><img src="https://blog.xiangpeng.systems/posts/bbtree/card-concurrent.png" class="img-fluid" alt="Gets of u64 keys per second from 1 to 96 threads: bbtree and its batched lookups against DashMap, scc TreeIndex, concurrent-map, crossbeam SkipMap and RwLock<BTreeMap>."></p>
+</div>
+<div id="tabset-1-3" class="tab-pane" aria-labelledby="tabset-1-3-tab">
+<p><img src="https://blog.xiangpeng.systems/posts/bbtree/card-end-to-end.png" class="img-fluid" alt="Time per operation with bbtree, relative to as shipped, in fjall, Turso, SlateDB, Tonbo and Lance."></p>
+</div>
+<div id="tabset-1-4" class="tab-pane" aria-labelledby="tabset-1-4-tab">
+<p><img src="https://blog.xiangpeng.systems/posts/bbtree/card-memory.png" class="img-fluid" alt="Resident memory for 10M u64 entries: bbtree, std's BTreeMap, crossbeam SkipMap, scc TreeIndex, concurrent-map and DashMap."></p>
+</div>
+<div id="tabset-1-5" class="tab-pane" aria-labelledby="tabset-1-5-tab">
+<p><img src="https://blog.xiangpeng.systems/posts/bbtree/card-architectures.png" class="img-fluid" alt="Mean time per UUID get, std's BTreeMap against bbtree, on Ryzen 9 9900X, Core i5-11400, Apple M1 Pro, AWS C8i and AWS Graviton5."></p>
+</div>
+</div>
+</div>
+<p>These are snapshots; the <a href="https://bbtree.xiangpeng.systems/post/">interactive version</a> switches between keys and workloads. The code is at <a href="https://github.com/XiangpengHao/bbtree">XiangpengHao/bbtree</a>.</p>
+<section id="what-can-it-do" class="level2 page-columns page-full">
+<h2 class="anchored" data-anchor-id="what-can-it-do">What can it do?</h2>
+<p>B-trees are the most important data structure in big data systems, a fast b-tree like <code>bbtree</code> benefits everything on top of it: agents memory, LLM training, RAG, KV store, state caching, vector search, and more.</p>
+<p>Here we discuss three representative use cases:</p>
+<ol type="1">
+<li><strong>Replace skiplist in LSM-trees.</strong> In place of the skiplist of four LSM-trees, <code>bbtree</code> is 1.37–6.83× faster.</li>
+<li><strong>In-memory database index.</strong> In place of Turso’s skiplists, inserts are 2.22× and indexed <code>SELECT</code>s 1.90× faster.</li>
+<li><strong>Mmap a bbtree from disk.</strong> No rebuild after a restart: the first answer comes 160–2,500× sooner than std’s <code>BTreeMap</code>.</li>
+</ol>
+<section id="case-1-faster-memtable" class="level3 page-columns page-full">
+<h3 class="anchored" data-anchor-id="case-1-faster-memtable">Case 1: faster memtable</h3>
+<p>All LSM-trees use an ordered map to hold recent writes in memory, the memtable. In Rust, this ordered map is usually a skiplist, like <code>crossbeam-skiplist</code>.</p>
+<p><code>bbtree</code> can easily replace it and is much faster. A skiplist takes a cache miss for almost every node it visits on its way down; a <code>bbtree</code> lookup touches a handful of cache lines (see How it works, below).</p>
+<p><code>bbtree</code> has a similar interface as <code>crossbeam-skiplist</code> but simpler: there is no epoch, no need to worry about when to pin or re-enter an epoch.</p>
+<p><code>bbtree</code> allows more advanced memory management:</p>
+<ol type="1">
+<li>Custom allocator is supported on day one.</li>
+<li>It never allocates on irregular sizes (i.e., not a power of two): memory management stays easy, with no external fragmentation<sup>2</sup>.</li>
+<li>Allocation failure can be gracefully handled.</li>
+</ol>
+<div class="no-row-height column-margin column-container"><div id="fn2"><p><sup>2</sup>&nbsp;Remzi H. Arpaci-Dusseau and Andrea C. Arpaci-Dusseau, <a href="https://pages.cs.wisc.edu/~remzi/OSTEP/vm-freespace.pdf">Free-Space Management</a>, chapter 17 of <em>Operating Systems: Three Easy Pieces</em>: external fragmentation is free space chopped into pieces of different sizes, so that a request can fail although the total would fit it.</p></div></div><p>We integrated <code>bbtree</code> into four LSM-trees, on each system’s own benchmarks:</p>
+<ol type="1">
+<li><a href="https://github.com/fjall-rs/fjall">fjall</a>: gets 2.47×, inserts 1.61×, write batches 3.00×.</li>
+<li><a href="https://github.com/slatedb/slatedb">SlateDB</a>: gets 1.71×, puts 1.65×, write batches of 10 rows 2.36×.</li>
+<li><a href="https://github.com/tonbo-io/tonbo">Tonbo</a>: 10M-row writes 6.83×, conflict-checked transactions 4.10×.</li>
+<li><a href="https://github.com/lance-format/lance">Lance</a>’s MemWAL index (its own skiplist): point lookups 2.19×, batched lookups 3.94×, batched puts 4.21×.</li>
+</ol>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="https://blog.xiangpeng.systems/posts/bbtree/end-to-end.svg#light" class="img-fluid figure-img"></p>
+<figcaption>The LSM-trees of the End to End card: each system’s own benchmark, one thread, Ryzen 9 9900X. The dark bar is the time per operation as shipped, the bright one inside it with <code>bbtree</code>; only the map changed.</figcaption>
+</figure>
+</div>
+</section>
+<section id="case-2-database-index" class="level3">
+<h3 class="anchored" data-anchor-id="case-2-database-index">Case 2: database index</h3>
+<p>A database’s tables change while they are read: rows are inserted, updated and deleted between queries, and every index of a table changes with it. An in-memory database keeps each in an ordered map, which has to stay sorted under these writes.</p>
+<p><a href="https://github.com/tursodatabase/turso">Turso</a>, SQLite rewritten in Rust, keeps its MVCC store in memory: its tables’ rows and its indexes’ entries, each in a <code>crossbeam-skiplist</code>. With <code>bbtree</code> in their place, on Turso’s own benchmarks:</p>
+<ol type="1">
+<li><code>INSERT</code> of random rowids: 2.22×.</li>
+<li>Indexed point <code>SELECT</code>: 1.90×.</li>
+<li><code>UPDATE</code> in <code>BEGIN CONCURRENT</code>: 1.22×.</li>
+<li>Point <code>SELECT</code> by rowid: 1.16×.</li>
+</ol>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="https://blog.xiangpeng.systems/posts/bbtree/database-index.svg#light" class="img-fluid figure-img"></p>
+<figcaption>Turso on the End to End card: its own benchmark, one thread, Ryzen 9 9900X. The dark bar is the time per operation as shipped, the bright one inside it with <code>bbtree</code>; only the map changed.</figcaption>
+</figure>
+</div>
+</section>
+<section id="case-3-bbtree-mmap" class="level3">
+<h3 class="anchored" data-anchor-id="case-3-bbtree-mmap">Case 3: bbtree-mmap</h3>
+<p><a href="https://crates.io/crates/bbtree-mmap"><code>bbtree-mmap</code></a> allows you to build a bbtree and write it to disk once; when you need it, you can simply mmap it and use it instantly, without rebuilding anything.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1" style="background: #f1f3f5;"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb1-1"><span class="ex" style="color: null;
+background-color: null;
+font-style: inherit;">cargo</span> add bbtree-mmap</span></code></pre></div></div>
+<p><strong>Build a bbtree and save to disk</strong></p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2" style="background: #f1f3f5;"><pre class="sourceCode rust code-with-copy"><code class="sourceCode rust"><span id="cb2-1"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">use</span> <span class="pp" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">bbtree::unsync::</span>BBTreeMap<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">;</span></span>
+<span id="cb2-2"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">use</span> <span class="pp" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">bbtree_mmap::</span>BBTreeMapFile<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">;</span></span>
+<span id="cb2-3"></span>
+<span id="cb2-4"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">let</span> names <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> <span class="pp" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">BBTreeMap::</span>from([(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">7_u64</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span> <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">String</span><span class="pp" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">::</span>from(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"ferris"</span>))<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span> (<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">42</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span> <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">String</span><span class="pp" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">::</span>from(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"corro"</span>))])<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">;</span></span>
+<span id="cb2-5"><span class="pp" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">BBTreeMapFile::</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&lt;</span><span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">u64</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span> <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">String</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&gt;</span><span class="pp" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">::</span>create(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"names.bbtree"</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&amp;</span>names)<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">?;</span></span></code></pre></div></div>
+<p><strong>Mmap bbtree and query it immediately</strong></p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3" style="background: #f1f3f5;"><pre class="sourceCode rust code-with-copy"><code class="sourceCode rust"><span id="cb3-1"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">use</span> <span class="pp" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">bbtree_mmap::</span>BBTreeMapFile<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">;</span></span>
+<span id="cb3-2"></span>
+<span id="cb3-3"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">let</span> names <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">unsafe</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{</span> <span class="pp" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">BBTreeMapFile::</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&lt;</span><span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">u64</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span> <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">String</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&gt;</span><span class="pp" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">::</span>mmap(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"names.bbtree"</span>)<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span>open()<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">?</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">};</span></span>
+<span id="cb3-4"><span class="pp" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">assert_eq!</span>(names<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span>get(<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&amp;</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">42</span>)<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span> <span class="cn" style="color: #8f5902;
+background-color: null;
+font-style: inherit;">Some</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"corro"</span>))<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">;</span></span></code></pre></div></div>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="https://blog.xiangpeng.systems/posts/bbtree/first-query.svg#light" class="img-fluid figure-img"></p>
+<figcaption>Time to the first answer after a restart, 10M <code>u64</code> entries, Ryzen 9 9900X. std’s <code>BTreeMap</code> reads its file back and rebuilds; <code>bbtree-mmap</code> maps its file and reads only the pages the lookup touches.</figcaption>
+</figure>
+</div>
+</section>
+</section>
+<section id="how-it-works" class="level2 page-columns page-full">
+<h2 class="anchored" data-anchor-id="how-it-works">How it works?</h2>
+<p>Every performance optimization should be guided by a cost model.</p>
+<p>B-tree optimizations are simple, three easy pieces<sup>3</sup>: we just need to remember three principles, in order:</p>
+<div class="no-row-height column-margin column-container"><div id="fn3"><p><sup>3</sup>&nbsp;Not more complicated than an operating system! Remzi H. Arpaci-Dusseau and Andrea C. Arpaci-Dusseau, <a href="https://pages.cs.wisc.edu/~remzi/OSTEP/">Operating Systems: Three Easy Pieces</a> (2016).</p></div></div><ol type="1">
+<li>The number of <strong>chained cache lines</strong> touched. A cache miss costs about 100 ns.</li>
+<li>The number of <strong>instructions</strong> executed. An instruction costs about 0.5 ns.</li>
+<li>The amount of <strong>cache coherence traffic</strong>, especially important for concurrent access. It forces a cache miss, and costs a little more than 100 ns.</li>
+</ol>
+<section id="minimize-cache-misses" class="level3 page-columns page-full">
+<h3 class="anchored" data-anchor-id="minimize-cache-misses">1. Minimize cache misses</h3>
+<p>With this cost model, it’s clear that the most important optimization is to minimize the number of cache misses. To put it another way, for each cache miss, we want to narrow down the search space as much as we can.</p>
+<section id="thought-experiment-binary-search-vs-linear-search" class="level4">
+<h4 class="anchored" data-anchor-id="thought-experiment-binary-search-vs-linear-search">Thought experiment: binary search vs linear search</h4>
+<p>Say we have a sorted array of <code>u64</code>s, and we want to find a target <code>u64</code>.</p>
+<p>With binary search, each cache miss narrows down the search space by half.</p>
+<p>With linear search, each cache miss narrows down the search space by <code>cache_line_size / item_size</code> items, which is 64 / 8 = 8.</p>
+<p>So the break-even point is about 16 items, where binary search costs the same as linear search: two cache misses to find the target.</p>
+<p>But there’s a catch: 1. the CPU prefetcher may fetch the next cache lines on its own, which gives linear search an even bigger advantage; 2. linear search is simpler, allowing much more parallelism in the CPU pipeline. So the actual break-even point is usually higher.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="https://blog.xiangpeng.systems/posts/bbtree/search-space.svg#light" class="img-fluid figure-img"></p>
+<figcaption>64 sorted <code>u64</code>s, 8 to a cache line. Each step is one cache miss: binary search halves what is left, linear search rules out one line. Here binary search needs 3 misses and linear search 6; at 16 items, both need at most 2.</figcaption>
+</figure>
+</div>
+</section>
+<section id="how-does-that-apply-to-b-trees" class="level4 page-columns page-full">
+<h4 class="anchored" data-anchor-id="how-does-that-apply-to-b-trees">How does that apply to B-trees?</h4>
+<p>In a B-tree, this decides the node size<sup>4</sup>. If we size nodes so that each holds about 16–32 items, we can always do linear search, which lets us do nice things like SIMD (in later sections).</p>
+<div class="no-row-height column-margin column-container"><div id="fn4"><p><sup>4</sup>&nbsp;Jun Rao and Kenneth A. Ross, <a href="https://doi.org/10.1145/342009.335449">Making B+-Trees Cache Conscious in Main Memory</a> (SIGMOD 2000).</p></div></div><p><strong>What if the keys are Strings?</strong> <code>String</code>s are different, because their bytes are stored on the heap, not inline in the node. This changes our equation completely. We no longer get 8 keys from one cache miss; instead, each key we load is its own cache miss. So we almost always want to do binary search over <code>String</code>s.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="https://blog.xiangpeng.systems/posts/bbtree/string-keys.svg#light" class="img-fluid figure-img"></p>
+<figcaption>A node of <code>String</code>s holds each key’s pointer, length and capacity; its bytes are on the heap. Every comparison of a binary search follows a pointer: 3 heap reads to find one key of 8.</figcaption>
+</figure>
+</div>
+<p><strong>How does <code>bbtree</code> do it?</strong> Heap keys are very common, so <code>bbtree</code> must handle them well. <code>bbtree</code> introduces <code>inline_keys</code>, an idea databases have used for decades<sup>5</sup><sup>6</sup>, similar to German strings<sup>7</sup> and <code>StringView</code> in Arrow<sup>8</sup>.</p>
+<div class="no-row-height column-margin column-container"><div id="fn5"><p><sup>5</sup>&nbsp;Goetz Graefe and Per-Åke Larson, <a href="https://doi.org/10.1109/ICDE.2001.914847">B-Tree Indexes and CPU Caches</a> (ICDE 2001).</p></div><div id="fn6"><p><sup>6</sup>&nbsp;Goetz Graefe, <a href="https://doi.org/10.1561/1900000070">More Modern B-Tree Techniques</a> (2024): keep full keys out of the comparison stream with dense, fixed-width codes, and skip the prefix a page shares.</p></div><div id="fn7"><p><sup>7</sup>&nbsp;Thomas Neumann and Michael Freitag, <a href="https://db.in.tum.de/~freitag/papers/p29-neumann-cidr20.pdf">Umbra: A Disk-Based System with In-Memory Performance</a> (CIDR 2020); see also my post on <a href="https://blog.xiangpeng.systems/posts/nature-of-string/">the nature of strings</a>.</p></div><div id="fn8"><p><sup>8</sup>&nbsp;Xiangpeng Hao and Andrew Lamb, Using StringView / German Style Strings to Make Queries Faster: <a href="https://datafusion.apache.org/blog/2024/09/13/string-view-german-style-strings-part-1/">Part 1, Reading Parquet</a> and <a href="https://datafusion.apache.org/blog/2024/09/13/string-view-german-style-strings-part-2/">Part 2, String Operations</a> (2024).</p></div></div><p>With fixed-size inline keys, we get back the benefit of one cache miss loading 8 (or more) keys. And we only load the full key when the comparison ties.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="https://blog.xiangpeng.systems/posts/bbtree/inline-keys.svg#light" class="img-fluid figure-img"></p>
+<figcaption>The same node with inline keys: the first 8 bytes of every key, 64 bytes, one cache line. One compare of all of them leaves a single candidate, and only it is read from the heap.</figcaption>
+</figure>
+</div>
+<p><strong>What about keys with long prefixes?</strong> Many keys, like URLs and paths, have long prefixes. If we just take the first 8 bytes as the inline key, we may compare nothing at all. <code>bbtree</code> addresses this with <code>prefix_keys</code>: the common prefix of all keys in a node<sup>9</sup>. The beauty of <code>prefix_keys</code> is that no node has to store them. Every key in a node sorts between the two separators on either side of the node in its parent. So if those two separators share their first 20 bytes, every key in the node starts with the same 20 bytes.</p>
+<div class="no-row-height column-margin column-container"><div id="fn9"><p><sup>9</sup>&nbsp;Rudolf Bayer and Karl Unterauer, <a href="https://doi.org/10.1145/320521.320530">Prefix B-Trees</a> (TODS 1977).</p></div></div><div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="https://blog.xiangpeng.systems/posts/bbtree/prefix-keys.svg#light" class="img-fluid figure-img"></p>
+<figcaption>Neighboring Wikipedia titles. The parent’s two separators share their first 20 bytes, so every key of the child does too. Over the first 8 bytes, the keys all tie; past the shared 20, they all differ.</figcaption>
+</figure>
+</div>
+<p>So each node only stores the length of its prefix, and keeps the window of each key right after it, which makes inline keys far more effective.</p>
+<p><strong>How does this apply to other key types, and how does it work with Rust’s type system?</strong></p>
+<p>It’s clear that <code>String</code> and <code>Vec&lt;u8&gt;</code> benefit from this optimization. But integers like <code>u64</code> and <code>u128</code> can too; we just need to mind the endianness: stored big-endian, their bytes sort in the same order as the numbers.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="https://blog.xiangpeng.systems/posts/bbtree/integer-keys.svg#light" class="img-fluid figure-img"></p>
+<figcaption>Four keys of one leaf of a tree of 10M random <code>u64</code>s, as bytes: the prefix its separators share, which the leaf skips; the 2 bytes it keeps as each inline key; and the rest, read only on a tie.</figcaption>
+</figure>
+</div>
+<p>For other key types, like compound keys in structs, users can implement the <code>InlineKey</code> trait, and when they do, we use the inline keys wherever we can.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4" style="background: #f1f3f5;"><pre class="sourceCode rust code-with-copy"><code class="sourceCode rust"><span id="cb4-1"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">pub</span> <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">trait</span> InlineKey<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">:</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">Ord</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{</span></span>
+<span id="cb4-2">    <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">/// How many bytes of each inline key the nodes keep: 2, 4 or 8.</span></span>
+<span id="cb4-3">    <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">const</span> WIDTH<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">:</span> InlineWidth <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> <span class="pp" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">InlineWidth::</span>Eight<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">;</span></span>
+<span id="cb4-4"></span>
+<span id="cb4-5">    <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">/// Bytes `offset..offset + 8` of the key's encoding, big-endian,</span></span>
+<span id="cb4-6">    <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">/// zero past its end, which orders as the keys do.</span></span>
+<span id="cb4-7">    <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">fn</span> inline_key_at(<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&amp;</span><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">self</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span> offset<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">:</span> <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">usize</span>) <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-&gt;</span> InlineWord<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">;</span></span>
+<span id="cb4-8"><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">}</span></span>
+<span id="cb4-9"></span>
+<span id="cb4-10"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">// A compound key, ordered by customer, then order: its encoding is</span></span>
+<span id="cb4-11"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">// both fields' bytes, one after the other.</span></span>
+<span id="cb4-12"><span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">#[</span>derive<span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">(</span><span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">PartialEq</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">Eq</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">PartialOrd</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">Ord</span><span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">)]</span></span>
+<span id="cb4-13"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">struct</span> OrderKey <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{</span></span>
+<span id="cb4-14">    customer<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">:</span> <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">u32</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span></span>
+<span id="cb4-15">    order<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">:</span> <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">u32</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span></span>
+<span id="cb4-16"><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">}</span></span>
+<span id="cb4-17"></span>
+<span id="cb4-18"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">impl</span> InlineKey <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">for</span> OrderKey <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{</span></span>
+<span id="cb4-19">    <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">fn</span> inline_key_at(<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&amp;</span><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">self</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span> offset<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">:</span> <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">usize</span>) <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-&gt;</span> InlineWord <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{</span></span>
+<span id="cb4-20">        <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">let</span> <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">mut</span> bytes <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> [<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">;</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">16</span>]<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">;</span></span>
+<span id="cb4-21">        bytes[<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">..</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">4</span>]<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span>copy_from_slice(<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&amp;</span><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">self</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span>customer<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span>to_be_bytes())<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">;</span></span>
+<span id="cb4-22">        bytes[<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">4</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">..</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">8</span>]<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span>copy_from_slice(<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&amp;</span><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">self</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span>order<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span>to_be_bytes())<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">;</span></span>
+<span id="cb4-23">        <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">let</span> start <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> offset<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span>min(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">8</span>)<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">;</span></span>
+<span id="cb4-24">        <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">u64</span><span class="pp" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">::</span>from_be_bytes(bytes[start<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">..</span>start <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">+</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">8</span>]<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span>try_into()<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span>unwrap())</span>
+<span id="cb4-25">    <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">}</span></span>
+<span id="cb4-26"><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">}</span></span>
+<span id="cb4-27"></span>
+<span id="cb4-28"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">let</span> orders<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">:</span> BBTreeMap<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&lt;</span>OrderKey<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span> <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">u64</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span> _<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&gt;</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span></span>
+<span id="cb4-29">    <span class="pp" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">BBTreeMap::</span>with_strategy(WithInlineKey)<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">;</span></span></code></pre></div></div>
+<p>The trickiest part is Rust’s type system. If we required every key type to implement <code>InlineKey</code>, <code>bbtree</code> couldn’t be a drop-in replacement for std’s <code>BTreeMap</code>/<code>BTreeSet</code>. Nightly Rust has <code>specialization</code><sup>10</sup> for exactly this. For stable Rust, we specialize the common types by hand: <code>u64</code>, <code>i64</code>, <code>u128</code>, <code>i128</code>, <code>String</code>, <code>str</code>, <code>&amp;str</code>, <code>Vec&lt;u8&gt;</code>, <code>&amp;[u8]</code>, <code>Box&lt;str&gt;</code>, <code>Box&lt;[u8]&gt;</code>, <code>[u8; 16]</code>, <code>[u8; 20]</code> and <code>[u8; 32]</code>. So without any extra work, the built-in types are optimized, and users can still implement the trait for their own types to get the full benefit.</p>
+<div class="no-row-height column-margin column-container"><div id="fn10"><p><sup>10</sup>&nbsp;<a href="https://rust-lang.github.io/rfcs/1210-impl-specialization.html">RFC 1210: impl specialization</a>, unstable since 2016 (<a href="https://github.com/rust-lang/rust/issues/31844">tracking issue</a>).</p></div></div></section>
+<section id="results" class="level4">
+<h4 class="anchored" data-anchor-id="results">Results</h4>
+<p>After these optimizations, we can show how many cache lines a lookup touches.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="https://blog.xiangpeng.systems/posts/bbtree/cache-lines.svg#light" class="img-fluid figure-img"></p>
+<figcaption>Cache lines brought in from memory per lookup that finds its key, 10M entries, one thread, Ryzen 9 9900X; lower is better.</figcaption>
+</figure>
+</div>
+</section>
+<section id="bonus-batch-mode-using-rusts-async-state-machines" class="level4 page-columns page-full">
+<h4 class="anchored" data-anchor-id="bonus-batch-mode-using-rusts-async-state-machines">Bonus: batch mode using Rust’s async state machines</h4>
+<p>So far we have focused on maximizing the value of a cache miss: packing as much information as possible into one cache line.</p>
+<p>There’s a more advanced optimization: hiding the cost of cache misses.</p>
+<p>The simplest way to hide latency is software prefetching: while working on one key, we prefetch the next one. This usually works well, but it isn’t enough for B-trees.</p>
+<p>This is because a <strong>B-tree’s memory accesses are fundamentally chained</strong>: you don’t know which node to fetch next until you have searched the current one.</p>
+<p>But B-trees are often read or built in batches, which lets us play a trick with Rust’s async state machines. A batch is one call with many keys, such as <code>BBTreeMap</code>’s <a href="https://docs.rs/bbtree/latest/bbtree/struct.BBTreeMap.html#method.get_many_copied"><code>get_many_copied</code></a> and <a href="https://docs.rs/bbtree/latest/bbtree/struct.BBTreeMap.html#method.insert_many"><code>insert_many</code></a>: an array of keys in, an array of answers out.</p>
+<p>The high-level idea is simple: in Rust we often treat an IO operation as a <code>Future</code>, and <code>await</code> it. In <code>bbtree</code>, we treat a cache miss as a <code>Future</code>, and <code>await</code> it too. Database research has interleaved lookups like this for years, by hand and with coroutines<sup>11</sup>.</p>
+<div class="no-row-height column-margin column-container"><div id="fn11"><p><sup>11</sup>&nbsp;Onur Kocberber, Babak Falsafi and Boris Grot, <a href="https://www.vldb.org/pvldb/vol9/p252-kocberber.pdf">Asynchronous Memory Access Chaining</a> (VLDB 2015); Georgios Psaropoulos et al., <a href="https://www.vldb.org/pvldb/vol11/p230-psaropoulos.pdf">Interleaving with Coroutines: A Practical Approach for Robust Index Joins</a> (VLDB 2017); Christopher Jonathan et al., <a href="https://www.vldb.org/pvldb/vol11/p1702-jonathan.pdf">Exploiting Coroutines to Attack the “Killer Nanoseconds”</a> (VLDB 2018).</p></div></div><p>The code looks roughly like this (they run in a single thread):</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5" style="background: #f1f3f5;"><pre class="sourceCode rust code-with-copy"><code class="sourceCode rust"><span id="cb5-1"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">fn</span> get_many<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&lt;</span><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">const</span> N<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">:</span> <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">usize</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&gt;</span>(<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&amp;</span><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">self</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span> keys<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">:</span> [<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&amp;</span>K<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">;</span> N]) <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-&gt;</span> [<span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">Option</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&lt;</span>V<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&gt;;</span> N] <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{</span></span>
+<span id="cb5-2">    <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">let</span> lanes <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> keys<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span>map(<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">|</span>key<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">|</span> <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">self</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span>search(key))<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">;</span></span>
+<span id="cb5-3">    block_on(join_all(lanes))</span>
+<span id="cb5-4"><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">}</span></span></code></pre></div></div>
+<p>And <code>search</code> looks like this:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6" style="background: #f1f3f5;"><pre class="sourceCode rust code-with-copy"><code class="sourceCode rust"><span id="cb6-1"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">async</span> <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">fn</span> search(<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&amp;</span><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">self</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span> key<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">:</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&amp;</span>K) <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-&gt;</span> <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">Option</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&lt;</span>V<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&gt;</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{</span></span>
+<span id="cb6-2">    <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">let</span> <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">mut</span> node <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">self</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span>root()<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">;</span></span>
+<span id="cb6-3">    <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">while</span> node<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span>is_internal() <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{</span></span>
+<span id="cb6-4">        <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">let</span> edge <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> node<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span>search(key)<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">;</span></span>
+<span id="cb6-5">        node <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> node<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span>child(edge)<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">;</span></span>
+<span id="cb6-6">        prefetch(node<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span>header())<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">await</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">;</span></span>
+<span id="cb6-7">    <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">}</span></span>
+<span id="cb6-8">    node<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span>get(key)</span>
+<span id="cb6-9"><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">}</span></span></code></pre></div></div>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="https://blog.xiangpeng.systems/posts/bbtree/batch-lanes.svg#light" class="img-fluid figure-img"></p>
+<figcaption>Four <code>u64</code> keys looked up together on one core, each key’s search a task, from bbtree’s own run of the batch; time is counted in turns. In its turn, a task reads the line it prefetched, steps down the tree, prefetches the next line and yields; while that line is on its way, the core runs the other tasks.</figcaption>
+</figure>
+</div>
+<p>But we need to be very careful:</p>
+<ol type="1">
+<li>A cache miss costs 100 ns, so our <code>Future</code> must be as lightweight as possible. This means we can’t use <code>tokio</code> or any general-purpose async runtime, because their overhead is already higher than a cache miss. <code>bbtree</code> polls its lanes with a tiny executor of its own: no allocation, no runtime.</li>
+<li>Each async function in Rust is a state machine generated at compile time. We want this state machine to be as small as possible, so that switching between states is cheap.</li>
+<li>There’s no way to know whether a cache line is already in cache, so we have to guess. In <code>bbtree</code> that’s not so hard: once the leaves outgrow the L2 cache, a leaf is almost always a cache miss; smaller trees look their keys up one at a time.</li>
+</ol>
+</section>
+</section>
+<section id="minimize-instructions" class="level3 page-columns page-full">
+<h3 class="anchored" data-anchor-id="minimize-instructions">2. Minimize instructions</h3>
+<p>In general, minimizing instructions means reducing CPU time, which means two things: 1. reducing the instruction count; 2. reducing branches.</p>
+<p>A mispredicted branch costs about 20 cycles (the time of 20 instructions), about 10% of a cache miss.</p>
+<section id="binary-search-vs-linear-search-again" class="level4 page-columns page-full">
+<h4 class="anchored" data-anchor-id="binary-search-vs-linear-search-again">Binary search vs linear search, again</h4>
+<p>With inline keys, searching a node means searching a small array of small integers: 2 bytes a key for integers and UUIDs, 4 to 8 for strings. Now let’s compare their instructions and branches over a node of 32 keys:</p>
+<ol type="1">
+<li>Binary search: about 5 steps, each a compare and a branch, and the CPU typically guesses wrong half of the time. A branchless binary search<sup>12</sup> avoids the guess, but then each step waits for the one before.</li>
+<li>Linear search, without its early exit, becomes a count: compare the target with every key, and count the keys smaller than it; that number is the child to follow. It does more compares, but none branches or waits for another, a perfect fit for the CPU pipeline.</li>
+</ol>
+<div class="no-row-height column-margin column-container"><div id="fn12"><p><sup>12</sup>&nbsp;Paul-Virak Khuong and Pat Morin, <a href="https://arxiv.org/abs/1509.05053">Array Layouts for Comparison-Based Searching</a> (2017).</p></div></div><div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="https://blog.xiangpeng.systems/posts/bbtree/key-count.svg#light" class="img-fluid figure-img"></p>
+<figcaption>Looking up 45 among seven inline keys, all in one cache line: neither search takes another miss. The count compares all of them at once: four are smaller, so it follows child 4. Binary search reaches child 4 after three compares, each waiting for the one before; over 32 keys, it takes about five.</figcaption>
+</figure>
+</div>
+</section>
+<section id="how-does-bbtree-search" class="level4 page-columns page-full">
+<h4 class="anchored" data-anchor-id="how-does-bbtree-search">How does <code>bbtree</code> search?</h4>
+<p>With SIMD, searching a node takes a handful of instructions<sup>13</sup>. One AVX-512 instruction compares the target with 32 two-byte keys at once; its result is a 32-bit mask, a bit a key, and the number of ones in the mask, its popcount, is the answer:</p>
+<div class="no-row-height column-margin column-container"><div id="fn13"><p><sup>13</sup>&nbsp;Benjamin Schlegel, Rainer Gemulla and Wolfgang Lehner, <a href="https://doi.org/10.1145/1565694.1565705">k-ary Search on Modern Processors</a> (DaMoN 2009).</p></div></div><div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7" style="background: #f1f3f5;"><pre class="sourceCode rust code-with-copy"><code class="sourceCode rust"><span id="cb7-1"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">fn</span> child_index(inline_keys<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">:</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&amp;</span>[<span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">u16</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">;</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">32</span>]<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span> target<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">:</span> <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">u16</span>) <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-&gt;</span> <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">usize</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{</span></span>
+<span id="cb7-2">    <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">let</span> keys <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> _mm512_loadu_epi16(inline_keys<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span>as_ptr()<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span>cast())<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">;</span></span>
+<span id="cb7-3">    <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">let</span> smaller <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span></span>
+<span id="cb7-4">        _mm512_cmplt_epu16_mask(keys<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span> _mm512_set1_epi16(target <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">as</span> <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">i16</span>))<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">;</span></span>
+<span id="cb7-5">    smaller<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span>count_ones() <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">as</span> <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">usize</span></span>
+<span id="cb7-6"><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">}</span></span></code></pre></div></div>
+<p>The function has only three steps, all branchless and super fast:</p>
+<ol type="1">
+<li><code>_mm512_loadu_epi16</code> loads the inline keys into a SIMD register.</li>
+<li><code>_mm512_cmplt_epu16_mask</code> compares them with the target and returns a mask, a bit for each smaller key, in key order (e.g., <code>1111100000000000</code>).</li>
+<li><code>smaller.count_ones()</code> counts the ones in the mask, which is the index of the child to follow. x86 does this in one instruction, <code>popcnt</code>.</li>
+</ol>
+<p>We also implement the same search for ARM in NEON, so Apple Silicon and AWS Graviton work too. On x86, AVX-512 needs <code>-C target-cpu=native</code> (Rust 1.89 or later).</p>
+</section>
+<section id="the-compiler-is-not-your-friend" class="level4 page-columns page-full">
+<h4 class="anchored" data-anchor-id="the-compiler-is-not-your-friend">The compiler is not your friend</h4>
+<p>We often hear “write simple code and let the compiler optimize it”. The extreme version is FastLanes<sup>14</sup>, whose scalar code the compiler automatically vectorizes (generates SIMD code for).</p>
+<div class="no-row-height column-margin column-container"><div id="fn14"><p><sup>14</sup>&nbsp;Azim Afroozeh and Peter Boncz, <a href="https://www.vldb.org/pvldb/vol16/p2132-afroozeh.pdf">The FastLanes Compression Layout: Decoding &gt;100 Billion Integers per Second with Scalar Code</a> (VLDB 2023).</p></div><div id="fn15"><p><sup>15</sup>&nbsp;Lookups of <code>u64</code> keys that hit, in a map of 10M <code>u64</code> entries, one run each on an M1 Pro, with bbtree-eval’s <a href="https://github.com/XiangpengHao/bbtree-eval/tree/main/diagnostics/portable">portable probe</a>, before and after <a href="https://github.com/XiangpengHao/bbtree/blob/main/design/03-decisions.md">decision D56</a>, which counts inline keys in NEON.</p></div></div><p>Here the compiler is not your friend. A node holds few keys, a few dozen at most, and their number is usually not a power of two. The compiler often considers it not worth vectorizing, and sometimes can’t prove it safe, so we write the SIMD by hand, and handle the boundary cases very carefully. On an M1 Pro, the compiler’s own count widened each compare’s result to 64 bits and added them up one at a time. We wrote the count in NEON by hand and changed nothing else: the same tree, the same nodes, the same cache lines. A lookup of a <code>u64</code> key in a map of 10M entries went from 1,678 to 407 instructions, and from 390 to 174 ns.<sup>15</sup></p>
+<p>Vectorization isn’t the only problem: sometimes the compiler generates bad code because it doesn’t know the workload. For example, to compare two <code>&amp;[u8]</code>, Rust calls <code>memcmp</code>, a function call that isn’t inlined. But in <code>bbtree</code>, we know the keys are usually short, so instead of calling <code>memcmp</code>, we load the bytes as integers and compare the integers. Arrow does the same for <code>StringView</code><sup>16</sup><sup>17</sup>.</p>
+<div class="no-row-height column-margin column-container"><div id="fn16"><p><sup>16</sup>&nbsp;Xiangpeng Hao and Andrew Lamb, Using StringView / German Style Strings to Make Queries Faster: <a href="https://datafusion.apache.org/blog/2024/09/13/string-view-german-style-strings-part-1/">Part 1, Reading Parquet</a> and <a href="https://datafusion.apache.org/blog/2024/09/13/string-view-german-style-strings-part-2/">Part 2, String Operations</a> (2024).</p></div><div id="fn17"><p><sup>17</sup>&nbsp;arrow-rs <a href="https://github.com/apache/arrow-rs/pull/7748">#7748</a> compares inlined string views as one <code>u128</code>, and their 4-byte prefixes as one <code>u32</code>, instead of byte by byte.</p></div></div></section>
+<section id="results-1" class="level4">
+<h4 class="anchored" data-anchor-id="results-1">Results</h4>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="https://blog.xiangpeng.systems/posts/bbtree/instructions.svg#light" class="img-fluid figure-img"></p>
+<figcaption>Instructions per lookup that finds its key, 10M entries, one thread, Ryzen 9 9900X; lower is better.</figcaption>
+</figure>
+</div>
+</section>
+</section>
+<section id="minimize-cache-coherence-traffic" class="level3 page-columns page-full">
+<h3 class="anchored" data-anchor-id="minimize-cache-coherence-traffic">3. Minimize cache coherence traffic</h3>
+<p>Cache coherence traffic happens when one core writes to a cache line that other cores hold. To make sure every core sees a consistent view of memory, CPU caches implement a cache coherence protocol<sup>18</sup>. At a very high level, a write to a cache line invalidates all copies of that line in other cores.</p>
+<div class="no-row-height column-margin column-container"><div id="fn18"><p><sup>18</sup>&nbsp;Vijay Nagarajan, Daniel J. Sorin, Mark D. Hill and David A. Wood, <a href="https://doi.org/10.1007/978-3-031-01764-3">A Primer on Memory Consistency and Cache Coherence</a>, second edition (2020).</p></div></div><p>This causes two problems: 1. more cache misses; 2. more importantly, it puts a ceiling on the B-tree’s concurrency.</p>
+<p>On modern hardware, a contended cache line supports at most about 10 M op/s. So if we simply put a <code>Mutex</code> over the B-tree, we reach at most 10 M op/s, while <code>bbtree</code> reaches 180 M op/s at 96 threads.</p>
+<p>Note that a <code>RwLock</code> won’t help: even a read lock must <strong>increment</strong> the lock’s reader count, which is a write to its cache line.</p>
+<p>So how does <code>bbtree</code> solve this?</p>
+<p>The key idea is a version lock<sup>19</sup><sup>20</sup>. Every node carries a version: a reader reads the version, reads the node, and reads the version again. If the version hasn’t changed, what it read is consistent; otherwise, it retries.</p>
+<div class="no-row-height column-margin column-container"><div id="fn19"><p><sup>19</sup>&nbsp;Sang K. Cha, Sangyong Hwang, Kihong Kim and Keunjoo Kwon, <a href="https://www.vldb.org/conf/2001/P181.pdf">Cache-Conscious Concurrency Control of Main-Memory Indexes on Shared-Memory Multiprocessor Systems</a> (VLDB 2001).</p></div><div id="fn20"><p><sup>20</sup>&nbsp;Viktor Leis et al., <a href="https://db.in.tum.de/~leis/papers/artsync.pdf">The ART of Practical Synchronization</a> (DaMoN 2016).</p></div></div><div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="https://blog.xiangpeng.systems/posts/bbtree/version-lock.svg#light" class="img-fluid figure-img"></p>
+<figcaption>Time runs down. Readers only read. Reader 1 finished before the writer changed anything, so its read stands. Reader 2 overlapped the change, finds version 8, and starts over.</figcaption>
+</figure>
+</div>
+<p>This allows very high concurrency, because a read causes no write traffic at all.</p>
+<p>But there are two things we need to be careful about.</p>
+<section id="problem-1-we-can-no-longer-hand-out-a-v-to-the-user" class="level5 page-columns page-full">
+<h5 class="anchored" data-anchor-id="problem-1-we-can-no-longer-hand-out-a-v-to-the-user">Problem 1: we can no longer hand out a <code>&amp;V</code> to the user</h5>
+<p>The value may change, or even be freed, while the user holds the reference, so it’s unsafe to use.</p>
+<p>We can’t return a clone of <code>V</code> either, because <code>V</code> may not be <code>Clone</code>.</p>
+<p>Here we use a trick similar to Bf-Tree’s<sup>21</sup>: only inner nodes are optimistic; leaves are not. This works because (1) contention usually happens at inner nodes, (2) values are stored only in leaves, and (3) leaves are only 20% of the nodes on a lookup’s path (assuming a tree of 5 levels). For <code>Copy</code> values, <code>get_copied</code> goes one step further: it reads the leaf optimistically too, copies the value out, and checks the version after, like a seqlock.</p>
+<div class="no-row-height column-margin column-container"><div id="fn21"><p><sup>21</sup>&nbsp;Xiangpeng Hao and Badrish Chandramouli, <a href="https://www.vldb.org/pvldb/vol17/p3442-hao.pdf">Bf-Tree: A Modern Read-Write-Optimized Concurrent Larger-Than-Memory Range Index</a> (VLDB 2024); code at <a href="https://github.com/microsoft/bf-tree">microsoft/bf-tree</a>.</p></div></div></section>
+<section id="problem-2-memory-reclamation" class="level5 page-columns page-full">
+<h5 class="anchored" data-anchor-id="problem-2-memory-reclamation">Problem 2: memory reclamation</h5>
+<p>The second problem is more subtle: if one thread is reading a node while another thread frees it, the reader may segfault.</p>
+<p>The usual solution is epoch-based memory reclamation<sup>22</sup>, e.g., <code>crossbeam-epoch</code>.</p>
+<div class="no-row-height column-margin column-container"><div id="fn22"><p><sup>22</sup>&nbsp;Keir Fraser, <a href="https://www.cl.cam.ac.uk/techreports/UCAM-CL-TR-579.pdf">Practical Lock-Freedom</a> (PhD thesis, 2004); in Rust, <a href="https://docs.rs/crossbeam-epoch"><code>crossbeam-epoch</code></a>.</p></div></div><p>But then we either leak the epoch to the user, which is ugly and error-prone, or pin an epoch on every access (many libraries do this), which is expensive: every access is a global read and a private write.</p>
+<p>In <code>bbtree</code>, we do it differently: a freed node never goes back to the allocator while the map lives. Instead, the map keeps it on a free list and reuses it for the next node it needs. The node keeps its version through both steps: freeing it bumps the version, reusing it bumps the version again, and a version only grows. So a late reader still reads a node, not arbitrary memory, finds a higher version than it saw, and retries, without any segfault.</p>
+</section>
+<section id="results-2" class="level4">
+<h4 class="anchored" data-anchor-id="results-2">Results</h4>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="https://blog.xiangpeng.systems/posts/bbtree/concurrent-gets.svg#light" class="img-fluid figure-img"></p>
+<figcaption>Gets of <code>u64</code> keys, half of them misses, 10M entries, all threads together, a thread a core, on AWS’s c8a.metal-24xl (96 cores); the Concurrent card above has the other keys and workloads.</figcaption>
+</figure>
+</div>
+<p><code>bbtree</code> is wildly concurrent: its get throughput grows 83–90× as the core count grows to 96, 86–94% of linear scaling. At this thread count, <code>bbtree</code> is even faster than <a href="https://github.com/xacrimon/dashmap">DashMap</a>, a <em>hashtable</em>.</p>
+</section>
+</section>
+</section>
+<section id="how-do-we-make-it-correct" class="level2 page-columns page-full">
+<h2 class="anchored" data-anchor-id="how-do-we-make-it-correct">How do we make it correct?</h2>
+<p>Performance optimization is easy: you simply ask Claude or Codex to make the code 10× faster on a workload. Speed is measurable, and LLMs can iterate on it relentlessly.</p>
+<p>But making sure the code is correct is hard. Correctness is implicit: you can never list every DON’T in the prompt, you can never write enough tests to prove the code correct, and you can never enumerate every property you want to hold.</p>
+<p><code>bbtree</code> has three guards to approach correctness.</p>
+<section id="guard-1-xiangpeng-hao" class="level3 page-columns page-full">
+<h3 class="anchored" data-anchor-id="guard-1-xiangpeng-hao">Guard 1: Xiangpeng Hao</h3>
+<p><a href="https://xiangpeng.systems">Xiangpeng</a> is a real human behind <code>bbtree</code>, and the front line guarding the correctness of its code. All of the code is written by LLMs, but Xiangpeng steers every design decision, and is accountable for the code.</p>
+<p>He spent his PhD writing many, many B-trees, including one that runs in production at Microsoft (Bf-Tree<sup>23</sup>). Choosing <code>bbtree</code> means offloading the attention to Xiangpeng.</p>
+<div class="no-row-height column-margin column-container"><div id="fn23"><p><sup>23</sup>&nbsp;Xiangpeng Hao and Badrish Chandramouli, <a href="https://www.vldb.org/pvldb/vol17/p3442-hao.pdf">Bf-Tree: A Modern Read-Write-Optimized Concurrent Larger-Than-Memory Range Index</a> (VLDB 2024); code at <a href="https://github.com/microsoft/bf-tree">microsoft/bf-tree</a>.</p></div></div></section>
+<section id="guard-2-llms" class="level3">
+<h3 class="anchored" data-anchor-id="guard-2-llms">Guard 2: LLMs</h3>
+<p>No human can write better code than LLMs. All of the implementation is written by LLMs, and cross-checked by LLMs from different providers.</p>
+</section>
+<section id="guard-3-fuzzing-verification-dsts" class="level3 page-columns page-full">
+<h3 class="anchored" data-anchor-id="guard-3-fuzzing-verification-dsts">Guard 3: fuzzing, verification, DSTs</h3>
+<p>Conventional approaches still apply here:</p>
+<ol type="1">
+<li><strong>Fuzzing</strong> runs random operations on <code>bbtree</code> and std’s <code>BTreeMap</code> side by side, checks that every answer matches, and checks the whole tree’s invariants after every operation: <a href="https://github.com/XiangpengHao/bbtree/tree/main/bbtree/fuzz/fuzz_targets">8 targets</a>, fuzzed weekly and before every release (<a href="https://github.com/XiangpengHao/bbtree/blob/main/.github/workflows/fuzz.yml">CI</a>).</li>
+<li><strong>Verification</strong> with Verus<sup>24</sup> proves the critical properties of the code, e.g., that the inline keys order the same way as the keys themselves: <a href="https://github.com/XiangpengHao/bbtree/tree/main/bbtree/src/proof">the proofs</a>, checked on every pull request (<a href="https://github.com/XiangpengHao/bbtree/blob/main/.github/workflows/verus.yml">CI</a>).</li>
+<li><strong>DSTs</strong> (deterministic simulation testing) with Shuttle<sup>25</sup> and ffs<sup>26</sup> test concurrent behavior in a deterministic and principled way: Shuttle runs <a href="https://github.com/XiangpengHao/bbtree/blob/main/bbtree/src/map/shuttle_tests.rs">each test</a> under thousands of thread schedules on every pull request (<a href="https://github.com/XiangpengHao/bbtree/blob/main/.github/workflows/shuttle.yml">CI</a>); ffs, run by its author, found a race Shuttle had missed (<a href="https://github.com/XiangpengHao/bbtree/issues/9">issue #9</a>), now fixed and tested.</li>
+</ol>
+<div class="no-row-height column-margin column-container"><div id="fn24"><p><sup>24</sup>&nbsp;Andrea Lattuada et al., <a href="https://doi.org/10.1145/3586037">Verus: Verifying Rust Programs using Linear Ghost Types</a> (OOPSLA 2023); code at <a href="https://github.com/verus-lang/verus">verus-lang/verus</a>.</p></div><div id="fn25"><p><sup>25</sup>&nbsp;<a href="https://github.com/awslabs/shuttle">Shuttle</a>, a library for testing concurrent Rust code, from AWS.</p></div><div id="fn26"><p><sup>26</sup>&nbsp;<a href="https://github.com/aoli-al/ffs">ffs</a>, fork-based deterministic concurrency testing.</p></div></div></section>
+</section>
+<section id="reviewers-of-this-post" class="level2">
+<h2 class="anchored" data-anchor-id="reviewers-of-this-post">Reviewers of this post</h2>
+<p>Thanks to <a href="https://andrew.nerdnetworks.org/">Andrew Lamb</a> (InfluxData), <a href="https://github.com/zfarrell">Zac Farrell</a> (Hotdata), <a href="https://eddietejeda.com/">Eddie Tejeda</a> (Hotdata), <a href="https://www.linkedin.com/in/divs1101/">Divya Ranganathan</a> (Hotdata), <a href="https://jacopotagliabue.it/">Jacopo Tagliabue</a> (bauplan), <a href="https://shawnzhong.com">Wanxiang Zhong</a> and <a href="https://github.com/MikeWalrus">Junxuan Liao</a> for reviewing this post.</p>
+
+
+</section>
+
+
+ ]]></description>
+  <guid>https://blog.xiangpeng.systems/posts/bbtree/</guid>
+  <pubDate>Fri, 23 Oct 2026 00:00:00 GMT</pubDate>
+</item>
 <item>
   <title>What is worth doing?</title>
   <link>https://blog.xiangpeng.systems/posts/what-is-worth-doing/</link>
